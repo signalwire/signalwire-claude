@@ -36,7 +36,15 @@ A comprehensive Claude Code skill that transforms Claude into an expert SignalWi
 
 ## Installation
 
-### For Your Own Use
+### With the installer
+
+```bash
+bash install.sh
+```
+
+### Manually
+
+Or you can manually follow the steps that the installer uses
 
 ```bash
 # Create skills directory if it doesn't exist
