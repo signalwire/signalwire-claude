@@ -674,7 +674,559 @@ response = requests.delete(
 6. **Recording**: Inform participants when recording is active
 7. **Error Handling**: Handle network disconnections gracefully
 
+## WebRTC as Native Resource
+
+**Key Concept:** SignalWire treats WebRTC as an addressable first-class resource, just like SIP or PSTN.
+
+### Advantages
+
+- Browser-to-phone calls (no plugins required)
+- Browser-to-SIP calls
+- Browser-to-AI agent
+- Browser-to-browser
+- Unified addressing scheme
+
+### Call Widget Embedding
+
+Simple HTML embed for instant video calling:
+
+```html
+<div id="sw-video-container"></div>
+<script>
+!function(){
+  var e=document.createElement("script");
+  e.async=!0,
+  e.src="https://YOURSPACE.signalwire.com/relay/sdk.js",
+  document.head.appendChild(e);
+}();
+</script>
+```
+
+### Widget Parameters
+
+```javascript
+{
+  token: "room_token_here",
+  username: "Agent Name",
+  theme: "dark", // or "light"
+  audio: true,
+  video: true,
+  memberList: true,
+  chat: true,
+  devicePicker: false, // Skip device selection screen
+  prejoin: false // Skip waiting room
+}
+```
+
+## Room Session Monitoring
+
+### Tracking Room Activity
+
+```javascript
+const { Video } = require('@signalwire/realtime-api');
+
+async function monitorRoom() {
+  const client = new Video.Client({
+    project: process.env.SIGNALWIRE_PROJECT_ID,
+    token: process.env.SIGNALWIRE_API_TOKEN
+  });
+
+  const roomSession = await client.video.roomSessions.get({
+    roomName: 'support-room'
+  });
+
+  // Monitor member events
+  roomSession.on('member.joined', (member) => {
+    console.log(`${member.name} joined`);
+
+    // Update UI, send notifications
+    notifyAdmins(`${member.name} joined the room`);
+  });
+
+  roomSession.on('member.talking', (member) => {
+    const talkTime = Date.now() - member.talkStartTime;
+
+    // Track speaking time for analytics
+    updateMetrics(member.name, talkTime);
+
+    // Highlight active speaker in UI
+    highlightSpeaker(member.id);
+  });
+
+  roomSession.on('member.left', (member) => {
+    console.log(`${member.name} left`);
+
+    // Calculate session duration
+    const duration = Date.now() - member.joinTime;
+    logMemberSession(member.name, duration);
+  });
+
+  roomSession.on('recording.started', () => {
+    console.log('Recording started');
+
+    // Notify all members
+    notifyAllMembers('This session is now being recorded');
+  });
+
+  roomSession.on('recording.ended', (recording) => {
+    console.log('Recording ended');
+
+    // Process recording
+    processRecording(recording.url);
+  });
+}
+```
+
+### Analytics Dashboard
+
+```javascript
+class RoomAnalytics {
+  constructor(roomName) {
+    this.roomName = roomName;
+    this.members = {};
+    this.talkingTime = {};
+  }
+
+  trackMember(member) {
+    this.members[member.id] = {
+      name: member.name,
+      joinTime: Date.now(),
+      leaveTime: null,
+      talkingTime: 0
+    };
+  }
+
+  updateTalkingTime(memberId, duration) {
+    if (this.members[memberId]) {
+      this.members[memberId].talkingTime += duration;
+    }
+  }
+
+  getMemberLeft(memberId) {
+    if (this.members[memberId]) {
+      this.members[memberId].leaveTime = Date.now();
+    }
+  }
+
+  generateReport() {
+    return {
+      roomName: this.roomName,
+      totalMembers: Object.keys(this.members).length,
+      members: Object.values(this.members).map(m => ({
+        name: m.name,
+        duration: (m.leaveTime || Date.now()) - m.joinTime,
+        talkingTime: m.talkingTime,
+        talkingPercentage: (m.talkingTime / ((m.leaveTime || Date.now()) - m.joinTime)) * 100
+      }))
+    };
+  }
+}
+```
+
+## Programmable Video Conference Setup
+
+### Quick Dashboard Setup
+
+1. Navigate to **Video** section in Dashboard
+2. Click **Create New**
+3. Configure:
+   - **Room name**: `team-standup`
+   - **Size**: Participants limit (e.g., 50)
+   - **Layout**: Grid, spotlight, custom
+   - **Quality settings**: 720p, 1080p, 1440p
+   - **Recording on start**: Enable/disable
+   - **Enable chat**: Yes/no
+   - **Room previews**: Show/hide video before joining
+
+### Embed in Website
+
+```html
+<!-- Simple iframe embed -->
+<iframe
+  src="https://YOURSPACE.signalwire.com/pvr/ROOM_TOKEN"
+  width="100%"
+  height="600px"
+  allow="camera;microphone"
+  style="border: none;"
+></iframe>
+```
+
+### Token Management
+
+```python
+from flask import Flask, request, jsonify
+import os
+import requests
+from requests.auth import HTTPBasicAuth
+import hashlib
+import time
+
+app = Flask(__name__)
+
+# Token cache to reduce API calls
+token_cache = {}
+
+@app.route('/api/get-video-token', methods=['POST'])
+def get_video_token():
+    data = request.json
+    room_name = data.get('room_name')
+    user_name = data.get('user_name')
+    is_moderator = data.get('is_moderator', False)
+
+    # Check cache (tokens valid for ~1 hour)
+    cache_key = f"{room_name}:{user_name}:{is_moderator}"
+    cached = token_cache.get(cache_key)
+
+    if cached and cached['expires'] > time.time():
+        return jsonify({"token": cached['token']})
+
+    # Generate new token
+    token_response = requests.post(
+        f"{os.getenv('SIGNALWIRE_SPACE_URL')}/api/video/room_tokens",
+        auth=HTTPBasicAuth(
+            os.getenv('SIGNALWIRE_PROJECT_ID'),
+            os.getenv('SIGNALWIRE_API_TOKEN')
+        ),
+        json={
+            "room_name": room_name,
+            "user_name": user_name,
+            "mod_permissions": is_moderator,
+            "permissions": [] if is_moderator else [
+                "room.self.audio_mute",
+                "room.self.video_mute",
+                "room.self.audio_unmute",
+                "room.self.video_unmute"
+            ]
+        }
+    )
+
+    if token_response.status_code == 200:
+        token = token_response.json()['token']
+
+        # Cache token
+        token_cache[cache_key] = {
+            'token': token,
+            'expires': time.time() + 3600  # 1 hour
+        }
+
+        return jsonify({"token": token})
+    else:
+        return jsonify({"error": "Failed to generate token"}), 500
+```
+
+## Click-to-Call Widget Patterns
+
+### Browser-Based Calling
+
+```html
+<div id="call-widget"></div>
+<script src="https://cdn.signalwire.com/call-widget.js"></script>
+<script>
+SignalWire.CallWidget({
+  token: 'YOUR_CLICK_TO_CALL_TOKEN',
+  element: '#call-widget',
+  resource: '/public/your-agent-address',
+  theme: 'dark',
+  callerId: 'Customer Support'
+});
+</script>
+```
+
+### Configuration
+
+Get token from Dashboard > Click to Call:
+
+```javascript
+// Initialize click-to-call
+const callWidget = SignalWire.CallWidget({
+  // Token from Dashboard
+  token: 'CTT_xxxxxxxxxxxxxxxxxxxxxxx',
+
+  // Widget container
+  element: '#call-widget',
+
+  // Connect to AI agent or SWML script
+  resource: '/public/support-agent',
+
+  // Customization
+  theme: 'dark',
+  position: 'bottom-right',
+  buttonText: 'Call Support',
+  callerId: 'Website Visitor',
+
+  // Audio/video settings
+  audio: true,
+  video: false
+});
+
+// Event handling
+callWidget.on('call.started', () => {
+  console.log('Call started');
+});
+
+callWidget.on('call.ended', () => {
+  console.log('Call ended');
+});
+```
+
+### No Server Infrastructure Needed
+
+The click-to-call widget connects directly to:
+- AI agents for conversational support
+- SWML scripts for IVR flows
+- Subscribers for direct agent calls
+
+```yaml
+# SWML for click-to-call routing
+version: 1.0.0
+sections:
+  main:
+    - answer: {}
+    - ai:
+        prompt: |
+          You are a customer support agent.
+          Help the caller with their questions.
+          Transfer to a human if needed.
+        functions:
+          - name: transfer_to_human
+            web_hook: "https://yourserver.com/transfer"
+```
+
+## Custom Video Applications
+
+### VueJS Example Architecture
+
+```javascript
+// Component-based video app
+<template>
+  <div class="video-app">
+    <device-selector @selected="setDevices" />
+    <layout-switcher @changed="changeLayout" />
+    <room-preview :rooms="availableRooms" />
+    <video-container ref="videoContainer" />
+    <invite-link-generator :roomName="currentRoom" />
+  </div>
+</template>
+
+<script>
+import { Video } from '@signalwire/js';
+
+export default {
+  data() {
+    return {
+      roomSession: null,
+      currentRoom: null,
+      availableRooms: []
+    };
+  },
+
+  methods: {
+    async joinRoom(roomToken) {
+      this.roomSession = new Video.RoomSession({
+        token: roomToken,
+        rootElementId: this.$refs.videoContainer.id,
+        audio: this.selectedAudio,
+        video: this.selectedVideo
+      });
+
+      await this.roomSession.join();
+    },
+
+    setDevices(audio, video) {
+      this.selectedAudio = audio;
+      this.selectedVideo = video;
+    },
+
+    changeLayout(layoutName) {
+      this.roomSession.setLayout({ name: layoutName });
+    }
+  }
+};
+</script>
+```
+
+### React Example
+
+```javascript
+import React, { useEffect, useRef, useState } from 'react';
+import { Video } from '@signalwire/js';
+
+function ZoomLikeInterface() {
+  const videoContainer = useRef(null);
+  const [roomSession, setRoomSession] = useState(null);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+
+  useEffect(() => {
+    async function setupRoom() {
+      // Fetch room token from backend
+      const response = await fetch('/api/get-video-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          room_name: 'team-meeting',
+          user_name: 'John Doe'
+        })
+      });
+
+      const { token } = await response.json();
+
+      // Create room session
+      const session = new Video.RoomSession({
+        token,
+        rootElementId: videoContainer.current.id,
+        audio: true,
+        video: true
+      });
+
+      session.on('room.joined', () => {
+        console.log('Joined room');
+      });
+
+      await session.join();
+      setRoomSession(session);
+    }
+
+    setupRoom();
+  }, []);
+
+  async function toggleScreenShare() {
+    if (!isScreenSharing) {
+      // Start screen share
+      const screenSession = new Video.RoomSession({
+        token: roomToken,
+        audio: false,
+        video: { deviceId: 'screen' }
+      });
+
+      await screenSession.join();
+      setIsScreenSharing(true);
+    } else {
+      // Stop screen share
+      // Handle cleanup
+      setIsScreenSharing(false);
+    }
+  }
+
+  return (
+    <div className="video-app">
+      <div ref={videoContainer} className="video-container" />
+      <div className="controls">
+        <button onClick={() => roomSession?.audioMute()}>Mute</button>
+        <button onClick={() => roomSession?.videoMute()}>Camera Off</button>
+        <button onClick={toggleScreenShare}>
+          {isScreenSharing ? 'Stop Sharing' : 'Share Screen'}
+        </button>
+        <button onClick={() => roomSession?.leave()}>Leave</button>
+      </div>
+    </div>
+  );
+}
+```
+
+### Code Examples
+
+Available on:
+- **SignalWire Developer Blog**: Complete tutorials
+- **GitHub**: `github.com/signalwire/*` repositories
+- **Replit**: Live examples you can fork and modify
+
+## Turn/STUN Services
+
+### Built-In Support
+
+SignalWire provides TURN/STUN automatically:
+
+- **No configuration needed**: Automatic setup
+- **Automatic fallback**: Uses TURN when direct connection fails
+- **Geographically distributed**: Low latency worldwide
+- **NAT traversal**: Works behind firewalls
+
+### When Used
+
+- NAT traversal for peer connections
+- Firewall bypass
+- Public internet connectivity
+- Enterprise network environments
+
+### Manual Configuration (if needed)
+
+```javascript
+// Custom TURN/STUN (rarely needed)
+const roomSession = new Video.RoomSession({
+  token: roomToken,
+  rootElementId: 'video-container',
+  iceServers: [
+    {
+      urls: 'stun:stun.signalwire.com:3478'
+    },
+    {
+      urls: 'turn:turn.signalwire.com:3478',
+      username: 'your-username',
+      credential: 'your-credential'
+    }
+  ]
+});
+```
+
+## Production Video Tips
+
+### Quality Settings
+
+```python
+# Create room with optimal quality
+response = requests.post(
+    f"{space_url}/api/video/rooms",
+    auth=HTTPBasicAuth(project_id, api_token),
+    json={
+        "name": "high-quality-meeting",
+        "quality": "1080p",  # or "720p", "1440p"
+        "max_participants": 25,  # Lower for better quality
+        "enable_simulcast": True  # Adaptive quality
+    }
+)
+```
+
+### Bandwidth Management
+
+```javascript
+// Client-side quality adaptation
+roomSession.on('network.quality', (quality) => {
+  if (quality === 'poor') {
+    // Reduce quality
+    roomSession.setVideoQuality('low');
+  } else if (quality === 'good') {
+    roomSession.setVideoQuality('high');
+  }
+});
+```
+
+### Recording Management
+
+```python
+@app.route('/video/recording-ready', methods=['POST'])
+def handle_recording():
+    data = request.json
+
+    recording_url = data.get('recording_url')
+    room_id = data.get('room_id')
+
+    # Upload to cloud storage
+    upload_to_s3(recording_url, f"recordings/{room_id}.mp4")
+
+    # Send to participants
+    participants = get_room_participants(room_id)
+    for participant in participants:
+        send_email(
+            to=participant.email,
+            subject='Meeting Recording Available',
+            body=f'Your recording is ready: {recording_url}'
+        )
+
+    return jsonify({"status": "ok"}), 200
+```
+
 ## Next Steps
 
 - [Webhooks & Events](webhooks-events.md) - Track video room events
 - [Fabric & Relay](fabric-relay.md) - Advanced video integration
+- [Authentication](authentication-setup.md) - Token management and security

@@ -651,9 +651,374 @@ def forward_to_email():
     return jsonify({"status": "ok"}), 200
 ```
 
+## Post-Prompt Processing Patterns
+
+### Collect Data After AI Call Ends
+
+Use `post_prompt_url` to gather structured data from conversations:
+
+```yaml
+# SWML with post-prompt collection
+- ai:
+    prompt: |
+      Gather customer name, phone, and order details.
+      Be conversational and friendly.
+    post_prompt_url: "https://yourserver.com/summary"
+    post_prompt: |
+      Summarize the conversation as a valid JSON object.
+      Include: customer_name, customer_phone, customer_order
+```
+
+### Server Receives Structured Data
+
+```python
+@app.route('/summary', methods=['POST'])
+def handle_post_prompt():
+    data = request.json
+
+    # Parsed data from AI
+    parsed = data.get('post_prompt_data', {}).get('parsed', {})
+
+    customer_name = parsed.get('customer_name')
+    customer_phone = parsed.get('customer_phone')
+    customer_order = parsed.get('customer_order', [])
+
+    # Full conversation transcript
+    conversation = data.get('conversation', [])
+
+    # Call metadata
+    call_id = data.get('call_id')
+    ai_session_id = data.get('ai_session_id')
+
+    # Store in database
+    database.save({
+        'customer_name': customer_name,
+        'customer_phone': customer_phone,
+        'order': customer_order,
+        'call_id': call_id,
+        'transcript': conversation,
+        'timestamp': datetime.now()
+    })
+
+    # Create CRM ticket
+    crm.create_ticket({
+        'name': customer_name,
+        'phone': customer_phone,
+        'notes': format_transcript(conversation)
+    })
+
+    return jsonify({"status": "ok"}), 200
+```
+
+### Post-Prompt Analytics
+
+```python
+@app.route('/analytics', methods=['POST'])
+def handle_analytics():
+    data = request.json
+
+    # Extract analytics from post-prompt
+    parsed = data.get('post_prompt_data', {}).get('parsed', {})
+
+    analytics = {
+        'call_id': data.get('call_id'),
+        'intent': parsed.get('intent'),  # "support", "sales", "billing"
+        'resolved': parsed.get('resolved'),  # True/False
+        'sentiment': parsed.get('sentiment'),  # "positive", "neutral", "negative"
+        'topics': parsed.get('topics', []),  # ["refund", "shipping"]
+        'action_items': parsed.get('action_items', []),
+        'call_duration': calculate_duration(data.get('conversation')),
+        'transfer_occurred': 'transfer' in str(data.get('conversation'))
+    }
+
+    # Store for reporting
+    analytics_db.save(analytics)
+
+    # Alert if negative sentiment
+    if analytics['sentiment'] == 'negative' and not analytics['resolved']:
+        alert_manager(f"Unresolved negative call: {analytics['call_id']}")
+
+    return jsonify({"status": "ok"}), 200
+```
+
+### Post-Prompt Structure
+
+```yaml
+ai:
+  params:
+    post_prompt_url: "https://yourserver.com/analytics"
+    post_prompt: |
+      Summarize this conversation as JSON:
+      {
+        "intent": "primary reason for call",
+        "resolved": true/false,
+        "sentiment": "positive/neutral/negative",
+        "topics": ["list", "of", "topics"],
+        "action_items": ["follow-up tasks"],
+        "customer_satisfied": true/false
+      }
+```
+
+## Webhook Testing with webhook.site
+
+### Development Pattern
+
+```python
+# Use webhook.site for testing SWAIG functions
+
+# 1. Go to webhook.site and get temporary URL
+# 2. Configure in SWML:
+
+functions:
+  - name: create_ticket
+    purpose: "Create support ticket"
+    web_hook: "https://webhook.site/unique-id-here"
+    parameters:
+      - name: title
+        type: string
+      - name: description
+        type: string
+
+# 3. Test AI agent
+# 4. View payload in webhook.site
+# 5. Iterate on response format
+```
+
+### Webhook.site Benefits
+
+- Instant temporary URLs
+- View raw payloads
+- No server setup needed
+- Copy/paste request data
+- Test before deploying real endpoint
+
+### Testing Workflow
+
+```python
+# After verifying payload structure on webhook.site,
+# implement real endpoint:
+
+@app.route('/swaig/create-ticket', methods=['POST'])
+def create_ticket():
+    data = request.json
+
+    # data structure verified via webhook.site
+    function_name = data.get('function')
+    args = data.get('argument', {})
+
+    if function_name == 'create_ticket':
+        ticket = github.create_issue(
+            title=args.get('title'),
+            body=args.get('description')
+        )
+
+        return jsonify({
+            "response": f"Ticket #{ticket.number} created successfully",
+            "metadata": {
+                "ticket_id": ticket.number,
+                "url": ticket.html_url
+            }
+        })
+```
+
+## Monitoring and Observability
+
+### Real-Time Transcription Integration
+
+```yaml
+# Enable live transcription
+sections:
+  main:
+    - live_transcribe:
+        url: "wss://yourserver.com/transcribe"
+    - ai:
+        prompt: "Your agent instructions"
+```
+
+### WebSocket Transcription Handler
+
+```javascript
+const WebSocket = require('ws');
+
+const wss = new WebSocket.Server({ port: 8080 });
+
+wss.on('connection', (ws) => {
+  console.log('Transcription connection established');
+
+  ws.on('message', (data) => {
+    const message = JSON.parse(data);
+
+    if (message.event === 'transcription') {
+      console.log('User said:', message.transcription.text);
+
+      // Real-time processing
+      analyzeIntent(message.transcription.text);
+
+      // Store for records
+      saveTranscript(message.transcription.text);
+
+      // Update live dashboard
+      broadcastToAgents({
+        type: 'live_transcript',
+        text: message.transcription.text,
+        timestamp: Date.now()
+      });
+    }
+  });
+});
+```
+
+### Call Audio Streaming
+
+Stream call audio for real-time transcription or recording:
+
+```yaml
+# SWML with audio streaming
+- stream:
+    url: "wss://yourserver.com/stream"
+    track: "both"  # inbound, outbound, or both
+- ai:
+    prompt: "Your instructions"
+```
+
+### WebSocket Stream Handler
+
+```javascript
+wss.on('connection', (ws) => {
+  let audioBuffer = [];
+
+  ws.on('message', (data) => {
+    const message = JSON.parse(data);
+
+    if (message.event === 'media') {
+      // Base64-encoded audio payload
+      const audioChunk = Buffer.from(message.media.payload, 'base64');
+
+      // Send to DeepGram, AssemblyAI, etc.
+      transcriptionService.process(audioChunk);
+
+      // Save to WAV file
+      audioBuffer.push(audioChunk);
+    }
+
+    if (message.event === 'stop') {
+      // Stream ended, save complete audio
+      const wavFile = createWav(audioBuffer);
+      saveToStorage(wavFile, `call-${message.call_id}.wav`);
+    }
+  });
+});
+```
+
+### Use Cases
+
+- Live transcription with DeepGram or AssemblyAI
+- Local audio storage in WAV format
+- Real-time speech analytics
+- Custom call recording implementations
+- Compliance monitoring
+
+## Status Callback Handling
+
+### Complete Status Event Tracking
+
+```python
+from enum import Enum
+from datetime import datetime
+
+class CallState(Enum):
+    QUEUED = "queued"
+    CREATED = "created"
+    RINGING = "ringing"
+    ANSWERED = "answered"
+    ENDED = "ended"
+
+# Track all call states
+call_states = {}
+
+@app.route('/call-status', methods=['POST'])
+def track_call_lifecycle():
+    data = request.json
+
+    call_id = data.get('call_id')
+    state = data.get('call_state')
+    timestamp = data.get('timestamp')
+
+    # Initialize tracking
+    if call_id not in call_states:
+        call_states[call_id] = {
+            'from': data.get('from'),
+            'to': data.get('to'),
+            'direction': data.get('direction'),
+            'states': {}
+        }
+
+    # Record state transition
+    call_states[call_id]['states'][state] = timestamp
+
+    # Handle specific states
+    if state == CallState.QUEUED.value:
+        log_call_queued(call_id)
+
+    elif state == CallState.RINGING.value:
+        # Calculate queue time
+        queued_time = call_states[call_id]['states'].get('queued')
+        if queued_time:
+            queue_duration = (datetime.fromisoformat(timestamp) -
+                            datetime.fromisoformat(queued_time)).total_seconds()
+            metrics.record('queue_time', queue_duration)
+
+    elif state == CallState.ANSWERED.value:
+        # Calculate ring time
+        ringing_time = call_states[call_id]['states'].get('ringing')
+        if ringing_time:
+            ring_duration = (datetime.fromisoformat(timestamp) -
+                           datetime.fromisoformat(ringing_time)).total_seconds()
+            metrics.record('ring_time', ring_duration)
+
+        # Start billing
+        start_billing(call_id)
+
+    elif state == CallState.ENDED.value:
+        # Calculate call duration
+        answered_time = call_states[call_id]['states'].get('answered')
+        if answered_time:
+            duration = (datetime.fromisoformat(timestamp) -
+                       datetime.fromisoformat(answered_time)).total_seconds()
+
+            # Record metrics
+            metrics.record('call_duration', duration)
+
+            # Calculate cost
+            cost = calculate_cost(duration)
+            billing.record(call_id, cost)
+
+        # Cleanup
+        finalize_call(call_id)
+
+    return jsonify({"status": "ok"}), 200
+```
+
+### Dashboard Metrics
+
+```python
+def generate_call_metrics():
+    """Generate real-time call center metrics"""
+
+    return {
+        'active_calls': count_active_calls(),
+        'average_wait_time': metrics.average('queue_time'),
+        'average_call_duration': metrics.average('call_duration'),
+        'calls_per_hour': metrics.rate('calls', hours=1),
+        'answer_rate': (metrics.count('answered') / metrics.count('ringing')) * 100,
+        'abandonment_rate': (metrics.count('abandoned') / metrics.count('queued')) * 100
+    }
+```
+
 ## Next Steps
 
 - [Fabric & Relay](fabric-relay.md) - Alternative to webhooks using WebSocket
 - [Outbound Calling](outbound-calling.md) - Configure status callbacks
-- [Messaging](messaging.md) - Configure message webhooks
+- [Messaging](messaging.md) - Configure message webhooks and delivery tracking
 - [Video](video.md) - Configure video event webhooks
+- [Voice AI](voice-ai.md) - Post-prompt processing for AI conversations

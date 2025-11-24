@@ -64,6 +64,18 @@ Voice AI capabilities:
 - **POM** (Prompt Object Model): Structured prompt building
 - **Datasphere**: RAG (Retrieval-Augmented Generation) stack
 
+## Practical Knowledge from Production
+
+This skill combines technical API documentation with practical implementation guidance from real-world SignalWire deployments. Each workflow file includes:
+
+- **Best Practices** - Production-tested techniques and patterns
+- **Common Patterns** - Real-world implementation examples
+- **Anti-Patterns** - What NOT to do, mistakes to avoid
+- **Production Tips** - Deployment, monitoring, and testing insights
+- **Real-World Examples** - Complete working patterns from live applications
+
+These insights come from analysis of 89 SignalWire training videos, LiveWire sessions, and production deployments.
+
 ## Workflow Documentation
 
 This skill is organized by developer workflow. Choose the workflow that matches your task:
@@ -146,12 +158,63 @@ In Call Fabric, everything is a "resource":
 
 Resources can be created via Dashboard or REST API.
 
+## Key Principles for Building with SignalWire
+
+### Treat AI Like a Person, Not a Program
+
+> "How would you instruct your mother to do the task you want done?" - Brian West
+
+- Use clear, natural language instructions
+- Avoid programming mentality - guide, don't command
+- Less is more - avoid over-prompting
+- Use positive sequential instructions, not rigid "never" statements
+
+### Use Metadata for Security
+
+**Critical Pattern:** Keep sensitive data OUT of the LLM context:
+- Customer information → metadata
+- Payment details → metadata + SWML Pay
+- Authentication tokens → metadata
+- Account balances → metadata
+
+SWAIG functions can access metadata, but AI cannot see it directly.
+
+### Test Continuously
+
+AI behavior is probabilistic:
+- Test after every prompt change
+- Use real phone calls, not just webhooks
+- Test with different voices and accents
+- Monitor post-prompt data religiously
+- Iterate constantly based on real usage
+
+### Preserve Context Through Transfers
+
+72% of customers expect agents to know who they are:
+- Use SWAIG functions to collect information
+- Pass context through metadata and variables
+- Implement screen pop for human agents
+- Never make customers repeat themselves
+
+### Implement Loop Protection
+
+Always protect gather/prompt nodes from infinite loops:
+```yaml
+- set:
+    loop_counter: "{{loop_counter | default(0) | int + 1}}"
+- condition:
+    if: "{{loop_counter}} > 3"
+    then: hangup
+    else: continue_flow
+```
+
 ## Next Steps
 
 1. Read the [Authentication & Setup](workflows/authentication-setup.md) workflow first
 2. Choose the workflow that matches your current task
 3. Reference the detailed API documentation in each workflow file
 4. Check example apps in the SignalWire GitHub organization for real-world patterns
+5. Review the Best Practices sections in each workflow for production guidance
 
 ## Additional Resources
 

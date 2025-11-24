@@ -510,9 +510,310 @@ sections:
     - hangup: {}
 ```
 
+## Outbound Dialer Patterns with CRM
+
+### Automated Patient/Customer Outreach
+
+```python
+#!/usr/bin/env -S uv run
+# /// script
+# dependencies = ["requests", "sqlalchemy"]
+# ///
+
+import os
+import requests
+from requests.auth import HTTPBasicAuth
+from datetime import datetime, timedelta
+
+project_id = os.getenv('SIGNALWIRE_PROJECT_ID')
+api_token = os.getenv('SIGNALWIRE_API_TOKEN')
+space_url = os.getenv('SIGNALWIRE_SPACE_URL')
+
+def dial_patients_for_checkup():
+    """Automated outbound calling for patient check-ins"""
+
+    # Get patients needing follow-up
+    patients = database.query("""
+        SELECT * FROM patients
+        WHERE last_checkup < NOW() - INTERVAL '6 months'
+        AND opt_in_calls = TRUE
+    """)
+
+    for patient in patients:
+        # Create call with patient-specific SWML
+        response = requests.post(
+            f"{space_url}/api/calling/calls",
+            auth=HTTPBasicAuth(project_id, api_token),
+            json={
+                "command": "dial",
+                "params": {
+                    "from": "+15551234567",
+                    "to": patient.phone,
+                    "url": f"https://yourserver.com/health-assessment/{patient.id}",
+                    "status_url": f"https://yourserver.com/call-status/{patient.id}"
+                }
+            }
+        )
+
+        if response.status_code == 200:
+            call_id = response.json()['call_id']
+
+            # Log outreach attempt
+            database.log_call_attempt({
+                'patient_id': patient.id,
+                'call_id': call_id,
+                'purpose': 'health_checkup',
+                'timestamp': datetime.now()
+            })
+```
+
+### Appointment Reminder Pattern
+
+```python
+from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import datetime, timedelta
+
+scheduler = BackgroundScheduler()
+
+def schedule_appointment_reminders():
+    """Send reminder calls for upcoming appointments"""
+
+    # Get appointments for next 24 hours
+    tomorrow = datetime.now() + timedelta(days=1)
+    appointments = database.query("""
+        SELECT * FROM appointments
+        WHERE appointment_time BETWEEN NOW() AND %s
+        AND reminder_sent = FALSE
+    """, (tomorrow,))
+
+    for appt in appointments:
+        # Schedule reminder call
+        reminder_time = appt.appointment_time - timedelta(hours=24)
+
+        scheduler.add_job(
+            send_reminder_call,
+            'date',
+            run_date=reminder_time,
+            args=[appt.patient_phone, appt.appointment_time, appt.doctor_name]
+        )
+
+def send_reminder_call(phone, appt_time, doctor):
+    """Make reminder call"""
+
+    # Create SWML for reminder
+    swml_url = create_reminder_swml(appt_time, doctor)
+
+    response = requests.post(
+        f"{space_url}/api/calling/calls",
+        auth=HTTPBasicAuth(project_id, api_token),
+        json={
+            "command": "dial",
+            "params": {
+                "from": "+15551234567",
+                "to": phone,
+                "url": swml_url,
+                "status_url": "https://yourserver.com/reminder-status"
+            }
+        }
+    )
+
+scheduler.start()
+```
+
+### Voice Appointment Reminders
+
+```yaml
+# SWML for appointment reminder
+version: 1.0.0
+sections:
+  main:
+    - answer: {}
+    - say:
+        text: "Hello, this is a reminder from {clinic_name}."
+    - say:
+        text: "You have an appointment tomorrow at {appointment_time} with Dr. {doctor_name}."
+    - prompt:
+        say: "Press 1 to confirm, 2 to reschedule, or 3 to cancel."
+        max_digits: 1
+    - switch:
+        variable: "%{digits}"
+        case:
+          "1":
+            - say:
+                text: "Thank you, your appointment is confirmed."
+            - request:
+                url: "https://yourserver.com/confirm-appointment"
+                method: POST
+            - hangup: {}
+          "2":
+            - say:
+                text: "Please call our office to reschedule."
+            - hangup: {}
+          "3":
+            - say:
+                text: "Your appointment has been cancelled."
+            - request:
+                url: "https://yourserver.com/cancel-appointment"
+                method: POST
+            - hangup: {}
+```
+
+### Healthcare Assessment Workflow
+
+```yaml
+# AI-powered health assessment call
+version: 1.0.0
+sections:
+  main:
+    - answer: {}
+    - ai:
+        prompt: |
+          You are Adam, a nursing home digital assistant conducting a weekly health assessment.
+
+          Steps:
+          1. Greet {patient_name} by name
+          2. Verify identity with 4-digit PIN
+          3. Ask standard health questions:
+             - How are you feeling today?
+             - Any pain or discomfort?
+             - Taking all medications as prescribed?
+             - Any concerns you want to discuss?
+          4. Provide guidance if needed
+          5. Thank them and end call
+
+          If patient reports serious symptoms, call transfer_to_nurse function.
+          Store summary using record_assessment function.
+
+        functions:
+          - name: verify_patient_pin
+            purpose: "Verify patient identity with PIN"
+            web_hook: "https://yourserver.com/verify-pin"
+
+          - name: get_patient_history
+            purpose: "Retrieve patient medical history"
+            web_hook: "https://yourserver.com/patient-history"
+
+          - name: transfer_to_nurse
+            purpose: "Transfer to live nurse for serious issues"
+            web_hook: "https://yourserver.com/transfer-nurse"
+
+          - name: record_assessment
+            purpose: "Store health assessment summary"
+            web_hook: "https://yourserver.com/save-assessment"
+
+          - name: send_caregiver_sms
+            purpose: "Notify caregiver of assessment results"
+            web_hook: "https://yourserver.com/notify-caregiver"
+
+        post_prompt_url: "https://yourserver.com/assessment-summary"
+        post_prompt: |
+          Summarize the health assessment as JSON:
+          {
+            "patient_name": "name",
+            "overall_status": "good/fair/concerning",
+            "symptoms_reported": ["list"],
+            "medication_compliance": true/false,
+            "concerns": ["list"],
+            "action_required": true/false
+          }
+```
+
+### CRM Integration Pattern
+
+```python
+@app.route('/assessment-summary', methods=['POST'])
+def handle_assessment():
+    data = request.json
+
+    # Extract assessment data
+    parsed = data.get('post_prompt_data', {}).get('parsed', {})
+
+    patient_name = parsed.get('patient_name')
+    status = parsed.get('overall_status')
+    action_required = parsed.get('action_required')
+
+    # Update CRM/EHR
+    ehr_system.update_patient_record({
+        'patient': patient_name,
+        'assessment_date': datetime.now(),
+        'status': status,
+        'notes': format_transcript(data.get('conversation'))
+    })
+
+    # Alert if action needed
+    if action_required or status == 'concerning':
+        # Notify care team
+        send_alert_to_team({
+            'patient': patient_name,
+            'urgency': 'high' if status == 'concerning' else 'medium',
+            'summary': parsed.get('concerns')
+        })
+
+    # Send SMS to caregiver
+    if status in ['fair', 'concerning']:
+        send_sms(
+            to=get_caregiver_phone(patient_name),
+            body=f"Health check completed for {patient_name}. Status: {status}. "
+                 f"Call office for details."
+        )
+
+    return jsonify({"status": "ok"}), 200
+```
+
+### Bulk Outbound Campaign
+
+```python
+def run_outbound_campaign(campaign_id):
+    """Execute bulk outbound calling campaign"""
+
+    campaign = database.get_campaign(campaign_id)
+    recipients = database.get_campaign_recipients(campaign_id)
+
+    # Rate limiting (e.g., 10 calls per second)
+    from time import sleep
+    delay = 0.1  # 100ms between calls
+
+    for recipient in recipients:
+        # Check opt-out status
+        if is_opted_out(recipient.phone):
+            continue
+
+        # Make call
+        try:
+            response = requests.post(
+                f"{space_url}/api/calling/calls",
+                auth=HTTPBasicAuth(project_id, api_token),
+                json={
+                    "command": "dial",
+                    "params": {
+                        "from": campaign.caller_id,
+                        "to": recipient.phone,
+                        "url": campaign.swml_url,
+                        "status_url": f"https://yourserver.com/campaign/{campaign_id}/status"
+                    }
+                },
+                timeout=5
+            )
+
+            if response.status_code == 200:
+                database.log_call({
+                    'campaign_id': campaign_id,
+                    'recipient_id': recipient.id,
+                    'call_id': response.json()['call_id'],
+                    'status': 'initiated'
+                })
+
+        except Exception as e:
+            log_error(f"Failed to call {recipient.phone}: {e}")
+
+        # Rate limit
+        sleep(delay)
+```
+
 ## Next Steps
 
 - [Inbound Call Handling](inbound-call-handling.md) - Create SWML to control calls
 - [Call Control](call-control.md) - Transfer, record, conference
-- [Webhooks & Events](webhooks-events.md) - Handle status callbacks
-- [Voice AI](voice-ai.md) - Add AI agents to calls
+- [Webhooks & Events](webhooks-events.md) - Handle status callbacks and post-prompt data
+- [Voice AI](voice-ai.md) - Add AI agents to outbound calls
+- [Messaging](messaging.md) - Follow up calls with SMS

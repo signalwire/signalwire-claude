@@ -648,9 +648,313 @@ def get_number_usage(number_sid):
 - Wait 24-48 hours for activation
 - Check address format matches requirements
 
+## Campaign Registry for Messaging (A2P 10DLC)
+
+### Why Registration is Required
+
+**CRITICAL:** All A2P (Application-to-Person) messaging to US numbers requires campaign registration to prevent spam and ensure deliverability.
+
+### Registration Process
+
+#### 1. Create Brand
+
+Navigate to: **Messaging Campaigns** > **Brands** > **New**
+
+```python
+# Create brand via API
+response = requests.post(
+    f"{space_url}/api/messaging/brands",
+    auth=HTTPBasicAuth(project_id, api_token),
+    json={
+        "legal_name": "Acme Corporation",
+        "ein": "12-3456789",
+        "business_type": "corporation",  # or "llc", "nonprofit", "sole_proprietor"
+        "email": "compliance@acme.com",
+        "phone": "+15551234567",
+        "address": {
+            "street": "123 Main St",
+            "city": "Anytown",
+            "state": "CA",
+            "postal_code": "90210",
+            "country": "US"
+        },
+        "vertical": "healthcare"  # or "retail", "finance", etc.
+    }
+)
+
+brand_id = response.json()['id']
+print(f"Brand created: {brand_id}")
+```
+
+**Required Information:**
+- Legal business name
+- EIN/Tax ID
+- Business type and vertical
+- Contact information
+- Physical address
+
+**Processing Time:** 1-5 business days for approval
+
+#### 2. Create Campaign
+
+Navigate to: **Messaging Campaigns** > **Campaigns** > **New**
+
+```python
+# Create campaign via API
+response = requests.post(
+    f"{space_url}/api/messaging/campaigns",
+    auth=HTTPBasicAuth(project_id, api_token),
+    json={
+        "brand_id": brand_id,
+        "use_case": "appointment_reminders",
+        "description": "Automated appointment confirmation and reminder messages to patients",
+        "sample_messages": [
+            "Hi {name}, your appointment is confirmed for {date} at {time}. Reply STOP to opt out.",
+            "Reminder: You have an appointment tomorrow at {time}. Reply C to confirm or R to reschedule.",
+            "Your test results are ready. Please call our office at (555) 123-4567 to discuss."
+        ],
+        "message_volume": "500",  # Estimated messages per day
+        "opt_in_workflow": "Patients opt-in during account creation and first visit",
+        "opt_out_keywords": ["STOP", "UNSUBSCRIBE", "CANCEL"],
+        "help_keywords": ["HELP", "INFO"],
+        "help_message": "For support, call (555) 123-4567 or visit example.com"
+    }
+)
+
+campaign_id = response.json()['id']
+print(f"Campaign created: {campaign_id}")
+```
+
+**Campaign Use Cases:**
+- `appointment_reminders`
+- `account_notifications`
+- `customer_care`
+- `delivery_notifications`
+- `fraud_alert`
+- `higher_education`
+- `marketing`
+- `mixed`
+- `polling_voting`
+- `public_service_announcement`
+
+**Processing Time:** 1-2 weeks for carrier approval
+
+#### 3. Associate Numbers with Campaign
+
+```python
+# Associate phone number with campaign
+response = requests.put(
+    f"{space_url}/api/relay/rest/phone_numbers/{number_sid}",
+    auth=HTTPBasicAuth(project_id, api_token),
+    json={
+        "messaging_campaign_id": campaign_id
+    }
+)
+
+if response.status_code == 200:
+    print(f"Number associated with campaign")
+else:
+    print(f"Error: {response.text}")
+```
+
+**Dashboard Method:**
+1. Go to **Phone Numbers**
+2. Select number
+3. Under **Messaging Settings**
+4. Select campaign from dropdown
+5. Save
+
+### Best Practices for Campaign Registration
+
+1. **Accurate Description:** Be specific about message content
+2. **Sample Messages:** Provide realistic examples with opt-out language
+3. **Volume Estimates:** Be conservative but realistic
+4. **Opt-In Process:** Clearly document how users consent
+5. **Multiple Campaigns:** Create separate campaigns for different purposes
+
+### Campaign Monitoring
+
+```python
+def check_campaign_status(campaign_id):
+    """Monitor campaign approval status"""
+
+    response = requests.get(
+        f"{space_url}/api/messaging/campaigns/{campaign_id}",
+        auth=HTTPBasicAuth(project_id, api_token)
+    )
+
+    campaign = response.json()
+
+    return {
+        'status': campaign.get('status'),  # pending, approved, rejected
+        'approval_date': campaign.get('approval_date'),
+        'rejection_reason': campaign.get('rejection_reason'),
+        'throughput': campaign.get('throughput')  # messages per second
+    }
+```
+
+### Compliance Requirements
+
+**Required Elements in Messages:**
+- Opt-out language: "Reply STOP to opt out"
+- Sender identification: "From Acme Healthcare"
+- Help keyword: "Reply HELP for support"
+
+**Prohibited:**
+- Sending to opted-out numbers
+- Exceeding approved message volume
+- Changing message content significantly from samples
+- Sharing numbers across campaigns
+
+## Number Association Process
+
+### Verify Number Capabilities
+
+```python
+def verify_number_capabilities(number_sid):
+    """Check if number supports desired features"""
+
+    response = requests.get(
+        f"{space_url}/api/relay/rest/phone_numbers/{number_sid}",
+        auth=HTTPBasicAuth(project_id, api_token)
+    )
+
+    number = response.json()
+    capabilities = number.get('capabilities', {})
+
+    return {
+        'voice': capabilities.get('voice', False),
+        'sms': capabilities.get('sms', False),
+        'mms': capabilities.get('mms', False),
+        'fax': capabilities.get('fax', False),
+        'number': number.get('phone_number'),
+        'type': number.get('number_type')  # local, toll-free, mobile
+    }
+
+# Usage
+caps = verify_number_capabilities(number_sid)
+
+if not caps['sms']:
+    print("Warning: Number doesn't support SMS")
+if not caps['mms']:
+    print("Warning: Number doesn't support MMS")
+```
+
+### Complete Number Setup
+
+```python
+def setup_business_number(phone_number, campaign_id=None):
+    """Complete setup for a business phone number"""
+
+    # Search and purchase number
+    search_response = requests.get(
+        f"{space_url}/api/relay/rest/phone_numbers/search",
+        auth=HTTPBasicAuth(project_id, api_token),
+        params={"contains": phone_number[-4:], "limit": 1}
+    )
+
+    if not search_response.json():
+        print("Number not available")
+        return None
+
+    # Purchase
+    purchase_response = requests.post(
+        f"{space_url}/api/relay/rest/phone_numbers",
+        auth=HTTPBasicAuth(project_id, api_token),
+        json={
+            "phone_number": phone_number,
+            "friendly_name": "Main Business Line"
+        }
+    )
+
+    number_sid = purchase_response.json()['sid']
+
+    # Configure voice
+    requests.put(
+        f"{space_url}/api/relay/rest/phone_numbers/{number_sid}",
+        auth=HTTPBasicAuth(project_id, api_token),
+        json={
+            "voice_url": "https://yourserver.com/swml/main-menu",
+            "voice_method": "GET",
+            "status_callback": "https://yourserver.com/call-status"
+        }
+    )
+
+    # Configure messaging
+    config = {
+        "sms_url": "https://yourserver.com/incoming-sms",
+        "sms_method": "POST"
+    }
+
+    # Associate with campaign if provided
+    if campaign_id:
+        config["messaging_campaign_id"] = campaign_id
+
+    requests.put(
+        f"{space_url}/api/relay/rest/phone_numbers/{number_sid}",
+        auth=HTTPBasicAuth(project_id, api_token),
+        json=config
+    )
+
+    # Register E911 address
+    address_response = requests.post(
+        f"{space_url}/api/relay/rest/addresses",
+        auth=HTTPBasicAuth(project_id, api_token),
+        json={
+            "friendly_name": "Office Address",
+            "customer_name": "Acme Corp",
+            "street": "123 Main St",
+            "city": "Anytown",
+            "region": "CA",
+            "postal_code": "90210",
+            "iso_country": "US"
+        }
+    )
+
+    address_sid = address_response.json()['sid']
+
+    requests.put(
+        f"{space_url}/api/relay/rest/phone_numbers/{number_sid}",
+        auth=HTTPBasicAuth(project_id, api_token),
+        json={"emergency_address_sid": address_sid}
+    )
+
+    print(f"Number {phone_number} fully configured")
+    return number_sid
+```
+
+### Bulk Number Management
+
+```python
+def configure_number_pool(area_code, count, campaign_id):
+    """Purchase and configure multiple numbers"""
+
+    # Search for numbers
+    search_response = requests.get(
+        f"{space_url}/api/relay/rest/phone_numbers/search",
+        auth=HTTPBasicAuth(project_id, api_token),
+        params={"areacode": area_code, "limit": count}
+    )
+
+    numbers = search_response.json()[:count]
+
+    configured_numbers = []
+
+    for number_data in numbers:
+        number_sid = purchase_and_configure(
+            number_data['phone_number'],
+            campaign_id
+        )
+
+        if number_sid:
+            configured_numbers.append(number_sid)
+
+    return configured_numbers
+```
+
 ## Next Steps
 
 - [Inbound Call Handling](inbound-call-handling.md) - Configure voice_url with SWML
-- [Messaging](messaging.md) - Configure sms_url webhooks
+- [Messaging](messaging.md) - Configure sms_url webhooks and campaigns
 - [Webhooks & Events](webhooks-events.md) - Handle status callbacks
 - [Outbound Calling](outbound-calling.md) - Use numbers for outbound calls

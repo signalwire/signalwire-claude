@@ -658,6 +658,636 @@ def serve_swml():
 4. **Pre-record prompts**: Better quality than TTS
 5. **Handle failures gracefully**: Always provide fallback options
 
+## Best Practices from Production
+
+### SWML Editor Validation
+
+**Always use the SWML Editor for validation:**
+- Located in Dashboard > Relay > SWML tab
+- Provides real-time validation
+- Catches syntax errors before deployment
+- Shows errors in red boxes with clear descriptions
+- Test your SWML before pointing phone numbers to it
+
+### Keep SWML Simple and Focused
+
+**Good Practice:**
+- Use clear, concise instructions
+- Avoid overly complex nested structures
+- Break complex flows into multiple SWML documents
+- Use sections to organize logical workflows
+
+**Example of good structure:**
+```yaml
+version: 1.0.0
+sections:
+  main:
+    - answer: {}
+    - execute: { dest: greeting }
+    - execute: { dest: main_menu }
+
+  greeting:
+    - play: { url: "https://example.com/greeting.mp3" }
+    - return: {}
+
+  main_menu:
+    - prompt:
+        say: "Press 1 for sales, 2 for support"
+        max_digits: 1
+```
+
+### Loop Protection Pattern
+
+**Problem:** Gather input nodes can loop infinitely if caller doesn't respond.
+
+**Solution:**
+
+```yaml
+sections:
+  main:
+    - answer: {}
+    - execute: { dest: get_input }
+
+  get_input:
+    # Create loop counter
+    - set:
+        loop: "{{loop | default(0) | int + 1}}"
+
+    # Check loop count
+    - condition:
+        if: "{{loop}} > 2"
+        then:
+          - say: { text: "We're having trouble understanding your input. Goodbye." }
+          - hangup: {}
+        else:
+          - prompt:
+              say: "Press 1 for sales, 2 for support"
+              max_digits: 1
+            on_success:
+              - switch:
+                  variable: "{{args.result}}"
+                  case:
+                    "1":
+                      - transfer: { dest: sales }
+                    "2":
+                      - transfer: { dest: support }
+                  default:
+                    - say: { text: "That was not a valid option" }
+                    - execute: { dest: get_input }
+            on_failure:
+              - say: { text: "We didn't receive any input" }
+              - execute: { dest: get_input }
+
+  sales:
+    - connect: { to: "+15551111111" }
+
+  support:
+    - connect: { to: "+15552222222" }
+```
+
+**Implementation per gather node:**
+- Use unique variable names (`loop1`, `loop2`) for multiple gather points
+- Set maximum iterations (typically 2-3)
+- Provide helpful feedback before looping
+- Always end with hangup after max attempts
+
+### Variable Management Best Practices
+
+**Using Variables Effectively:**
+
+```yaml
+sections:
+  main:
+    - answer: {}
+    # Set variables for reuse
+    - set:
+        movie1: "Mean Girls plays at 12:45, 2:15, and 5:00"
+        movie2: "Godfather plays at 1:45, 3:25, and 6:00"
+        movie3: "Batman plays at 12:30, 1:30, and 5:45"
+        business_phone: "+15551234567"
+
+    - prompt:
+        say: "Press 1 for Mean Girls, 2 for Godfather, 3 for Batman"
+        max_digits: 1
+      on_success:
+        - switch:
+            variable: "{{args.result}}"
+            case:
+              "1":
+                - execute:
+                    dest: announce_times
+                    params:
+                      movie_info: "{{movie1}}"
+              "2":
+                - execute:
+                    dest: announce_times
+                    params:
+                      movie_info: "{{movie2}}"
+              "3":
+                - execute:
+                    dest: announce_times
+                    params:
+                      movie_info: "{{movie3}}"
+
+  announce_times:
+    - say:
+        text: "{{movie_info}}"
+    - play:
+        url: "silence:1.0"
+    - prompt:
+        say: "Press 1 to receive showtimes via SMS, or press star to return to the menu"
+        max_digits: 1
+      on_success:
+        - switch:
+            variable: "{{args.result}}"
+            case:
+              "1":
+                - send_sms:
+                    to_number: "{{call.from}}"
+                    from_number: "{{business_phone}}"
+                    body: "{{movie_info}}"
+                - say: { text: "Showtimes have been sent to your phone" }
+              "*":
+                - transfer: { dest: main }
+```
+
+**Benefits:**
+- Update in one place
+- Reuse across nodes
+- Maintain consistency
+- Easier to modify
+
+### Accessing Caller Information
+
+**Built-in Call Variables:**
+
+```yaml
+# Access caller phone number
+- say:
+    text: "You called from {{call.from}}"
+
+# Access destination number
+- say:
+    text: "You called {{call.to}}"
+
+# Use in SMS node
+- send_sms:
+    to: "{{call.from}}"
+    from: "{{call.to}}"
+    body: "Thanks for calling! Your reference number is {{call.id}}"
+
+# Access call metadata
+- condition:
+    if: "{{call.direction}} == 'inbound'"
+    then:
+      - say: { text: "This is an inbound call" }
+```
+
+### Handling Unknown/No Input
+
+**Always handle these paths:**
+- `unknown`: Caller input doesn't match options
+- `no_input`: Caller doesn't respond
+
+**Best Practice Example:**
+
+```yaml
+- prompt:
+    say: "Press 1 for sales, 2 for support, or 0 to speak with an operator"
+    max_digits: 1
+    digit_timeout: 5.0
+  on_success:
+    - switch:
+        variable: "{{args.result}}"
+        case:
+          "1":
+            - transfer: { dest: sales }
+          "2":
+            - transfer: { dest: support }
+          "0":
+            - transfer: { dest: operator }
+          default:
+            - say: { text: "That's not a valid option. Let me repeat the menu." }
+            - execute: { dest: main_menu }
+  on_failure:
+    - say: { text: "We didn't receive your input. Let me repeat the options." }
+    - execute: { dest: main_menu }
+```
+
+## Common SWML Patterns from Production
+
+### Pattern 1: Call Flow Builder IVR
+
+**Use Case:** Visual, drag-and-drop IVR creation without code
+
+**What It Is:**
+- Located in SignalWire Dashboard > Call Flow Builder
+- No-code IVR creation
+- Visual node-based design
+- Automatically generates SWML
+
+**Key Node Types:**
+1. **Answer Call** - Required first step
+2. **Play Audio/TTS** - Communicate with caller
+3. **Gather Input** - Collect DTMF or speech
+4. **Forward to Phone** - Transfer to another number
+5. **Voicemail Recording** - Capture messages
+6. **Send SMS** - Send text messages
+7. **AI Agent** - Connect to AI resources
+8. **Request** - Call external APIs
+9. **Condition** - Branching logic
+10. **Set Variable** - Store data
+11. **Hang Up** - End the call
+
+**When to Use:**
+- Simple IVR flows
+- Non-technical team members
+- Rapid prototyping
+- Business logic changes frequently
+
+### Pattern 2: After-Hours Routing
+
+**Use Case:** Different behavior during business hours
+
+```yaml
+version: 1.0.0
+sections:
+  main:
+    - answer: {}
+    # Call external time API
+    - request:
+        url: "https://timeapi.io/api/Time/current/zone?timeZone=America/Chicago"
+        method: GET
+    - condition:
+        if: "{{request.response.hour}} >= 9 && {{request.response.hour}} < 17"
+        then:
+          - transfer: { dest: business_hours }
+        else:
+          - transfer: { dest: after_hours }
+
+  business_hours:
+    - say: { text: "Our office is open. Connecting you now." }
+    - connect:
+        to: "+15551234567"
+        timeout: 30
+      on_failure:
+        - transfer: { dest: voicemail }
+
+  after_hours:
+    - say:
+        text: "Our office is currently closed. We're open Monday through Friday, 9 AM to 5 PM Central Time."
+    - transfer: { dest: voicemail }
+
+  voicemail:
+    - say: { text: "Please leave a message after the beep" }
+    - record:
+        max_length: 120
+        end_silence_timeout: 3
+    - say: { text: "Thank you. We'll return your call soon." }
+    - hangup: {}
+```
+
+### Pattern 3: Multi-Destination Call Routing
+
+**Use Case:** Try multiple numbers sequentially
+
+```yaml
+version: 1.0.0
+sections:
+  main:
+    - answer: {}
+    - say: { text: "Please hold while we locate an available representative" }
+    - execute: { dest: try_office }
+
+  try_office:
+    - connect:
+        to: "+15551111111"
+        timeout: 20
+      on_success:
+        - hangup: {}
+      on_failure:
+        - execute: { dest: try_mobile }
+
+  try_mobile:
+    - say: { text: "Trying alternate number" }
+    - connect:
+        to: "+15552222222"
+        timeout: 20
+      on_success:
+        - hangup: {}
+      on_failure:
+        - execute: { dest: try_backup }
+
+  try_backup:
+    - say: { text: "Trying final contact method" }
+    - connect:
+        to: "+15553333333"
+        timeout: 20
+      on_success:
+        - hangup: {}
+      on_failure:
+        - transfer: { dest: voicemail }
+
+  voicemail:
+    - say: { text: "All representatives are unavailable. Please leave a message." }
+    - record: { max_length: 120 }
+    - hangup: {}
+```
+
+### Pattern 4: Callback Queue System
+
+**Use Case:** Offer callback instead of waiting on hold
+
+```yaml
+version: 1.0.0
+sections:
+  main:
+    - answer: {}
+    - prompt:
+        say: "All agents are currently busy. Press 1 to hold, or press 2 to receive a callback when an agent is available"
+        max_digits: 1
+      on_success:
+        - switch:
+            variable: "{{args.result}}"
+            case:
+              "1":
+                - transfer: { dest: hold_queue }
+              "2":
+                - transfer: { dest: schedule_callback }
+
+  hold_queue:
+    - play:
+        url: "https://example.com/hold-music.mp3"
+    - say: { text: "Your call is important to us. Please continue holding." }
+    - execute: { dest: hold_queue }  # Loop hold music
+
+  schedule_callback:
+    - say: { text: "We'll call you back at this number when an agent is available" }
+    # Make API call to queue system
+    - request:
+        url: "https://yourserver.com/api/callback-queue"
+        method: POST
+        body:
+          phone: "{{call.from}}"
+          timestamp: "{{call.timestamp}}"
+    - say: { text: "You've been added to our callback queue. We'll call you back shortly." }
+    - hangup: {}
+```
+
+### Pattern 5: Survey Collection
+
+**Use Case:** Gather feedback after call
+
+```yaml
+version: 1.0.0
+sections:
+  main:
+    - answer: {}
+    - say: { text: "Thank you for calling. We'd like to ask you a brief survey question." }
+    - execute: { dest: survey }
+
+  survey:
+    - prompt:
+        say: "On a scale of 1 to 5, how satisfied were you with your service today? Press 1 for very dissatisfied, or 5 for very satisfied."
+        max_digits: 1
+      on_success:
+        - request:
+            url: "https://yourserver.com/api/survey"
+            method: POST
+            body:
+              rating: "{{args.result}}"
+              call_id: "{{call.id}}"
+              phone: "{{call.from}}"
+        - say:
+            text: "Thank you for your feedback. Have a great day!"
+        - hangup: {}
+      on_failure:
+        - say: { text: "Thank you for calling" }
+        - hangup: {}
+```
+
+## Anti-Patterns to Avoid
+
+### 1. Creating Infinite Loops Without Protection
+
+❌ **Wrong:**
+```yaml
+- gather:
+    type: digits
+    no_input:
+      - goto: gather  # Infinite loop!
+```
+
+✅ **Right:**
+```yaml
+- set:
+    loop: "{{loop | default(0) | int + 1}}"
+- condition:
+    if: "{{loop}} > 3"
+    then:
+      - hangup: {}
+    else:
+      - gather: {}
+```
+
+### 2. Not Handling All Input Paths
+
+❌ **Wrong:**
+```yaml
+- prompt:
+    say: "Press 1 or 2"
+    max_digits: 1
+  on_success:
+    - switch:
+        variable: "{{args.result}}"
+        case:
+          "1":
+            - transfer: { dest: option1 }
+          "2":
+            - transfer: { dest: option2 }
+# Missing default and on_failure handlers!
+```
+
+✅ **Right:**
+```yaml
+- prompt:
+    say: "Press 1 or 2"
+    max_digits: 1
+  on_success:
+    - switch:
+        variable: "{{args.result}}"
+        case:
+          "1":
+            - transfer: { dest: option1 }
+          "2":
+            - transfer: { dest: option2 }
+          default:
+            - say: { text: "Invalid option" }
+            - execute: { dest: main_menu }
+  on_failure:
+    - say: { text: "No input received" }
+    - execute: { dest: main_menu }
+```
+
+### 3. Hardcoding Values That Should Be Variables
+
+❌ **Wrong:**
+```yaml
+- say: { text: "Movie 1 plays at 12:45, 2:15, and 5:00" }
+# Later in the code...
+- say: { text: "Movie 1 plays at 12:45, 2:15, and 5:00" }
+# If times change, you must update in multiple places
+```
+
+✅ **Right:**
+```yaml
+- set:
+    movie1_times: "Movie 1 plays at 12:45, 2:15, and 5:00"
+- say: { text: "{{movie1_times}}" }
+# Later...
+- say: { text: "{{movie1_times}}" }
+# Update in one place
+```
+
+### 4. Using Complex Nested Structures
+
+❌ **Wrong:**
+```yaml
+sections:
+  main:
+    - answer: {}
+    - prompt:
+        say: "Complex menu"
+      on_success:
+        - switch:
+            case:
+              "1":
+                - prompt:
+                    say: "Submenu"
+                  on_success:
+                    - switch:
+                        # Deeply nested, hard to maintain
+```
+
+✅ **Right:**
+```yaml
+sections:
+  main:
+    - answer: {}
+    - execute: { dest: main_menu }
+
+  main_menu:
+    - prompt:
+        say: "Main menu"
+      on_success:
+        - switch:
+            case:
+              "1":
+                - transfer: { dest: submenu }
+
+  submenu:
+    - prompt:
+        say: "Submenu"
+    # Separate sections are easier to understand and maintain
+```
+
+## Production Tips
+
+### 1. Audio File Best Practices
+
+**Use CDN for audio files:**
+- Faster playback
+- Reduced latency
+- Better reliability
+- Geographic distribution
+
+**Optimize audio files:**
+- MP3 at 64-128 kbps is sufficient for voice
+- 8kHz or 16kHz sample rate
+- Mono channel (not stereo) for voice prompts
+- Pre-record prompts rather than using TTS for frequently played messages
+
+### 2. Test with Real Phone Calls
+
+**Development workflow:**
+1. Write SWML locally
+2. Use SWML Editor to validate
+3. Deploy to test server with ngrok
+4. Call with real phone to test
+5. Check Dashboard logs for issues
+6. Iterate based on real-world behavior
+
+**Don't rely solely on:**
+- Synthetic testing
+- Webhook simulators
+- API testing tools
+
+Real phone calls reveal issues with:
+- Audio quality
+- Timing
+- User experience
+- Network latency
+
+### 3. Use Sections as Functions
+
+**Organize SWML into reusable sections:**
+
+```yaml
+sections:
+  main:
+    - answer: {}
+    - execute: { dest: play_greeting }
+    - execute: { dest: main_menu }
+
+  play_greeting:
+    - play: { url: "https://example.com/greeting.mp3" }
+    - return: {}
+
+  main_menu:
+    - prompt: { say: "Main menu options" }
+    # ... menu logic
+    - return: {}
+
+  play_hold_music:
+    - play: { url: "https://example.com/hold.mp3" }
+    - return: {}
+```
+
+**Benefits:**
+- Reusable components
+- Easier to test
+- Simpler to modify
+- Better organization
+
+### 4. Monitor and Log
+
+**Use Dashboard Logs:**
+- Navigate to: Relay > Activity
+- Filter by date, status, resource
+- Export for external analysis
+
+**Key Metrics to Track:**
+- Call success rate
+- Average call duration
+- DTMF input patterns
+- Transfer success rate
+- Hang-up points in flow
+
+### 5. Provide Clear Feedback
+
+**Always tell callers what's happening:**
+
+```yaml
+# Good - tells user what to expect
+- say: { text: "Please hold while I transfer you to sales. This may take up to 30 seconds." }
+- connect:
+    to: "+15551234567"
+    timeout: 30
+
+# Bad - silent transfer
+- connect: { to: "+15551234567" }
+```
+
 ## Next Steps
 
 - [Call Control](call-control.md) - Transfer, record, conference

@@ -617,8 +617,612 @@ ngrok http 5000
 # https://abc123.ngrok.io/incoming-sms
 ```
 
+## Campaign Registry Requirements
+
+**CRITICAL:** All A2P (Application-to-Person) messaging to US numbers requires registration.
+
+### Required For
+
+- Long codes (10-digit local numbers)
+- Toll-free numbers
+- Short codes
+- Any outbound SMS/MMS
+
+### Registration Process
+
+#### 1. Create Brand
+
+Navigate to: **Messaging Campaigns** > **Brands** > **New**
+
+Required information:
+- Legal business name
+- EIN/Tax ID
+- Business type
+- Contact information
+- Business address
+
+```python
+# Creating a brand via API
+response = requests.post(
+    f"{space_url}/api/messaging/brands",
+    auth=HTTPBasicAuth(project_id, api_token),
+    json={
+        "legal_name": "Acme Corporation",
+        "ein": "12-3456789",
+        "business_type": "corporation",
+        "email": "compliance@acme.com",
+        "phone": "+15551234567",
+        "address": {
+            "street": "123 Main St",
+            "city": "Anytown",
+            "state": "CA",
+            "postal_code": "90210",
+            "country": "US"
+        }
+    }
+)
+
+brand_id = response.json()['id']
+```
+
+#### 2. Create Campaign
+
+Navigate to: **Messaging Campaigns** > **Campaigns** > **New**
+
+Campaign details:
+- Brand selection
+- Use case description (e.g., "Appointment reminders", "Marketing")
+- Message samples (provide 2-3 example messages)
+- Volume estimates (messages per day/month)
+- Opt-in/opt-out processes
+
+```python
+# Creating a campaign via API
+response = requests.post(
+    f"{space_url}/api/messaging/campaigns",
+    auth=HTTPBasicAuth(project_id, api_token),
+    json={
+        "brand_id": brand_id,
+        "use_case": "appointment_reminders",
+        "description": "Automated appointment confirmation and reminder messages",
+        "sample_messages": [
+            "Hi {name}, your appointment is confirmed for {date} at {time}. Reply STOP to opt out.",
+            "Reminder: You have an appointment tomorrow at {time}. Reply C to confirm or R to reschedule."
+        ],
+        "message_volume": "1000",
+        "opt_in_workflow": "Customers opt-in during account creation",
+        "opt_out_keywords": ["STOP", "UNSUBSCRIBE", "CANCEL"]
+    }
+)
+
+campaign_id = response.json()['id']
+```
+
+#### 3. Associate Phone Number
+
+Navigate to: **Phone Numbers** > Select Number > **Edit**
+
+Link number to campaign and save:
+
+```python
+# Associate number with campaign
+response = requests.put(
+    f"{space_url}/api/relay/rest/phone_numbers/{number_sid}",
+    auth=HTTPBasicAuth(project_id, api_token),
+    json={
+        "messaging_campaign_id": campaign_id
+    }
+)
+```
+
+**Processing Time:** Campaign approval can take 1-2 weeks
+
+## Message Templates and Best Practices
+
+### Template Patterns
+
+```python
+# Define reusable message templates
+templates = {
+    "appointment_confirm": lambda name, datetime:
+        f"Hi {name}, your appointment is confirmed for {datetime}. Reply STOP to opt out.",
+
+    "appointment_reminder": lambda name, datetime:
+        f"Reminder: You have an appointment tomorrow at {datetime}. Reply C to confirm or R to reschedule.",
+
+    "opt_out": lambda:
+        "You have been unsubscribed. Reply START to opt back in.",
+
+    "opt_in_confirm": lambda:
+        "Thank you for subscribing! You'll receive appointment reminders. Reply STOP to unsubscribe.",
+}
+
+# Use templates
+message_body = templates["appointment_confirm"]("John Doe", "Jan 15, 2025 at 2:00 PM")
+```
+
+### Best Practices
+
+1. **Always Include Opt-Out Language**
+   ```python
+   message = f"{content} Reply STOP to opt out."
+   ```
+
+2. **Keep Messages Concise**
+   - SMS limit: 160 characters (standard)
+   - Unicode/emoji: 70 characters per segment
+   - Long messages auto-split into multiple segments
+
+3. **Personalize When Possible**
+   ```python
+   message = f"Hi {customer_name}, {content}"
+   ```
+
+4. **Include Sender Identification**
+   ```python
+   message = f"From Acme Healthcare: {content}"
+   ```
+
+5. **Respect Quiet Hours**
+   ```python
+   from datetime import datetime
+
+   def should_send_message(timezone='America/New_York'):
+       hour = datetime.now(tz=timezone).hour
+       # Don't send between 9 PM and 8 AM
+       if hour >= 21 or hour < 8:
+           return False
+       return True
+   ```
+
+## Opt-In/Opt-Out Handling
+
+### Inbound Message Handler with Opt-Out
+
+```python
+# Opt-out database (use actual database in production)
+opted_out_numbers = set()
+
+@app.route('/incoming-sms', methods=['POST'])
+def handle_sms():
+    data = request.json
+    from_number = data.get('from')
+    body = data.get('body', '').strip().upper()
+
+    # Handle STOP/UNSUBSCRIBE
+    if body in ['STOP', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT']:
+        opted_out_numbers.add(from_number)
+
+        # Send confirmation
+        send_sms(
+            to=from_number,
+            from_number=data.get('to'),
+            body="You have been unsubscribed. Reply START to opt back in."
+        )
+
+        # Log opt-out
+        log_opt_out(from_number)
+
+        return jsonify({"status": "opted_out"}), 200
+
+    # Handle START/SUBSCRIBE
+    elif body in ['START', 'SUBSCRIBE', 'YES']:
+        if from_number in opted_out_numbers:
+            opted_out_numbers.remove(from_number)
+
+        send_sms(
+            to=from_number,
+            from_number=data.get('to'),
+            body="You have been re-subscribed. Reply STOP to unsubscribe."
+        )
+
+        log_opt_in(from_number)
+
+        return jsonify({"status": "opted_in"}), 200
+
+    # Handle HELP
+    elif body == 'HELP':
+        send_sms(
+            to=from_number,
+            from_number=data.get('to'),
+            body="Commands: HELP, STOP. For support, call (555) 123-4567."
+        )
+        return jsonify({"status": "help_sent"}), 200
+
+    # Check opt-out status before processing
+    if from_number in opted_out_numbers:
+        return jsonify({"status": "user_opted_out"}), 200
+
+    # Process message normally
+    process_message(from_number, body)
+
+    return jsonify({"status": "ok"}), 200
+
+def send_sms(to, from_number, body):
+    """Helper to send SMS"""
+    requests.post(
+        f"{space_url}/api/messaging/messages",
+        auth=HTTPBasicAuth(project_id, api_token),
+        json={
+            "from": from_number,
+            "to": to,
+            "body": body
+        }
+    )
+```
+
+### Required Opt-Out Keywords
+
+Per CTIA guidelines, support these keywords:
+- STOP
+- STOPALL
+- UNSUBSCRIBE
+- CANCEL
+- END
+- QUIT
+
+### Required Opt-In Keywords
+
+- START
+- UNSTOP
+- SUBSCRIBE
+- YES
+
+## Delivery Status Tracking Patterns
+
+### Track Message Status
+
+```python
+import time
+from enum import Enum
+
+class MessageStatus(Enum):
+    QUEUED = "queued"
+    SENT = "sent"
+    DELIVERED = "delivered"
+    FAILED = "failed"
+    UNDELIVERED = "undelivered"
+
+# Track message statuses
+message_tracking = {}
+
+def send_tracked_message(to, from_number, body):
+    """Send message with delivery tracking"""
+
+    response = requests.post(
+        f"{space_url}/api/messaging/messages",
+        auth=HTTPBasicAuth(project_id, api_token),
+        json={
+            "from": from_number,
+            "to": to,
+            "body": body,
+            "status_callback": "https://example.com/message-status"
+        }
+    )
+
+    if response.status_code == 201:
+        message_data = response.json()
+        message_id = message_data['id']
+
+        # Track message
+        message_tracking[message_id] = {
+            'to': to,
+            'status': MessageStatus.QUEUED,
+            'sent_at': time.time(),
+            'delivered_at': None,
+            'attempts': 1
+        }
+
+        return message_id
+    else:
+        return None
+
+@app.route('/message-status', methods=['POST'])
+def handle_message_status():
+    """Handle delivery status callbacks"""
+    data = request.json
+
+    message_id = data.get('message_id')
+    status = data.get('status')
+
+    if message_id in message_tracking:
+        message_tracking[message_id]['status'] = MessageStatus(status)
+
+        if status == 'delivered':
+            message_tracking[message_id]['delivered_at'] = time.time()
+
+            # Calculate delivery time
+            sent_at = message_tracking[message_id]['sent_at']
+            delivery_time = time.time() - sent_at
+
+            print(f"Message {message_id} delivered in {delivery_time:.2f}s")
+
+        elif status == 'failed':
+            # Handle failed delivery
+            handle_failed_message(message_id, message_tracking[message_id])
+
+    return jsonify({"status": "ok"}), 200
+
+def handle_failed_message(message_id, message_data):
+    """Retry or log failed message"""
+    if message_data['attempts'] < 3:
+        # Retry
+        message_data['attempts'] += 1
+        time.sleep(60)  # Wait before retry
+
+        send_tracked_message(
+            to=message_data['to'],
+            from_number='+15551234567',
+            body="Retry attempt"
+        )
+    else:
+        # Log permanent failure
+        print(f"Message {message_id} failed after 3 attempts")
+        # Alert admin, log to database, etc.
+```
+
+## MMS Support Patterns
+
+### Sending Images
+
+```python
+def send_mms_image(to, from_number, body, image_url):
+    """Send MMS with image"""
+    response = requests.post(
+        f"{space_url}/api/messaging/messages",
+        auth=HTTPBasicAuth(project_id, api_token),
+        json={
+            "from": from_number,
+            "to": to,
+            "body": body,
+            "media_urls": [image_url]
+        }
+    )
+    return response.json()
+
+# Usage
+send_mms_image(
+    to="+15559876543",
+    from_number="+15551234567",
+    body="Your receipt is attached",
+    image_url="https://example.com/receipts/12345.pdf"
+)
+```
+
+### Supported Media Formats
+
+**Images:**
+- JPG, PNG, GIF
+- Max size: 5MB per message
+
+**Documents:**
+- PDF
+
+**Audio:**
+- MP3, WAV
+
+**Video:**
+- MP4, 3GP
+
+### Multiple Media Files
+
+```python
+send_multiple_media(
+    to="+15559876543",
+    from_number="+15551234567",
+    body="Here are your documents",
+    media_urls=[
+        "https://example.com/doc1.pdf",
+        "https://example.com/image.jpg",
+        "https://example.com/video.mp4"
+    ]
+)
+```
+
+### Receiving MMS
+
+```python
+@app.route('/incoming-sms', methods=['POST'])
+def handle_incoming_mms():
+    data = request.json
+
+    from_number = data.get('from')
+    body = data.get('body', '')
+    media = data.get('media', [])
+
+    if media:
+        print(f"Received {len(media)} media files from {from_number}")
+
+        for media_url in media:
+            # Download and process media
+            process_media(media_url, from_number)
+
+    return jsonify({"status": "ok"}), 200
+
+def process_media(media_url, from_number):
+    """Download and process received media"""
+    response = requests.get(media_url)
+
+    if response.status_code == 200:
+        # Save or process media
+        content_type = response.headers.get('Content-Type')
+
+        if content_type.startswith('image/'):
+            # Process image
+            save_image(response.content, from_number)
+        elif content_type == 'application/pdf':
+            # Process PDF
+            save_pdf(response.content, from_number)
+```
+
+## Relay SDK Messaging Patterns
+
+### Modern Messaging Client (Relay v4)
+
+```python
+#!/usr/bin/env -S uv run
+# /// script
+# dependencies = ["signalwire"]
+# ///
+
+import os
+from signalwire.realtime import Client
+
+async def main():
+    client = Client(
+        project=os.getenv('SIGNALWIRE_PROJECT_ID'),
+        token=os.getenv('SIGNALWIRE_API_TOKEN')
+    )
+
+    # Event-driven message handling
+    @client.messaging.on('message.received')
+    async def on_message(message):
+        print(f"Received: {message.body} from {message.from_number}")
+
+        # Auto-process common commands
+        if message.body.upper() == 'STOP':
+            await handle_opt_out(message.from_number)
+        elif message.body.upper() == 'START':
+            await handle_opt_in(message.from_number)
+        else:
+            # Route to appropriate handler
+            await route_message(message)
+
+    # Send message with delivery tracking
+    result = await client.messaging.send(
+        from_number='+15551234567',
+        to_number='+15559876543',
+        body='Hello from Realtime SDK!',
+        status_callback='https://example.com/status'
+    )
+
+    print(f"Message ID: {result.message_id}")
+
+    await client.connect()
+
+if __name__ == '__main__':
+    import asyncio
+    asyncio.run(main())
+```
+
+### Context-Based Routing
+
+```python
+# Route messages to different contexts
+client = Client(
+    project=os.getenv('SIGNALWIRE_PROJECT_ID'),
+    token=os.getenv('SIGNALWIRE_API_TOKEN'),
+    contexts=['support', 'sales', 'billing']
+)
+
+# Send to specific context
+await client.messaging.send(
+    from_number='+15551234567',
+    to_number='+15559876543',
+    body='Your support ticket is ready',
+    context='support'
+)
+```
+
+## Production Messaging Tips
+
+### Rate Limiting
+
+```python
+import time
+from collections import deque
+
+class RateLimiter:
+    def __init__(self, max_per_second=10):
+        self.max_per_second = max_per_second
+        self.timestamps = deque()
+
+    def wait_if_needed(self):
+        now = time.time()
+
+        # Remove timestamps older than 1 second
+        while self.timestamps and self.timestamps[0] < now - 1:
+            self.timestamps.popleft()
+
+        # If at limit, wait
+        if len(self.timestamps) >= self.max_per_second:
+            sleep_time = 1 - (now - self.timestamps[0])
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+
+        self.timestamps.append(time.time())
+
+# Usage
+rate_limiter = RateLimiter(max_per_second=10)
+
+for recipient in recipients:
+    rate_limiter.wait_if_needed()
+    send_sms(recipient, message)
+```
+
+### Personalization
+
+```python
+def personalize_message(template, customer_data):
+    """Replace placeholders with customer data"""
+    return template.format(**customer_data)
+
+# Template
+template = "Hi {name}, your {appointment_type} appointment is on {date} at {time}."
+
+# Customer data
+customer = {
+    "name": "John Doe",
+    "appointment_type": "dental cleaning",
+    "date": "January 20",
+    "time": "2:00 PM"
+}
+
+# Personalized message
+message = personalize_message(template, customer)
+# "Hi John Doe, your dental cleaning appointment is on January 20 at 2:00 PM."
+```
+
+### Error Recovery
+
+```python
+def send_with_retry(to, from_number, body, max_retries=3):
+    """Send message with exponential backoff retry"""
+    for attempt in range(max_retries):
+        try:
+            response = requests.post(
+                f"{space_url}/api/messaging/messages",
+                auth=HTTPBasicAuth(project_id, api_token),
+                json={
+                    "from": from_number,
+                    "to": to,
+                    "body": body
+                },
+                timeout=10
+            )
+
+            if response.status_code == 201:
+                return response.json()
+
+            # Don't retry client errors
+            if 400 <= response.status_code < 500:
+                raise Exception(f"Client error: {response.text}")
+
+            # Retry server errors with backoff
+            if attempt < max_retries - 1:
+                sleep_time = 2 ** attempt  # 1s, 2s, 4s
+                time.sleep(sleep_time)
+
+        except requests.exceptions.Timeout:
+            if attempt == max_retries - 1:
+                raise
+            time.sleep(2 ** attempt)
+
+    raise Exception("Max retries exceeded")
+```
+
 ## Next Steps
 
 - [Voice AI](voice-ai.md) - Add AI to messaging conversations
 - [Webhooks & Events](webhooks-events.md) - Advanced event handling
-- [Number Management](number-management.md) - Configure messaging numbers
+- [Number Management](number-management.md) - Configure messaging numbers and campaigns
