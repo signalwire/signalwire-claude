@@ -35,7 +35,8 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Copy the skill files
 echo "Installing SignalWire skill to ${INSTALL_DIR}..."
-cp -r "${SCRIPT_DIR}" "${INSTALL_DIR}"
+mkdir -p "${INSTALL_DIR}"
+cp -r "${SCRIPT_DIR}"/* "${INSTALL_DIR}/"
 
 # Verify installation
 if [ -f "${INSTALL_DIR}/SKILL.md" ]; then
