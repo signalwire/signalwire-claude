@@ -13,20 +13,32 @@ A comprehensive Claude Code skill that transforms Claude into an expert SignalWi
 
 ## What's Included
 
-### Core Workflows (11,000+ lines of documentation)
+### Core Workflows (14,800+ lines of documentation)
 
 Each workflow combines technical API documentation with practical implementation guidance:
 
+**Telephony Core:**
 1. **Authentication & Setup** - Credentials, MFA patterns, metadata for security, token management
 2. **Outbound Calling** - REST API, CRM integration, appointment reminders, healthcare workflows
 3. **Inbound Call Handling** - Complete SWML reference, loop protection, variable management, IVR patterns
 4. **Call Control** - Context-aware transfers, screen pop, recording best practices, conference management
 5. **Messaging** - SMS/MMS, Campaign Registry, templates, opt-in/opt-out, Relay SDK v4
-6. **Voice AI** - AI Agent prompting strategies, SWAIG patterns, latency optimization, anti-patterns
-7. **Video** - WebRTC integration, room management, Browser SDK, click-to-call widgets
-8. **Fabric & Relay** - Subscribers, resource architecture, context routing, high availability
-9. **Webhooks & Events** - Post-prompt analytics, webhook testing, transcription integration
-10. **Number Management** - Campaign Registry compliance, number association, bulk management
+6. **Video** - WebRTC integration, room management, Browser SDK, click-to-call widgets
+7. **Fabric & Relay** - Subscribers, resource architecture, context routing, high availability
+8. **Webhooks & Events** - Post-prompt analytics, webhook testing, transcription integration
+9. **Number Management** - Campaign Registry compliance, number association, bulk management
+
+**AI Voice Agents (Voice AI):**
+- **Voice AI Overview** - Navigation hub and decision guide for AI agents
+- **AI Agent SDK Basics** - Python SDK fundamentals, installation, tool decorator
+- **AI Agent Prompting** - Best practices, RISE-M framework, anti-patterns
+- **AI Agent Functions** - SWAIG patterns, progressive knowledge building, DataMap
+- **AI Agent Deployment** - Traditional server, Docker, serverless (Lambda/GCF/Azure)
+- **AI Agent Patterns** - Common reusable flows (data lookup, confirmation, MFA)
+- **AI Agent Error Handling** - Robust error handling patterns
+- **AI Agent Security** - Authentication, input validation, secrets management
+- **AI Agent Testing** - swaig-test CLI, pytest patterns, integration testing
+- **AI Agent Debug Webhooks** - Real-time monitoring and debugging
 
 ### What Makes This Skill Different
 
@@ -124,11 +136,12 @@ Claude: [Generates code with uv shebang, Campaign Registry compliance,
 
 ```
 You: "Create a restaurant ordering AI agent with SWAIG"
-Claude: [Generates complete AI Agents SDK code with:
-         - Natural prompting (not over-prompting)
+Claude: [Uses Voice AI workflow hub to generate complete AI Agents SDK code with:
+         - Natural prompting following RISE-M framework
          - Metadata for sensitive data (payment info)
-         - Progressive knowledge building via SWAIG
+         - Progressive knowledge building via SWAIG functions
          - Latency optimization with fillers
+         - Error handling and security patterns
          - Post-prompt analytics]
 ```
 
@@ -152,19 +165,32 @@ Claude: [Generates secure token creation, frontend client with never-expose-API-
 
 ```
 signalwire/
-├── SKILL.md                           # Main entry point with key principles
+├── SKILL.md                           # Main entry point (optimized, 624 words)
 ├── README.md                          # This file
-└── workflows/
-    ├── authentication-setup.md         # 593 lines: Auth, MFA, security patterns
-    ├── outbound-calling.md            # 819 lines: Dialer, CRM, reminders
-    ├── inbound-call-handling.md       # 1,296 lines: SWML, loops, IVR patterns
-    ├── call-control.md                # 1,143 lines: Context transfers, recording
-    ├── messaging.md                   # 1,228 lines: Campaign Registry, templates
-    ├── voice-ai.md                    # 1,446 lines: Prompting, SWAIG, anti-patterns
-    ├── video.md                       # 1,232 lines: WebRTC, rooms, widgets
-    ├── fabric-relay.md                # 1,111 lines: Subscribers, resources
-    ├── webhooks-events.md             # 1,024 lines: Post-prompt, analytics
-    └── number-management.md           # 960 lines: Compliance, provisioning
+├── workflows/                         # 19 workflow files, 14,844 lines total
+│   ├── authentication-setup.md        # 593 lines: Auth, MFA, security
+│   ├── outbound-calling.md            # 819 lines: Dialer, CRM, reminders
+│   ├── inbound-call-handling.md       # 1,296 lines: SWML, loops, IVR
+│   ├── call-control.md                # 1,143 lines: Transfers, recording
+│   ├── messaging.md                   # 1,228 lines: Campaign Registry
+│   ├── video.md                       # 1,232 lines: WebRTC, rooms
+│   ├── fabric-relay.md                # 1,111 lines: Subscribers, resources
+│   ├── webhooks-events.md             # 1,114 lines: Analytics, testing
+│   ├── number-management.md           # 960 lines: Compliance
+│   ├── voice-ai.md                    # 444 lines: AI navigation hub
+│   ├── ai-agent-sdk-basics.md         # 529 lines: SDK fundamentals
+│   ├── ai-agent-prompting.md          # 683 lines: Best practices
+│   ├── ai-agent-functions.md          # 827 lines: SWAIG patterns
+│   ├── ai-agent-deployment.md         # 835 lines: Server/serverless
+│   ├── ai-agent-patterns.md           # 467 lines: Common flows
+│   ├── ai-agent-error-handling.md     # 391 lines: Error patterns
+│   ├── ai-agent-security.md           # 410 lines: Auth, secrets
+│   ├── ai-agent-testing.md            # 383 lines: Testing patterns
+│   └── ai-agent-debug-webhooks.md     # 379 lines: Monitoring
+└── reference/                         # SDK API docs (loaded only when needed)
+    ├── sdk/                           # 12 files: AgentBase, SWAIG, etc.
+    ├── deployment/                    # 3 files: Serverless, env vars
+    └── examples/                      # 6 complete agent examples
 ```
 
 Each workflow file includes:
@@ -226,7 +252,7 @@ Instead, it focuses on modern approaches:
 
 ## Updates
 
-The skill is based on SignalWire APIs and training content as of November 2025. For the latest SignalWire features, check:
+The skill is based on SignalWire APIs and training content as of December 2025. For the latest SignalWire features, check:
 
 - https://developer.signalwire.com/
 - https://github.com/signalwire
@@ -260,6 +286,6 @@ For skill issues:
 
 ## Version
 
-**Version**: 1.0.0-beta2
-**Last Updated**: November 2025
-**Content**: 11,000+ lines combining technical documentation with practical production knowledge from 89 SignalWire training videos
+**Version**: 1.0.0-beta3
+**Last Updated**: December 2025
+**Content**: 14,800+ lines combining technical documentation with practical production knowledge from SignalWire training videos, production applications, and support tickets

@@ -1,68 +1,28 @@
 ---
-name: signalwire-expert
-description: Expert knowledge for building SignalWire applications including all SDKs, REST APIs, SWML, Relay/Fabric, AI Agents, and modern JSON/YAML-based communication systems
+name: signalwire
+description: Use when building telephony, messaging, or video applications; implementing voice AI agents; working with SWML call flows; debugging webhook callbacks or call state issues; setting up real-time WebSocket communication; encountering authentication 401/403 errors; or troubleshooting SWAIG function errors - provides REST API patterns, SDK examples, and production-tested workflows for modern SignalWire communication systems
 ---
 
-# SignalWire Expert Skill
+# SignalWire
 
-Use this skill when working on SignalWire communication applications, APIs, or integrations.
+## ⚠️ AVOID Deprecated APIs
 
-## When to Use This Skill
+SignalWire maintains compatibility APIs (LAML/CXML) that should NOT be used for new development:
+- **LAML** endpoints (`/laml/`) → Use REST API (`/api/calling/`, `/api/video/`)
+- **CXML** (XML markup) → Use SWML (YAML/JSON)
 
-Use this skill whenever you are:
-- Building telephony, messaging, or video applications with SignalWire
-- Working with SignalWire REST APIs, SWML, or SDKs
-- Implementing AI agents or voice AI features
-- Setting up Call Fabric, Relay applications, or Subscribers
-- Debugging SignalWire webhooks or API responses
-- Answering questions about SignalWire capabilities or best practices
+This skill documents ONLY modern APIs: REST with JSON, SWML, Relay SDK, AI Agents SDK.
 
-## Important: Modern APIs Only
+## SignalWire Technologies Quick Reference
 
-**AVOID** these deprecated/compatibility APIs:
-- LAML (compatibility API - use modern REST or SWML instead)
-- CXML (XML-based markup - use SWML in JSON/YAML instead)
-- Any API endpoints containing `/laml/`
-- XML-based request/response formats
-
-**PREFER** these modern approaches:
-- SignalWire REST API (`/api/calling/`, `/api/video/`, etc.) with JSON
-- SWML (SignalWire Markup Language) in YAML or JSON
-- Relay SDK for real-time WebSocket communication
-- AI Agents SDK for voice AI applications
-
-## SignalWire Architecture Overview
-
-SignalWire provides several complementary technologies:
-
-### 1. REST APIs
-HTTP-based APIs for managing calls, messages, video rooms, and other resources. Use when you need to trigger actions or query state from your backend.
-
-### 2. SWML (SignalWire Markup Language)
-Declarative YAML/JSON documents that define call flows, IVR systems, and AI interactions. SWML can be:
-- Served via HTTP endpoint (SignalWire fetches your SWML document)
-- Sent inline via Relay SDK
-- Deployed serverless via the SignalWire Dashboard
-
-### 3. SDKs
-Client and server libraries available in multiple languages:
-- **JavaScript/TypeScript**: Browser SDK, Realtime SDK, Node.js SDK
-- **Python**: Realtime SDK, AI Agents SDK
-- Both SDKs and REST APIs can be used together in the same application
-
-### 4. Call Fabric & Relay
-Real-time communication framework using WebSockets:
-- **Subscribers**: Internal account-holders within your SignalWire application
-- **Fabric Addresses**: Routing identifiers (phone numbers, SIP addresses, etc.)
-- **Relay Applications**: Your server or client apps connected via WebSocket
-- **Resources**: AI Agents, SWML Scripts, Video Rooms, SIP Gateways
-
-### 5. AI & SWAIG
-Voice AI capabilities:
-- **AI Agents**: Conversational AI for phone calls
-- **SWAIG** (SignalWire AI Gateway): Functions your AI agent can call via HTTP
-- **POM** (Prompt Object Model): Structured prompt building
-- **Datasphere**: RAG (Retrieval-Augmented Generation) stack
+| Technology | Use When | Format/Protocol |
+|------------|----------|-----------------|
+| **REST APIs** | Trigger actions from backend, query state | HTTP + JSON |
+| **SWML** | Define call flows, IVR, AI interactions | YAML/JSON documents |
+| **Relay SDK** | Real-time WebSocket control | JavaScript/Python |
+| **AI Agents SDK** | Build voice AI agents | Python decorators |
+| **Call Fabric** | Route between subscribers/resources | WebSocket framework |
+| **SWAIG** | AI agent calls server-side functions | HTTP POST to your endpoint |
 
 ## Practical Knowledge from Production
 
@@ -76,148 +36,78 @@ This skill combines technical API documentation with practical implementation gu
 
 These insights come from analysis of 89 SignalWire training videos, LiveWire sessions, and production deployments.
 
-## Workflow Documentation
+## Workflows by Use Case
 
-This skill is organized by developer workflow. Choose the workflow that matches your task:
+**Getting Started:**
+- [Authentication & Setup](workflows/authentication-setup.md) | [Number Management](workflows/number-management.md)
 
-### Core Workflows
+**Voice Calls:**
+- [Outbound Calling](workflows/outbound-calling.md) | [Inbound Handling](workflows/inbound-call-handling.md) | [Call Control](workflows/call-control.md)
 
-- **[Authentication & Setup](workflows/authentication-setup.md)** - Getting started, credentials, project setup
-- **[Outbound Calling](workflows/outbound-calling.md)** - Initiating calls via REST API
-- **[Inbound Call Handling](workflows/inbound-call-handling.md)** - Receiving calls and responding with SWML
-- **[Call Control](workflows/call-control.md)** - Transfer, recording, conferencing during active calls
-- **[Messaging](workflows/messaging.md)** - Sending/receiving SMS/MMS
-- **[Voice AI](workflows/voice-ai.md)** - Building AI agents with SWAIG and POM
-- **[Video](workflows/video.md)** - Creating and managing video rooms
-- **[Fabric & Relay](workflows/fabric-relay.md)** - Real-time WebSocket communication, Subscribers
-- **[Webhooks & Events](workflows/webhooks-events.md)** - Handling status callbacks and events
-- **[Number Management](workflows/number-management.md)** - Provisioning and configuring phone numbers
+**AI Voice Agents:** Start with [Voice AI](workflows/voice-ai.md) overview
+- **SDK:** [Basics](workflows/ai-agent-sdk-basics.md) | [Prompting](workflows/ai-agent-prompting.md) | [Functions](workflows/ai-agent-functions.md) | [Deployment](workflows/ai-agent-deployment.md)
+- **Best Practices:** [Patterns](workflows/ai-agent-patterns.md) | [Error Handling](workflows/ai-agent-error-handling.md) | [Security](workflows/ai-agent-security.md) | [Testing](workflows/ai-agent-testing.md) | [Debug Webhooks](workflows/ai-agent-debug-webhooks.md)
 
-## Common Patterns
+**Other:**
+- [Messaging](workflows/messaging.md) | [Video](workflows/video.md) | [Fabric & Relay](workflows/fabric-relay.md) | [Webhooks & Events](workflows/webhooks-events.md)
 
-### Authentication
+## Quick Start Patterns
 
-Most SignalWire APIs use **HTTP Basic Authentication**:
-- Username: Your Project ID
-- Password: Your API Token
-- Format: `Authorization: Basic <base64(project_id:api_token)>`
+**Authentication:** HTTP Basic Auth with Project ID (username) + API Token (password)
 
-### Spaces and URLs
+**Space URL:** All API requests go to `https://{space-name}.signalwire.com`
 
-Your SignalWire Space URL format: `https://{space-name}.signalwire.com`
+**SWML Variables:** `%{call.from}`, `%{call.to}`, `%{params.custom_field}`, `%{args.user_input}`
 
-All API requests go to your Space URL, not a generic API endpoint.
+**Webhooks:** HTTP POST with JSON (`call_id`, `call_state`, `from`, `to`, `direction`)
 
-### Variable Substitution in SWML
-
-Use `%{variable_name}` format to access dynamic values:
-- `%{call.from}` - Caller's phone number
-- `%{call.to}` - Destination number
-- `%{params.custom_field}` - Custom parameter from API call
-- `%{args.user_input}` - User input from prompt
-
-### Webhook Formats
-
-SignalWire sends webhooks as HTTP POST with JSON body. Common fields:
-- `call_id` - Unique call identifier
-- `call_state` - Current state (queued, created, ringing, answered, ended)
-- `from` - Calling party
-- `to` - Called party
-- `direction` - inbound or outbound
-
-### Error Handling
-
-REST API errors return:
-- HTTP status codes (400, 401, 403, 404, 500, etc.)
-- JSON response with `error` and `message` fields
-
-SWML errors are typically logged to your SignalWire Dashboard logs.
+**Errors:** REST returns HTTP status + JSON with `error`/`message`. SWML logs to Dashboard.
 
 ## Key Concepts
 
-### Call States
-- **queued**: Call request received, not yet initiated
-- **created**: Call has been created
-- **ringing**: Destination is ringing
-- **answered**: Call was answered
-- **ended**: Call has terminated
+**Call States:** queued → created → ringing → answered → ended
 
-### SWML Sections
-Every SWML document has sections (like functions). The `main` section is required and is where execution starts. Navigate between sections with:
-- `execute`: Call a section and return (like a function call)
-- `transfer`: Permanently move to a section (like a goto)
+**SWML Sections:** `main` (required entry point) | `execute` (call + return) | `transfer` (goto)
 
-### Resource Types
-In Call Fabric, everything is a "resource":
-- Subscribers (internal users)
-- AI Agents
-- SWML Scripts
-- Video Rooms
-- SIP Gateways
-- Relay Applications
+**Resources:** Subscribers, AI Agents, SWML Scripts, Video Rooms, SIP Gateways, Relay Apps (created via Dashboard or REST API)
 
-Resources can be created via Dashboard or REST API.
+## Critical Pattern: Loop Protection
 
-## Key Principles for Building with SignalWire
+SWML gather/prompt nodes can infinite loop. Always add counters:
 
-### Treat AI Like a Person, Not a Program
-
-> "How would you instruct your mother to do the task you want done?" - Brian West
-
-- Use clear, natural language instructions
-- Avoid programming mentality - guide, don't command
-- Less is more - avoid over-prompting
-- Use positive sequential instructions, not rigid "never" statements
-
-### Use Metadata for Security
-
-**Critical Pattern:** Keep sensitive data OUT of the LLM context:
-- Customer information → metadata
-- Payment details → metadata + SWML Pay
-- Authentication tokens → metadata
-- Account balances → metadata
-
-SWAIG functions can access metadata, but AI cannot see it directly.
-
-### Test Continuously
-
-AI behavior is probabilistic:
-- Test after every prompt change
-- Use real phone calls, not just webhooks
-- Test with different voices and accents
-- Monitor post-prompt data religiously
-- Iterate constantly based on real usage
-
-### Preserve Context Through Transfers
-
-72% of customers expect agents to know who they are:
-- Use SWAIG functions to collect information
-- Pass context through metadata and variables
-- Implement screen pop for human agents
-- Never make customers repeat themselves
-
-### Implement Loop Protection
-
-Always protect gather/prompt nodes from infinite loops:
 ```yaml
 - set:
     loop_counter: "{{loop_counter | default(0) | int + 1}}"
 - condition:
     if: "{{loop_counter}} > 3"
-    then: hangup
-    else: continue_flow
+    then: hangup  # Prevent caller stuck in loop
 ```
 
-## Next Steps
+For complete patterns, see [Inbound Call Handling](workflows/inbound-call-handling.md).
 
-1. Read the [Authentication & Setup](workflows/authentication-setup.md) workflow first
-2. Choose the workflow that matches your current task
-3. Reference the detailed API documentation in each workflow file
-4. Check example apps in the SignalWire GitHub organization for real-world patterns
-5. Review the Best Practices sections in each workflow for production guidance
+## AI Agents SDK Reference
+
+**IMPORTANT:** For AI agent tasks, start with [Voice AI](workflows/voice-ai.md) - it covers 90% of use cases with examples and best practices.
+
+**Only load reference docs for:** Complete API parameters, advanced features (Contexts/Steps, Prefabs), platform-specific deployment (Lambda/GCF/Azure), or debugging production issues.
+
+See [Voice AI workflow](workflows/voice-ai.md) "When to Pull Additional Documentation" section for detailed guidance on when to use each reference document.
+
+## Finding the Right Workflow
+
+**New to SignalWire?** → [Authentication & Setup](workflows/authentication-setup.md)
+
+**Building AI voice agent?** → [Voice AI](workflows/voice-ai.md)
+
+**Making/receiving calls?** → [Outbound Calling](workflows/outbound-calling.md) or [Inbound Handling](workflows/inbound-call-handling.md)
+
+**Debugging webhooks/callbacks?** → [Webhooks & Events](workflows/webhooks-events.md)
+
+**Need real-time control?** → [Fabric & Relay](workflows/fabric-relay.md)
 
 ## Additional Resources
 
 - Main Documentation: https://developer.signalwire.com/
 - GitHub Examples: https://github.com/signalwire
+- AI Agents SDK: https://github.com/signalwire/signalwire-agents
 - Dashboard: `https://{your-space-name}.signalwire.com`

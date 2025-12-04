@@ -1015,6 +1015,95 @@ def generate_call_metrics():
     }
 ```
 
+## AI Agent Debugging
+
+### Debug Webhooks
+
+Monitor AI agent behavior in real-time by sending events to an external URL:
+
+```python
+agent.set_params({
+    "debug_webhook_url": "https://webhook.site/your-unique-id",
+    "debug_webhook_level": 2  # 1=basic, 2=verbose
+})
+```
+
+**Debug Levels:**
+- **0**: Off (default)
+- **1**: Function calls, errors, state changes
+- **2**: Full transcripts and payloads
+
+Use webhook.site or similar services to inspect:
+- Function calls and arguments
+- AI responses
+- State changes
+- Errors and warnings
+
+For complete debugging guide, see: [AI Agent Debug Webhooks](ai-agent-debug-webhooks.md)
+
+### Testing AI Functions with webhook.site
+
+**Development Pattern:**
+
+```python
+# Use webhook.site for testing SWAIG functions
+
+# 1. Go to webhook.site and get temporary URL
+# 2. Configure in SWML:
+
+functions:
+  - name: create_ticket
+    purpose: "Create support ticket"
+    web_hook: "https://webhook.site/unique-id-here"
+    parameters:
+      - name: title
+        type: string
+      - name: description
+        type: string
+
+# 3. Test AI agent
+# 4. View payload in webhook.site
+# 5. Iterate on response format
+```
+
+**Webhook.site Benefits:**
+- Instant temporary URLs
+- View raw payloads
+- No server setup needed
+- Copy/paste request data
+- Test before deploying real endpoint
+
+**Testing Workflow:**
+
+```python
+# After verifying payload structure on webhook.site,
+# implement real endpoint:
+
+@app.route('/swaig/create-ticket', methods=['POST'])
+def create_ticket():
+    data = request.json
+
+    # data structure verified via webhook.site
+    function_name = data.get('function')
+    args = data.get('argument', {})
+
+    if function_name == 'create_ticket':
+        ticket = github.create_issue(
+            title=args.get('title'),
+            body=args.get('description')
+        )
+
+        return jsonify({
+            "response": f"Ticket #{ticket.number} created successfully",
+            "metadata": {
+                "ticket_id": ticket.number,
+                "url": ticket.html_url
+            }
+        })
+```
+
+This is invaluable for debugging SWAIG function payloads without deploying code.
+
 ## Next Steps
 
 - [Fabric & Relay](fabric-relay.md) - Alternative to webhooks using WebSocket
@@ -1022,3 +1111,4 @@ def generate_call_metrics():
 - [Messaging](messaging.md) - Configure message webhooks and delivery tracking
 - [Video](video.md) - Configure video event webhooks
 - [Voice AI](voice-ai.md) - Post-prompt processing for AI conversations
+- [AI Agent Functions](ai-agent-functions.md) - SWAIG function patterns
