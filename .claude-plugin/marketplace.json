@@ -1,12 +1,23 @@
 {
-  "marketplace": "signalwire",
+  "name": "signalwire",
+  "owner": {
+    "name": "SignalWire",
+    "email": "support@signalwire.com"
+  },
+  "metadata": {
+    "description": "SignalWire development tools and knowledge base for building communication applications",
+    "version": "1.0.0"
+  },
   "plugins": [
     {
-      "id": "signalwire-builder",
-      "name": "SignalWire Builder",
+      "name": "signalwire-builder",
+      "source": "https://github.com/signalwire/signalwire-claude/releases/latest/download/signalwire-builder.tar.gz",
       "description": "Expert knowledge for building SignalWire applications including all SDKs, REST APIs, SWML, Relay/Fabric, AI Agents, and modern JSON/YAML-based communication systems. Includes 110+ Python examples, 24+ JavaScript examples, 44+ SWML examples, and 19 comprehensive workflow guides.",
       "version": "1.0.0",
-      "author": "SignalWire",
+      "author": {
+        "name": "SignalWire",
+        "email": "support@signalwire.com"
+      },
       "repository": "https://github.com/signalwire/signalwire-claude",
       "tags": [
         "signalwire",
@@ -20,8 +31,7 @@
         "python",
         "javascript",
         "webrtc"
-      ],
-      "install_url": "https://github.com/signalwire/signalwire-claude/releases/latest/download/signalwire-builder.tar.gz"
+      ]
     }
   ]
 }
