@@ -1,6 +1,6 @@
-# SignalWire Expert Skill for Claude Code
+# SignalWire Builder - Claude Code Plugin
 
-A comprehensive Claude Code skill that transforms Claude into an expert SignalWire developer, combining complete API documentation with practical production knowledge from real-world deployments.
+A comprehensive Claude Code plugin that transforms Claude into an expert SignalWire developer, combining complete API documentation with practical production knowledge from real-world deployments.
 
 ## Features
 
@@ -76,28 +76,49 @@ Each workflow combines technical API documentation with practical implementation
 
 ## Installation
 
-### With the installer
+### Option 1: Install from Marketplace (Recommended)
+
+Install the plugin directly using Claude Code:
 
 ```bash
-bash install.sh
+/plugin install signalwire-builder@signalwire
 ```
 
-### Manually
+The plugin will be installed to `~/.claude/plugins/signalwire-builder/` and will be available in all your Claude Code sessions.
+
+### Option 2: Install from GitHub Release
+
+Download and install from the latest release:
 
 ```bash
-# Create skills directory if it doesn't exist
-mkdir -p ~/.claude/skills
+# Download and extract
+curl -L https://github.com/signalwire/signalwire-claude/releases/latest/download/signalwire-builder.tar.gz | tar -xz
 
-# Copy the signalwire skill
-cp -r signalwire ~/.claude/skills/
-
-# Verify installation
-ls ~/.claude/skills/signalwire/
+# Run installer
+cd signalwire-builder
+./install.sh
 ```
+
+### Option 3: Manual Installation
+
+Clone the repository and install manually:
+
+```bash
+# Clone the repository
+git clone https://github.com/signalwire/signalwire-claude.git
+cd signalwire-claude/skills/signalwire
+
+# Run installer
+./install.sh
+```
+
+### Verify Installation
+
+Restart Claude Code after installation. The plugin will automatically activate when you work with SignalWire applications.
 
 ## Usage
 
-Once installed, Claude will automatically use this skill when:
+Once installed, Claude will automatically use this plugin when:
 
 - Building telephony, messaging, or video applications with SignalWire
 - Working with SignalWire REST APIs, SWML, or SDKs
@@ -106,13 +127,7 @@ Once installed, Claude will automatically use this skill when:
 - Debugging SignalWire webhooks or API responses
 - Answering questions about SignalWire capabilities or best practices
 
-### Accessing via Slash Command
-
-If you have Claude Code with slash command support:
-
-```
-/signalwire
-```
+The plugin activates automatically based on your conversation context - no manual invocation needed!
 
 ## Examples of What Claude Can Do
 
@@ -161,10 +176,11 @@ Claude: [Generates secure token creation, frontend client with never-expose-API-
          pattern, layout controls, and recording configuration]
 ```
 
-## Skill Structure
+## Plugin Structure
 
 ```
-signalwire/
+signalwire-builder/
+├── plugin.json                        # Plugin manifest
 ├── SKILL.md                           # Main entry point (optimized, 624 words)
 ├── README.md                          # This file
 ├── workflows/                         # 19 workflow files, 14,844 lines total
@@ -201,9 +217,9 @@ Each workflow file includes:
 - Production Tips for deployment
 - Real-world code examples
 
-## What This Skill Avoids
+## What This Plugin Avoids
 
-The skill explicitly excludes deprecated and compatibility APIs:
+The plugin explicitly excludes deprecated and compatibility APIs:
 
 - ❌ LAML (compatibility API)
 - ❌ CXML (XML-based markup)
@@ -259,13 +275,15 @@ The skill is based on SignalWire APIs and training content as of December 2025. 
 
 ## Contributing
 
-To update or improve this skill:
+To update or improve this plugin:
 
-1. Edit the relevant workflow file in `workflows/`
-2. Follow the existing format (Technical + Practical knowledge)
-3. Include working code examples
-4. Add to Best Practices, Common Patterns, or Anti-Patterns sections
-5. Update this README if adding new workflows
+1. Fork the repository at https://github.com/signalwire/signalwire-claude
+2. Edit the relevant workflow file in `skills/signalwire/workflows/`
+3. Follow the existing format (Technical + Practical knowledge)
+4. Include working code examples
+5. Add to Best Practices, Common Patterns, or Anti-Patterns sections
+6. Update this README if adding new workflows
+7. Submit a pull request
 
 ## License
 
@@ -279,9 +297,10 @@ For SignalWire API questions:
 - Documentation: https://developer.signalwire.com/
 - Support: https://signalwire.com/support
 
-For skill issues:
-- Check that files are in `~/.claude/skills/signalwire/`
-- Verify SKILL.md is present and readable
+For plugin issues:
+- GitHub Issues: https://github.com/signalwire/signalwire-claude/issues
+- Check that files are in `~/.claude/plugins/signalwire-builder/`
+- Verify plugin.json and SKILL.md are present
 - Restart Claude Code after installation
 
 ## Version
