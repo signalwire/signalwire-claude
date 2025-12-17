@@ -1,0 +1,27 @@
+{
+  "marketplace": "signalwire",
+  "plugins": [
+    {
+      "id": "signalwire-builder",
+      "name": "SignalWire Builder",
+      "description": "Expert knowledge for building SignalWire applications including all SDKs, REST APIs, SWML, Relay/Fabric, AI Agents, and modern JSON/YAML-based communication systems. Includes 110+ Python examples, 24+ JavaScript examples, 44+ SWML examples, and 19 comprehensive workflow guides.",
+      "version": "1.0.0",
+      "author": "SignalWire",
+      "repository": "https://github.com/signalwire/signalwire-claude",
+      "tags": [
+        "signalwire",
+        "telephony",
+        "messaging",
+        "video",
+        "ai-agents",
+        "voice-ai",
+        "swml",
+        "swaig",
+        "python",
+        "javascript",
+        "webrtc"
+      ],
+      "install_url": "https://github.com/signalwire/signalwire-claude/releases/latest/download/signalwire-builder.tar.gz"
+    }
+  ]
+}
