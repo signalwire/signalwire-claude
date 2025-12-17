@@ -2,6 +2,15 @@
 
 A comprehensive Claude Code plugin that transforms Claude into an expert SignalWire developer, combining complete API documentation with practical production knowledge from real-world deployments.
 
+## Quick install
+
+From inside a Claude Code session:
+
+```bash
+/plugin marketplace add signalwire/signalwire-claude
+/plugin install signalwire-builder
+```
+
 ## Features
 
 - **Complete API Coverage**: All SignalWire REST APIs, SWML, Relay SDK, AI Agents SDK, Video API (excludes deprecated LAML/CXML)
@@ -81,32 +90,20 @@ Each workflow combines technical API documentation with practical implementation
 Install the plugin directly using Claude Code:
 
 ```bash
-/plugin install signalwire-builder@signalwire
+/plugin marketplace add signalwire/signalwire-claude
+/plugin install signalwire-builder
 ```
 
 The plugin will be installed to `~/.claude/plugins/signalwire-builder/` and will be available in all your Claude Code sessions.
 
-### Option 2: Install from GitHub Release
-
-Download and install from the latest release:
-
-```bash
-# Download and extract
-curl -L https://github.com/signalwire/signalwire-claude/releases/latest/download/signalwire-builder.tar.gz | tar -xz
-
-# Run installer
-cd signalwire-builder
-./install.sh
-```
-
-### Option 3: Manual Installation
+### Option 2: Manual Installation
 
 Clone the repository and install manually:
 
 ```bash
 # Clone the repository
 git clone https://github.com/signalwire/signalwire-claude.git
-cd signalwire-claude/skills/signalwire
+cd signalwire-claude
 
 # Run installer
 ./install.sh
@@ -127,7 +124,7 @@ Once installed, Claude will automatically use this plugin when:
 - Debugging SignalWire webhooks or API responses
 - Answering questions about SignalWire capabilities or best practices
 
-The plugin activates automatically based on your conversation context - no manual invocation needed!
+The plugin activates automatically based on your conversation context - no manual invocation needed.
 
 ## Examples of What Claude Can Do
 
@@ -180,33 +177,40 @@ Claude: [Generates secure token creation, frontend client with never-expose-API-
 
 ```
 signalwire-builder/
-├── plugin.json                        # Plugin manifest
-├── SKILL.md                           # Main entry point (optimized, 624 words)
+├── .claude-plugin/
+│   ├── plugin.json                    # Plugin manifest
+│   └── marketplace.json               # Marketplace listing
+├── skills/
+│   └── signalwire/                    # SignalWire skill
+│       ├── SKILL.md                   # Main entry point (optimized, 624 words)
+│       ├── workflows/                 # 19 workflow files, 14,844 lines total
+│       │   ├── authentication-setup.md        # 593 lines: Auth, MFA, security
+│       │   ├── outbound-calling.md            # 819 lines: Dialer, CRM, reminders
+│       │   ├── inbound-call-handling.md       # 1,296 lines: SWML, loops, IVR
+│       │   ├── call-control.md                # 1,143 lines: Transfers, recording
+│       │   ├── messaging.md                   # 1,228 lines: Campaign Registry
+│       │   ├── video.md                       # 1,232 lines: WebRTC, rooms
+│       │   ├── fabric-relay.md                # 1,111 lines: Subscribers, resources
+│       │   ├── webhooks-events.md             # 1,114 lines: Analytics, testing
+│       │   ├── number-management.md           # 960 lines: Compliance
+│       │   ├── voice-ai.md                    # 444 lines: AI navigation hub
+│       │   ├── ai-agent-sdk-basics.md         # 529 lines: SDK fundamentals
+│       │   ├── ai-agent-prompting.md          # 683 lines: Best practices
+│       │   ├── ai-agent-functions.md          # 827 lines: SWAIG patterns
+│       │   ├── ai-agent-deployment.md         # 835 lines: Server/serverless
+│       │   ├── ai-agent-patterns.md           # 467 lines: Common flows
+│       │   ├── ai-agent-error-handling.md     # 391 lines: Error patterns
+│       │   ├── ai-agent-security.md           # 410 lines: Auth, secrets
+│       │   ├── ai-agent-testing.md            # 383 lines: Testing patterns
+│       │   └── ai-agent-debug-webhooks.md     # 379 lines: Monitoring
+│       └── reference/                 # SDK API docs (loaded only when needed)
+│           ├── sdk/                   # 12 files: AgentBase, SWAIG, etc.
+│           ├── deployment/            # 3 files: Serverless, env vars
+│           └── examples/              # 6 complete agent examples
 ├── README.md                          # This file
-├── workflows/                         # 19 workflow files, 14,844 lines total
-│   ├── authentication-setup.md        # 593 lines: Auth, MFA, security
-│   ├── outbound-calling.md            # 819 lines: Dialer, CRM, reminders
-│   ├── inbound-call-handling.md       # 1,296 lines: SWML, loops, IVR
-│   ├── call-control.md                # 1,143 lines: Transfers, recording
-│   ├── messaging.md                   # 1,228 lines: Campaign Registry
-│   ├── video.md                       # 1,232 lines: WebRTC, rooms
-│   ├── fabric-relay.md                # 1,111 lines: Subscribers, resources
-│   ├── webhooks-events.md             # 1,114 lines: Analytics, testing
-│   ├── number-management.md           # 960 lines: Compliance
-│   ├── voice-ai.md                    # 444 lines: AI navigation hub
-│   ├── ai-agent-sdk-basics.md         # 529 lines: SDK fundamentals
-│   ├── ai-agent-prompting.md          # 683 lines: Best practices
-│   ├── ai-agent-functions.md          # 827 lines: SWAIG patterns
-│   ├── ai-agent-deployment.md         # 835 lines: Server/serverless
-│   ├── ai-agent-patterns.md           # 467 lines: Common flows
-│   ├── ai-agent-error-handling.md     # 391 lines: Error patterns
-│   ├── ai-agent-security.md           # 410 lines: Auth, secrets
-│   ├── ai-agent-testing.md            # 383 lines: Testing patterns
-│   └── ai-agent-debug-webhooks.md     # 379 lines: Monitoring
-└── reference/                         # SDK API docs (loaded only when needed)
-    ├── sdk/                           # 12 files: AgentBase, SWAIG, etc.
-    ├── deployment/                    # 3 files: Serverless, env vars
-    └── examples/                      # 6 complete agent examples
+├── INSTALL.md                         # Installation guide
+├── install.sh                         # Installation script
+└── LICENSE
 ```
 
 Each workflow file includes:
@@ -217,48 +221,6 @@ Each workflow file includes:
 - Production Tips for deployment
 - Real-world code examples
 
-## What This Plugin Avoids
-
-The plugin explicitly excludes deprecated and compatibility APIs:
-
-- ❌ LAML (compatibility API)
-- ❌ CXML (XML-based markup)
-- ❌ Any `/laml/` endpoints
-- ❌ XML request/response formats
-
-Instead, it focuses on modern approaches:
-
-- ✅ Modern REST APIs with JSON (`/api/calling/`, `/api/messaging/`, etc.)
-- ✅ SWML in YAML or JSON format
-- ✅ Relay SDK v4 for real-time communication
-- ✅ AI Agents SDK for voice AI
-- ✅ Call Fabric resource-based architecture
-
-## Real-World Knowledge Included
-
-### Production Metrics and Benchmarks
-- Latency targets (~500ms average)
-- Quality metrics (completion rates, function success)
-- Operational efficiency patterns
-
-### Security Patterns
-- MFA implementation (phone-based, voice-based)
-- Metadata for sensitive data (keep out of LLM)
-- Payment data handling (SWML Pay)
-- Encryption patterns for stored data
-
-### Testing and Debugging
-- AI-driven testing approaches
-- Webhook.site development workflow
-- Post-prompt data analysis
-- Common issues and solutions
-
-### Anti-Patterns to Avoid
-- Over-prompting AI agents
-- Treating AI like code instead of conversation
-- Exposing sensitive data to LLM
-- Creating infinite loops without protection
-- Losing context during transfers
 
 ## Requirements
 
@@ -283,7 +245,8 @@ To update or improve this plugin:
 4. Include working code examples
 5. Add to Best Practices, Common Patterns, or Anti-Patterns sections
 6. Update this README if adding new workflows
-7. Submit a pull request
+7. Test the plugin structure follows Claude Code requirements
+8. Submit a pull request
 
 ## License
 
@@ -302,9 +265,3 @@ For plugin issues:
 - Check that files are in `~/.claude/plugins/signalwire-builder/`
 - Verify plugin.json and SKILL.md are present
 - Restart Claude Code after installation
-
-## Version
-
-**Version**: 1.0.0-beta3
-**Last Updated**: December 2025
-**Content**: 14,800+ lines combining technical documentation with practical production knowledge from SignalWire training videos, production applications, and support tickets

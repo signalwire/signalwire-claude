@@ -2,12 +2,10 @@
   "name": "signalwire-builder",
   "version": "1.0.0",
   "description": "Expert knowledge for building SignalWire applications including all SDKs, REST APIs, SWML, Relay/Fabric, AI Agents, and modern JSON/YAML-based communication systems",
-  "author": "SignalWire",
-  "repository": "https://github.com/signalwire/signalwire-claude",
-  "skills": [
-    {
-      "name": "signalwire",
-      "path": "SKILL.md"
-    }
-  ]
+  "author": {
+    "name": "SignalWire",
+    "email": "support@signalwire.com",
+    "url": "https://github.com/signalwire"
+  },
+  "repository": "https://github.com/signalwire/signalwire-claude"
 }
