@@ -346,15 +346,16 @@ How AI runtime is metered (confirmed by SignalWire support, Aug 2026):
 - **Post-prompt processing is never billed as AI runtime** — it always runs after the AI call ends and never extends AI billing.
 - **Each AI leg is metered independently** — two simultaneous AI legs run two meters.
 - **Usage rounds UP to the nearest minute** — a 2m20s AI session bills as 3 minutes. Voice legs (inbound and outbound) are billed individually the same way.
+- **An unset `languages` defaults to a premium voice and bills TTS separately** — with no `ai.languages` configured, the platform currently defaults to an ElevenLabs voice, adding a per-usage Text to Speech line on top of AI runtime (confirmed by SignalWire support, Aug 2026; a change of default has been filed). Voices from the standard providers — OpenAI, Deepgram, Amazon Polly, Google Cloud, Azure — carry no separate TTS charge. Always set an engine-prefixed voice explicitly (e.g. `voice: polly.Matthew`, `voice: gcloud.en-US-Neural2-F`); an unprefixed voice ID can fail to resolve and fall back to the premium default.
 
 ### Cost Guardrails
 
 There are **no Space-level spend or duration alerts or caps** — set your own limits on every AI call:
 
-- **answer.max_duration**: Hard ceiling on the call (default 14400 seconds = 4 hours); disconnects instantly when reached
-- **hard_stop_time**: Caps the AI session (accepts `30s`, `2m`, `1h45m` formats); the AI finishes speaking and processes `hard_stop_prompt` before hanging up, so it is not an instant cutoff
+- **answer.max_duration**: Hard ceiling on the call (default 14400 seconds = 4 hours, which is also the **platform maximum** — 14400 is the largest accepted value; confirmed by SignalWire support, Aug 2026); disconnects instantly when reached
+- **hard_stop_time**: Caps the AI session (accepts `30s`, `2m`, `1h45m` formats); the AI finishes speaking and processes `hard_stop_prompt` before hanging up, so it is not an instant cutoff. Values beyond 4 hours are inert — the platform maximum ends the call first.
 
-Without these, a stuck AI call meters until the 4-hour default ends it.
+Without these, a stuck AI call meters until the 4-hour platform limit ends it.
 
 ## Best Practices Quick Reference
 
