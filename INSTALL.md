@@ -23,7 +23,7 @@ cd signalwire-builder
 ```
 
 The installer will:
-- Create `~/.claude/plugins/signalwire-builder/` if it doesn't exist
+- Create `~/.claude/skills/signalwire-builder/` if it doesn't exist
 - Check for existing installation (prompts before overwriting)
 - Copy all plugin files to the correct location
 - Verify the installation
@@ -34,24 +34,34 @@ The installer will:
 # Extract the archive
 tar -xzf signalwire-builder.tar.gz
 
-# Create plugin directory
-mkdir -p ~/.claude/plugins/signalwire-builder
+# Create plugin directory (Claude Code auto-loads plugins from ~/.claude/skills/)
+mkdir -p ~/.claude/skills/signalwire-builder
 
 # Copy the plugin contents
-cp -r signalwire-builder/.claude-plugin ~/.claude/plugins/signalwire-builder/
-cp -r signalwire-builder/skills ~/.claude/plugins/signalwire-builder/
+cp -r signalwire-builder/.claude-plugin ~/.claude/skills/signalwire-builder/
+cp -r signalwire-builder/skills ~/.claude/skills/signalwire-builder/
 
 # Verify installation
-ls ~/.claude/plugins/signalwire-builder/skills/signalwire/SKILL.md
+ls ~/.claude/skills/signalwire-builder/skills/signalwire/SKILL.md
+```
+
+### Option 4: Run Without Installing
+
+Load the plugin for a single session (useful for testing):
+
+```bash
+claude --plugin-dir /path/to/signalwire-claude
 ```
 
 ## Verification
 
-After installation, verify the plugin is present:
+After a manual installation, verify the plugin is present:
 
 ```bash
-ls -la ~/.claude/plugins/signalwire-builder/
+ls -la ~/.claude/skills/signalwire-builder/
 ```
+
+(Marketplace installs are managed by Claude Code itself — check them with `/plugin list` instead.)
 
 You should see:
 ```
@@ -94,14 +104,14 @@ The plugin activates automatically based on context - no manual invocation neede
 
 ### Plugin Not Loading
 
-1. **Check file location**:
+1. **Check file location** (manual installs):
    ```bash
-   ls ~/.claude/plugins/signalwire-builder/skills/signalwire/SKILL.md
+   ls ~/.claude/skills/signalwire-builder/skills/signalwire/SKILL.md
    ```
 
-2. **Verify plugin structure**:
+2. **Verify plugin structure** (manual installs):
    ```bash
-   ls ~/.claude/plugins/signalwire-builder/.claude-plugin/plugin.json
+   ls ~/.claude/skills/signalwire-builder/.claude-plugin/plugin.json
    ```
 
 3. **Restart Claude Code**: Close and reopen Claude Code after installation
@@ -128,7 +138,7 @@ To update to a newer version:
 /plugin update signalwire-builder
 
 # Or manually
-rm -rf ~/.claude/plugins/signalwire-builder
+rm -rf ~/.claude/skills/signalwire-builder
 tar -xzf signalwire-builder-v2.tar.gz
 cd signalwire-builder
 ./install.sh
@@ -143,7 +153,7 @@ To remove the plugin:
 /plugin uninstall signalwire-builder
 
 # Or manually
-rm -rf ~/.claude/plugins/signalwire-builder
+rm -rf ~/.claude/skills/signalwire-builder
 ```
 
 ## What's Included
