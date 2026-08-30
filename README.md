@@ -94,7 +94,7 @@ Install the plugin directly using Claude Code:
 /plugin install signalwire-builder
 ```
 
-The plugin will be installed to `~/.claude/plugins/signalwire-builder/` and will be available in all your Claude Code sessions.
+Claude Code manages marketplace installs in its own plugin cache; once installed, the plugin is available in all your Claude Code sessions.
 
 ### Option 2: Manual Installation
 
@@ -105,8 +105,15 @@ Clone the repository and install manually:
 git clone https://github.com/signalwire/signalwire-claude.git
 cd signalwire-claude
 
-# Run installer
+# Run installer (copies the plugin to ~/.claude/skills/signalwire-builder/,
+# which Claude Code auto-loads on the next session)
 ./install.sh
+```
+
+Or load it for a single session without installing:
+
+```bash
+claude --plugin-dir .
 ```
 
 ### Verify Installation
@@ -262,6 +269,6 @@ For SignalWire API questions:
 
 For plugin issues:
 - GitHub Issues: https://github.com/signalwire/signalwire-claude/issues
-- Check that files are in `~/.claude/plugins/signalwire-builder/`
+- For manual installs, check that files are in `~/.claude/skills/signalwire-builder/`
 - Verify plugin.json and SKILL.md are present
 - Restart Claude Code after installation

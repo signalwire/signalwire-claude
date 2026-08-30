@@ -4,17 +4,20 @@
 set -e
 
 PLUGIN_NAME="signalwire-builder"
-CLAUDE_PLUGINS_DIR="${HOME}/.claude/plugins"
-INSTALL_DIR="${CLAUDE_PLUGINS_DIR}/${PLUGIN_NAME}"
+# Claude Code auto-loads plugins from the skills directory ("skills-directory
+# plugins"); ~/.claude/plugins is managed by the marketplace system and is
+# not scanned for manual copies.
+CLAUDE_SKILLS_DIR="${HOME}/.claude/skills"
+INSTALL_DIR="${CLAUDE_SKILLS_DIR}/${PLUGIN_NAME}"
 
 echo "SignalWire Builder Plugin Installer for Claude Code"
 echo "===================================================="
 echo ""
 
-# Check if plugins directory exists
-if [ ! -d "${CLAUDE_PLUGINS_DIR}" ]; then
-    echo "Creating Claude plugins directory: ${CLAUDE_PLUGINS_DIR}"
-    mkdir -p "${CLAUDE_PLUGINS_DIR}"
+# Check if skills directory exists
+if [ ! -d "${CLAUDE_SKILLS_DIR}" ]; then
+    echo "Creating Claude skills directory: ${CLAUDE_SKILLS_DIR}"
+    mkdir -p "${CLAUDE_SKILLS_DIR}"
 fi
 
 # Check if plugin already exists
