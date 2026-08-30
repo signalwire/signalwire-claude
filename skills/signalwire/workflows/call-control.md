@@ -441,24 +441,32 @@ GET https://{space}.signalwire.com/api/voice/logs
 
 Each log entry includes the call's `status` (e.g. `in-progress`, `completed`) and an `id` — that `id` is the call ID accepted by the Send Call Commands API (`POST /api/calling/calls`), including `calling.end`.
 
-As of Aug 2026 the endpoint supports only date filters and pagination — no server-side status filter — so filter on `status` client-side. SignalWire was adding Compatibility-style query parameters; check current docs before assuming a filter is missing.
+As of Aug 2026 the endpoint supports only date filters, pagination, and an `include_deleted` flag — no server-side status filter — so filter on `status` client-side. SignalWire was adding Compatibility-style query parameters; check current docs before assuming a filter is missing.
 
 ```python
 import requests
 from requests.auth import HTTPBasicAuth
+from datetime import datetime, timedelta, timezone
 
 auth = HTTPBasicAuth(project_id, api_token)
 space_url = "https://your-space.signalwire.com"
 
-# List voice logs; filter to live calls client-side
+# List voice logs; filter client-side (no server-side status filter).
 # NOTE: results are paginated (page_size defaults to 50) —
 # iterate pages for a complete sweep
 logs = requests.get(f"{space_url}/api/voice/logs", auth=auth).json()['data']
-live = [log for log in logs
-        if log['status'] in ('created', 'ringing', 'answered', 'in-progress')]
 
-# End a stale call using the log's id as the call ID
-for log in live:
+# Live = any non-terminal status; stale = live AND older than the
+# longest call you consider legitimate. Without the age check this
+# would hang up healthy in-progress calls.
+TERMINAL = ('completed', 'ended', 'busy', 'failed', 'no-answer', 'canceled')
+cutoff = datetime.now(timezone.utc) - timedelta(hours=1)
+stale = [log for log in logs
+         if log['status'] not in TERMINAL
+         and datetime.fromisoformat(log['created_at'].replace('Z', '+00:00')) < cutoff]
+
+# End each stale call using the log's id as the call ID
+for log in stale:
     requests.post(
         f"{space_url}/api/calling/calls",
         auth=auth,

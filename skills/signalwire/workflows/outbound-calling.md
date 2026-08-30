@@ -771,8 +771,9 @@ def run_outbound_campaign(campaign_id):
     campaign = database.get_campaign(campaign_id)
     recipients = database.get_campaign_recipients(campaign_id)
 
-    # SignalWire dials at 1 call per second Space-wide;
-    # pace submissions so the dial queue never fills
+    # SignalWire dials at 1 call per second Space-wide, shared across
+    # ALL projects — local pacing reduces queue pressure but cannot
+    # guarantee headroom; treat queue-full failures as retryable
     from time import sleep
     delay = 1.0  # 1 second between calls (1 CPS)
 
