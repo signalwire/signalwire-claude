@@ -19,6 +19,7 @@ Build conversational AI agents for phone calls using SignalWire's AI platform. T
 
 **Looking for specific topics:**
 - [SWAIG Functions](#swaig-signalwire-ai-gateway) - Add server-side functions to SWML AI
+- [AI Billing & Metering](#ai-billing--metering) - How AI runtime is charged, cost guardrails
 - [When to Pull Additional Documentation](#when-to-pull-additional-documentation) - Reference guide
 
 ## AI Architecture Options
@@ -335,6 +336,25 @@ if __name__ == "__main__":
 ```
 
 **To learn more about building SDK-based agents, see: [AI Agent SDK Basics](ai-agent-sdk-basics.md)**
+
+## AI Billing & Metering
+
+How AI runtime is metered (confirmed by SignalWire support, Aug 2026):
+
+- **AI runtime bills the entire time the AI is active on the call** — including while on `ai_hold`. Pausing speech processing does NOT pause the meter. (Listed at $0.16/min as of Aug 2026.)
+- **Transfers stop the meter**: with an `execute_swml` function using `"transfer": true`, the AI leaves the call and AI billing stops as soon as the transfer completes.
+- **Post-prompt processing is never billed as AI runtime** — it always runs after the AI call ends and never extends AI billing.
+- **Each AI leg is metered independently** — two simultaneous AI legs run two meters.
+- **Usage rounds UP to the nearest minute** — a 2m20s AI session bills as 3 minutes. Voice legs (inbound and outbound) are billed individually the same way.
+
+### Cost Guardrails
+
+There are **no Space-level spend or duration alerts or caps** — set your own limits on every AI call:
+
+- **answer.max_duration**: Hard ceiling on the call (default 14400 seconds = 4 hours); disconnects instantly when reached
+- **hard_stop_time**: Caps the AI session (accepts `30s`, `2m`, `1h45m` formats); the AI finishes speaking and processes `hard_stop_prompt` before hanging up, so it is not an instant cutoff
+
+Without these, a stuck AI call meters until the 4-hour default ends it.
 
 ## Best Practices Quick Reference
 
