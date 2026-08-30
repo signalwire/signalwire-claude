@@ -742,6 +742,28 @@ server {
 }
 ```
 
+### Path-Prefix Proxying and Callback URLs
+
+The Nginx example above proxies at the root (`location /`). If you instead mount an agent behind a path prefix (e.g. `location /myagent/`), the prefix must appear in the **agent's own `route`**, not just in the proxy config or a `register()` override:
+
+```python
+# Wrong — mounted at /myagent/screener, but callbacks point at /screener
+agent = MyAgent(name="screener", route="/screener")
+server.register(agent, route="/myagent/screener")
+
+# Correct — mount and callbacks agree
+agent = MyAgent(name="screener", route="/myagent/screener")
+server.register(agent)
+```
+
+`register(route=...)` overrides only where the app is mounted. The `swaig`, `post_prompt`, and `debug_events` callback URLs handed to SignalWire are built from the agent's own `route` attribute plus `SWML_PROXY_URL_BASE` — with a mismatched prefix, every callback 404s: the agent still serves SWML, but no function ever fires and no webhook arrives.
+
+Verify after deploying behind any proxy:
+
+```bash
+swaig-test my_agent.py --dump-swml | grep web_hook_url
+```
+
 ### AWS Application Load Balancer
 
 ```yaml

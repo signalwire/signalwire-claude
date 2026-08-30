@@ -108,16 +108,75 @@ return SwaigFunctionResult("Setting up your account.").add_actions([
 
 ### connect() (Convenience Method)
 
-Shorthand for transfer action.
+Transfer the call to another destination. This is the SDK's purpose-built in-session transfer: in a live session, a document containing `connect` only works when the `transfer` flag rides beside the document — exactly the shape this helper emits (see `execute_swml()` below for the emitted structure).
 
 ```python
-def connect(self, dest: str, final: bool = True) -> 'SwaigFunctionResult'
+def connect(self, destination: str, final: bool = True, from_addr: str = None) -> 'SwaigFunctionResult'
 ```
+
+**Parameters:**
+- `destination` - Where to transfer: `tel:`/`sip:` URI or a phone number
+- `final` - `True`: permanent transfer — the call exits the agent completely and continues at the destination. `False`: temporary transfer — if the far end hangs up, the call returns to the agent to continue the conversation
+- `from_addr` - Optional caller ID override
 
 ```python
 return SwaigFunctionResult("Connecting you to sales.").connect(
     "sip:sales@company.com",
     final=True
+)
+```
+
+The emitted action carries a SWML `connect` document with a `transfer` key beside it (`"true"`/`"false"` from `final`).
+
+### execute_swml()
+
+Execute a SWML document from a function result, optionally exiting the agent.
+
+```python
+def execute_swml(self, swml_content, transfer: bool = False) -> 'SwaigFunctionResult'
+```
+
+**Parameters:**
+- `swml_content` - The SWML document as a JSON string, dict, or SDK object
+- `transfer` - `True`: the call exits the agent after the document executes
+
+```python
+return SwaigFunctionResult("One moment.").execute_swml(
+    {"version": "1.0.0", "sections": {"main": [
+        {"play": {"url": "https://example.com/wait.mp3"}}
+    ]}}
+)
+```
+
+The emitted action carries the document under `SWML` with `transfer` as a **sibling** key — the same shape `connect()` emits:
+
+```python
+{"SWML": { ...document... }, "transfer": "true"}
+```
+
+`transfer` is not a SWML key, so it must sit beside the document, not inside it. (Current SDK behavior, fixed August 2026 — earlier releases wrote `transfer` inside the document, where the platform ignores it and the call never leaves the agent. If `execute_swml` transfers silently fail on an older SDK, upgrade.)
+
+### tap()
+
+Start streaming call audio to an external destination.
+
+```python
+def tap(self, uri: str, control_id: str = None, direction: str = "both",
+        codec: str = "PCMU", rtp_ptime: int = 20, status_url: str = None) -> 'SwaigFunctionResult'
+```
+
+**Parameters:**
+- `uri` - Where to send the audio: `rtp://host:port`, `ws://`, or `wss://`
+- `control_id` - Identifier for stopping this tap later (auto-generated if omitted)
+- `direction` - `"speak"` (what the party says), `"listen"` (what the party hears), or `"both"` (default). These are the only valid values, and `direction` is always emitted: the underlying SWML verb defaults to `"speak"` when the key is omitted, which would tap less than the helper's documented `"both"`
+- `codec` - `"PCMU"` (default) or `"PCMA"`
+- `rtp_ptime` - RTP packetization time in milliseconds (default 20)
+- `status_url` - Optional status webhook URL
+
+```python
+return SwaigFunctionResult("Starting quality monitoring.").tap(
+    "wss://monitor.example.com/tap",
+    direction="both"
 )
 ```
 
@@ -472,11 +531,13 @@ result = SwaigFunctionResult("Goodbye!", post_process=True).add_action("hangup",
 {
     "response": "Goodbye!",
     "action": [
-        {"SWML": {"sections": {"main": [{"ai": {"post_prompt": ...}}]}}},
         {"hangup": {}}
-    ]
+    ],
+    "post_process": true
 }
 ```
+
+`post_process` is serialized as a top-level key, and only when there are actions to defer — with no actions it is omitted.
 
 ## Best Practices
 
