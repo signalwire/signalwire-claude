@@ -221,6 +221,37 @@ If a server advertises neither `tools` nor `resources` in its capabilities hands
 
 SDK-side equivalent: `/docs/server-sdks/guides/mcp-gateway`.
 
+## SWAIG Includes — Remote Function Discovery
+
+Pull a function list from a remote URL at session start instead of declaring every function inline. Useful for sharing one tool catalog across several agents.
+
+Docs: `/docs/swml/reference/calling/ai/swaig/includes`
+
+```yaml
+SWAIG:
+  includes:
+    - url: https://myapp.com/swaig/catalog
+      functions: [lookup_order, cancel_order]
+      auth_user: user
+      auth_password: pass
+      meta_data:
+        tenant: acme
+```
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| `url` | string | yes | Where the remote functions are defined |
+| `functions` | string[] | yes | Names which functions to import |
+| `auth_user` | string | no | HTTP basic auth |
+| `auth_password` | string | no | HTTP basic auth |
+| `meta_data` | object | no | Key-value pairs passed through to the remote functions |
+
+**`functions` is required, and it is a filter you write, not a discovery wildcard.** During initialization SWAIG sends a signature request listing exactly these names to your `url`, and your server returns the matching definitions. A name you leave out is not imported; there is no "give me everything" form.
+
+The fetch happens **when the SWML document loads**, before any interaction with the caller. If your catalog endpoint is slow or down, that cost lands on call setup.
+
+Compare with [`mcp_servers`](#mcp-servers-as-tool-providers): includes pull SWAIG function definitions from an endpoint you control and speak SWAIG's own signature protocol; MCP servers speak MCP and get translated. Both end up in the same unified tool list the model sees.
+
 ## SwaigFunctionResult Actions
 
 Return SWML actions from functions to control the call:
