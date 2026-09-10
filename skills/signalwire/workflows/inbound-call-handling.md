@@ -25,8 +25,8 @@ version: 1.0.0
 sections:
   main:
     - answer: {}
-    - say:
-        text: "Hello from SignalWire"
+    - play:
+        url: "say:Hello from SignalWire"
 ```
 
 ```json
@@ -35,7 +35,7 @@ sections:
   "sections": {
     "main": [
       { "answer": {} },
-      { "say": { "text": "Hello from SignalWire" } }
+      { "play": { "url": "say:Hello from SignalWire" } }
     ]
   }
 }
@@ -81,7 +81,7 @@ def serve_swml():
         "sections": {
             "main": [
                 {"answer": {}},
-                {"say": {"text": "Welcome to our service"}}
+                {"play": {"url": "say:Welcome to our service"}}
             ]
         }
     }
@@ -95,8 +95,8 @@ version: 1.0.0
 sections:
   main:
     - answer: {}
-    - say:
-        text: Welcome to our service
+    - play:
+        url: "say:Welcome to our service"
     """
     return swml, 200, {'Content-Type': 'text/yaml'}
 ```
@@ -116,7 +116,7 @@ class MyConsumer(Consumer):
             "version": "1.0.0",
             "sections": {
                 "main": [
-                    {"say": {"text": "Hello from Relay"}}
+                    {"play": {"url": "say:Hello from Relay"}}
                 ]
             }
         }
@@ -160,25 +160,28 @@ Play audio file.
 
 **Supported formats**: MP3, WAV, OGG
 
-### say
+### Text-to-speech (say: URLs)
 
-Text-to-speech (TTS).
+There is no separate `say` method in SWML. Text-to-speech is done with `play` using the `say:` URL prefix.
 
 ```yaml
-- say:
-    text: "Welcome to SignalWire"
-    language: "en-US"
-    gender: "female"
+- play:
+    url: "say:Welcome to SignalWire"
+    say_language: "en-US"
+    say_gender: "female"
 
 # With variable substitution
-- say:
-    text: "You called from %{call.from}"
+- play:
+    url: "say:You called from %{call.from}"
 ```
 
-**Parameters**:
-- `text`: What to say
-- `language`: Voice language (default: `en-US`)
-- `gender`: `male`, `female`, or specific voice name
+**Properties**:
+- `url`: `say:<text to speak>`
+- `say_voice`: Voice to use (e.g., `gcloud.en-US-Neural2-A`)
+- `say_language`: Voice language (e.g., `en-US`)
+- `say_gender`: `male` or `female`
+
+Other playable sound prefixes: `silence:<seconds>` and `ring:[duration:]<country code>`.
 
 ### prompt
 
@@ -186,32 +189,39 @@ Play audio/TTS and collect user input.
 
 ```yaml
 - prompt:
-    play: "Press 1 for sales, 2 for support"
+    play: "say:Press 1 for sales, 2 for support"
     max_digits: 1
     terminators: "#"
     digit_timeout: 5.0
 ```
 
-**Parameters**:
-- `play`: Audio URL or TTS text
-- `say`: Alternative to `play` for TTS
+**Properties**:
+- `play`: A playable sound (audio URL, `say:` text, `silence:`, `ring:`) or an array of them
 - `max_digits`: Maximum digits to collect
-- `terminators`: Keys that end input (default: `#`)
-- `digit_timeout`: Seconds to wait for digit
+- `terminators`: Digits that end input
+- `digit_timeout`: Seconds to wait for the next digit
+- `initial_timeout`: Seconds to wait for input to start
+- `speech_timeout`, `speech_end_timeout`, `speech_language`, `speech_hints`: setting any of these enables speech recognition
 
 **Accessing result**:
+
+`prompt` sets output variables when it completes:
+- `prompt_result`: `failed`, `no_input`, `match_speech`, `match_digits`, or `no_match`
+- `prompt_value`: the digits or utterance collected
+- `prompt_digit_terminator`: terminator digit collected, if any
+- `prompt_speech_confidence`: speech confidence measured, if any
+
 ```yaml
 - prompt:
-    play: "Enter your account number"
+    play: "say:Enter your account number"
     max_digits: 6
-  on_success:
-    - execute:
-        dest: process_input
-        params:
-          digits: "%{args.result}"
+- execute:
+    dest: process_input
+    params:
+      digits: "%{prompt_value}"
 ```
 
-Result available in `%{args.result}`.
+Result available in `%{prompt_value}`.
 
 ### connect
 
@@ -228,10 +238,12 @@ Connect caller to a phone number or SIP endpoint.
     to: "sip:user@example.sip.signalwire.com"
 ```
 
-**Parameters**:
+**Properties**:
 - `to`: Destination number or SIP address
 - `from`: Caller ID to display
 - `timeout`: Ring timeout in seconds
+
+`connect` sets `connect_result` (`connected` or `failed`) and `connect_failed_reason` — branch on these with `cond` or `switch`.
 
 ### transfer
 
@@ -241,28 +253,27 @@ Transfer call to another SWML section (permanently).
 sections:
   main:
     - prompt:
-        play: "Press 1 for sales, 2 for support"
+        play: "say:Press 1 for sales, 2 for support"
         max_digits: 1
-      on_success:
-        - switch:
-            variable: "%{args.result}"
-            case:
-              "1":
-                - transfer:
-                    dest: sales
-              "2":
-                - transfer:
-                    dest: support
+    - switch:
+        variable: prompt_value
+        case:
+          "1":
+            - transfer:
+                dest: sales
+          "2":
+            - transfer:
+                dest: support
 
   sales:
-    - say:
-        text: "Transferring to sales"
+    - play:
+        url: "say:Transferring to sales"
     - connect:
         to: "+15551111111"
 
   support:
-    - say:
-        text: "Transferring to support"
+    - play:
+        url: "say:Transferring to support"
     - connect:
         to: "+15552222222"
 ```
@@ -276,8 +287,8 @@ sections:
   main:
     - execute:
         dest: play_greeting
-    - say:
-        text: "What can I help you with?"
+    - play:
+        url: "say:What can I help you with?"
 
   play_greeting:
     - play:
@@ -303,7 +314,7 @@ Start recording the call.
     format: "mp3"
 ```
 
-**Parameters**:
+**Properties**:
 - `stereo`: Record each side on separate channel (default: `false`)
 - `format`: `mp3`, `wav` (default: `wav`)
 - Recording URL sent to webhook when call ends
@@ -321,19 +332,19 @@ Send an SMS during the call.
 
 ## Variable Substitution
 
-Use `%{variable_name}` to access dynamic values:
+Use `%{variable_name}` or `${variable_name}` to access dynamic values. In Calling documents the two forms are interchangeable for plain paths; `${...}` also evaluates JavaScript expressions.
 
 ### Call Variables
 
 ```yaml
-- say:
-    text: "You called from %{call.from} to %{call.to}"
+- play:
+    url: "say:You called from %{call.from} to %{call.to}"
 ```
 
 Available variables:
 - `%{call.from}` - Caller's number
 - `%{call.to}` - Destination number
-- `%{call.id}` - Unique call ID
+- `%{call.call_id}` - Unique call ID
 - `%{call.direction}` - `inbound` or `outbound`
 
 ### Custom Parameters
@@ -354,110 +365,121 @@ Pass parameters when creating call:
 
 Access in SWML:
 ```yaml
-- say:
-    text: "Your reference is %{params.custom_param}"
+- play:
+    url: "say:Your reference is %{params.custom_param}"
 ```
 
 ### Prompt Results
 
 ```yaml
 - prompt:
-    play: "Enter your PIN"
+    play: "say:Enter your PIN"
     max_digits: 4
-  on_success:
-    - switch:
-        variable: "%{args.result}"
-        case:
-          "1234":
-            - say: { text: "PIN accepted" }
-          default:
-            - say: { text: "Invalid PIN" }
+- switch:
+    variable: prompt_value
+    case:
+      "1234":
+        - play: { url: "say:PIN accepted" }
+    default:
+      - play: { url: "say:Invalid PIN" }
 ```
 
 ## Control Flow
 
 ### switch
 
-Conditional branching based on variable value.
+Conditional branching based on variable value. `variable` takes the variable name directly (no substitution syntax).
 
 ```yaml
 - switch:
-    variable: "%{args.result}"
+    variable: prompt_value
     case:
       "1":
-        - say: { text: "You pressed 1" }
+        - play: { url: "say:You pressed 1" }
       "2":
-        - say: { text: "You pressed 2" }
-      default:
-        - say: { text: "Invalid selection" }
+        - play: { url: "say:You pressed 2" }
+    default:
+      - play: { url: "say:Invalid selection" }
 ```
 
-### Callbacks (on_success, on_failure)
+### cond
 
-Methods can have success/failure handlers:
+Branch on JavaScript conditions. `cond` takes an array of `when`/`then` objects, plus an optional final `else`. Inside `when`, reference variables directly — do not wrap the condition in `${...}`.
+
+SWML methods do not take `on_success`/`on_failure` handlers. Instead, each method sets output variables (`prompt_result`, `connect_result`, `record_result`, etc.) that you branch on with `cond` or `switch`:
 
 ```yaml
 - prompt:
-    play: "Press any key"
+    play: "say:Press any key"
     max_digits: 1
     digit_timeout: 5.0
-  on_success:
-    - say: { text: "Thank you" }
-  on_failure:
-    - say: { text: "No input received" }
+- cond:
+    - when: "prompt_result == 'no_input'"
+      then:
+        - play: { url: "say:No input received" }
+    - else:
+        - play: { url: "say:Thank you" }
 ```
 
 ## Advanced Patterns
 
 ### IVR Menu System
 
+Use `label` + `goto` with `max` to cap menu retries.
+
 ```yaml
 version: 1.0.0
 sections:
   main:
     - answer: {}
-    - execute:
+    - transfer:
         dest: main_menu
 
   main_menu:
+    - label: menu
     - prompt:
         play: "https://example.com/main-menu.mp3"
         max_digits: 1
         digit_timeout: 5.0
-      on_success:
-        - switch:
-            variable: "%{args.result}"
-            case:
-              "1":
-                - transfer: { dest: sales }
-              "2":
-                - transfer: { dest: support }
-              "3":
-                - transfer: { dest: billing }
-              "9":
-                - execute: { dest: main_menu }  # Repeat menu
-              default:
-                - say: { text: "Invalid selection" }
-                - execute: { dest: main_menu }
-      on_failure:
-        - say: { text: "Sorry, I didn't catch that" }
-        - execute: { dest: main_menu }
+    - cond:
+        - when: "prompt_result == 'no_input'"
+          then:
+            - play: { url: "say:Sorry, I didn't catch that" }
+            - goto: { label: menu, max: 3 }
+    - switch:
+        variable: prompt_value
+        case:
+          "1":
+            - transfer: { dest: sales }
+          "2":
+            - transfer: { dest: support }
+          "3":
+            - transfer: { dest: billing }
+          "9":
+            - goto: { label: menu, max: 5 }  # Repeat menu
+        default:
+          - play: { url: "say:Invalid selection" }
+          - goto: { label: menu, max: 3 }
+    - play: { url: "say:We were unable to process your selection. Goodbye." }
+    - hangup: {}
 
   sales:
-    - say: { text: "Connecting you to sales" }
+    - play: { url: "say:Connecting you to sales" }
     - connect:
         to: "+15551111111"
         timeout: 30
-      on_failure:
-        - say: { text: "Sales is unavailable. Returning to main menu" }
-        - execute: { dest: main_menu }
+    - cond:
+        - when: "connect_result == 'failed'"
+          then:
+            - play: { url: "say:Sales is unavailable. Returning to main menu" }
+            - transfer: { dest: main_menu }
 
   support:
-    - say: { text: "Connecting you to support" }
+    - play: { url: "say:Connecting you to support" }
     - connect: { to: "+15552222222" }
 
   billing:
-    - say: { text: "Connecting you to billing" }
+    - play: { url: "say:Connecting you to billing" }
     - connect: { to: "+15553333333" }
 ```
 
@@ -468,16 +490,16 @@ version: 1.0.0
 sections:
   main:
     - answer: {}
-    - say:
-        text: "Please leave a message after the beep"
+    - play:
+        url: "say:Please leave a message after the beep"
     - play:
         url: "https://example.com/beep.mp3"
     - record:
         beep: false
         max_length: 120
         end_silence_timeout: 3
-    - say:
-        text: "Thank you for your message"
+    - play:
+        url: "say:Thank you for your message"
     - send_sms:
         to_number: "+15551234567"  # Notify admin
         from_number: "%{call.to}"
@@ -492,24 +514,25 @@ version: 1.0.0
 sections:
   main:
     - answer: {}
-    - say:
-        text: "Please say your name after the beep"
+    - play:
+        url: "say:Please say your name after the beep"
     - play: { url: "https://example.com/beep.mp3" }
     - record:
         max_length: 5
         end_silence_timeout: 2
-    - say:
-        text: "Please hold while we connect you"
+    - play:
+        url: "say:Please hold while we connect you"
     - connect:
         to: "+15551234567"
-        caller_id: "%{call.from}"
-      on_success:
-        - hangup: {}
-      on_failure:
-        - transfer: { dest: voicemail }
+        from: "%{call.from}"
+    - cond:
+        - when: "connect_result == 'failed'"
+          then:
+            - transfer: { dest: voicemail }
+    - hangup: {}
 
   voicemail:
-    - say: { text: "Sorry, that person is unavailable" }
+    - play: { url: "say:Sorry, that person is unavailable" }
     - hangup: {}
 ```
 
@@ -521,31 +544,31 @@ sections:
   main:
     - answer: {}
     - prompt:
-        play: "Press 1 for English, presione 2 para Español"
+        play: "say:Press 1 for English, presione 2 para Español"
         max_digits: 1
-      on_success:
-        - switch:
-            variable: "%{args.result}"
-            case:
-              "1":
-                - transfer: { dest: english_menu }
-              "2":
-                - transfer: { dest: spanish_menu }
+    - switch:
+        variable: prompt_value
+        case:
+          "1":
+            - transfer: { dest: english_menu }
+          "2":
+            - transfer: { dest: spanish_menu }
 
   english_menu:
-    - say:
-        text: "Welcome to our service"
-        language: "en-US"
+    - play:
+        url: "say:Welcome to our service"
+        say_language: "en-US"
     - prompt:
-        say: "Press 1 for sales, 2 for support"
+        play: "say:Press 1 for sales, 2 for support"
         max_digits: 1
 
   spanish_menu:
-    - say:
-        text: "Bienvenido a nuestro servicio"
-        language: "es-MX"
+    - play:
+        url: "say:Bienvenido a nuestro servicio"
+        say_language: "es-MX"
     - prompt:
-        say: "Presione 1 para ventas, 2 para soporte"
+        play: "say:Presione 1 para ventas, 2 para soporte"
+        say_language: "es-MX"
         max_digits: 1
 ```
 
@@ -614,7 +637,7 @@ def serve_swml():
         "sections": {
             "main": [
                 {"answer": {}},
-                {"say": {"text": f"Debug: Call from {request.args.get('From')}"}}
+                {"play": {"url": f"say:Debug: Call from {request.args.get('From')}"}}
             ]
         }
     }
@@ -648,7 +671,7 @@ def serve_swml():
 **Fix**:
 - Check `timeout` values in `prompt` and `connect`
 - Increase `digit_timeout` for slower input
-- Add `on_failure` handlers
+- Branch on result variables (e.g., `prompt_result`, `connect_result`) with `cond` to handle failures
 
 ## Performance Best Practices
 
@@ -692,51 +715,44 @@ sections:
 
   main_menu:
     - prompt:
-        say: "Press 1 for sales, 2 for support"
+        play: "say:Press 1 for sales, 2 for support"
         max_digits: 1
 ```
 
 ### Loop Protection Pattern
 
-**Problem:** Gather input nodes can loop infinitely if caller doesn't respond.
+**Problem:** Input-collection loops can repeat infinitely if the caller never responds.
 
-**Solution:**
+**Solution:** Use `label` + `goto` with `max` — `goto` stops jumping after `max` attempts (1-100), so the script falls through to your exit path.
 
 ```yaml
 sections:
   main:
     - answer: {}
-    - execute: { dest: get_input }
+    - transfer: { dest: get_input }
 
   get_input:
-    # Create loop counter
-    - set:
-        loop: "{{loop | default(0) | int + 1}}"
-
-    # Check loop count
-    - condition:
-        if: "{{loop}} > 2"
-        then:
-          - say: { text: "We're having trouble understanding your input. Goodbye." }
-          - hangup: {}
-        else:
-          - prompt:
-              say: "Press 1 for sales, 2 for support"
-              max_digits: 1
-            on_success:
-              - switch:
-                  variable: "{{args.result}}"
-                  case:
-                    "1":
-                      - transfer: { dest: sales }
-                    "2":
-                      - transfer: { dest: support }
-                  default:
-                    - say: { text: "That was not a valid option" }
-                    - execute: { dest: get_input }
-            on_failure:
-              - say: { text: "We didn't receive any input" }
-              - execute: { dest: get_input }
+    - label: menu
+    - prompt:
+        play: "say:Press 1 for sales, 2 for support"
+        max_digits: 1
+    - cond:
+        - when: "prompt_result == 'no_input'"
+          then:
+            - play: { url: "say:We didn't receive any input" }
+            - goto: { label: menu, max: 2 }
+    - switch:
+        variable: prompt_value
+        case:
+          "1":
+            - transfer: { dest: sales }
+          "2":
+            - transfer: { dest: support }
+        default:
+          - play: { url: "say:That was not a valid option" }
+          - goto: { label: menu, max: 2 }
+    - play: { url: "say:We're having trouble understanding your input. Goodbye." }
+    - hangup: {}
 
   sales:
     - connect: { to: "+15551111111" }
@@ -745,11 +761,11 @@ sections:
     - connect: { to: "+15552222222" }
 ```
 
-**Implementation per gather node:**
-- Use unique variable names (`loop1`, `loop2`) for multiple gather points
-- Set maximum iterations (typically 2-3)
+**Implementation per input-collection point:**
+- Use unique label names (`menu1`, `menu2`) for multiple input-collection points
+- Set `max` to the maximum retries (typically 2-3)
 - Provide helpful feedback before looping
-- Always end with hangup after max attempts
+- Always end with hangup after max attempts (the methods after `goto` run once the jump limit is reached)
 
 ### Variable Management Best Practices
 
@@ -767,48 +783,46 @@ sections:
         business_phone: "+15551234567"
 
     - prompt:
-        say: "Press 1 for Mean Girls, 2 for Godfather, 3 for Batman"
+        play: "say:Press 1 for Mean Girls, 2 for Godfather, 3 for Batman"
         max_digits: 1
-      on_success:
-        - switch:
-            variable: "{{args.result}}"
-            case:
-              "1":
-                - execute:
-                    dest: announce_times
-                    params:
-                      movie_info: "{{movie1}}"
-              "2":
-                - execute:
-                    dest: announce_times
-                    params:
-                      movie_info: "{{movie2}}"
-              "3":
-                - execute:
-                    dest: announce_times
-                    params:
-                      movie_info: "{{movie3}}"
+    - switch:
+        variable: prompt_value
+        case:
+          "1":
+            - execute:
+                dest: announce_times
+                params:
+                  movie_info: "%{movie1}"
+          "2":
+            - execute:
+                dest: announce_times
+                params:
+                  movie_info: "%{movie2}"
+          "3":
+            - execute:
+                dest: announce_times
+                params:
+                  movie_info: "%{movie3}"
 
   announce_times:
-    - say:
-        text: "{{movie_info}}"
+    - play:
+        url: "say:%{params.movie_info}"
     - play:
         url: "silence:1.0"
     - prompt:
-        say: "Press 1 to receive showtimes via SMS, or press star to return to the menu"
+        play: "say:Press 1 to receive showtimes via SMS, or press star to return to the menu"
         max_digits: 1
-      on_success:
-        - switch:
-            variable: "{{args.result}}"
-            case:
-              "1":
-                - send_sms:
-                    to_number: "{{call.from}}"
-                    from_number: "{{business_phone}}"
-                    body: "{{movie_info}}"
-                - say: { text: "Showtimes have been sent to your phone" }
-              "*":
-                - transfer: { dest: main }
+    - switch:
+        variable: prompt_value
+        case:
+          "1":
+            - send_sms:
+                to_number: "%{call.from}"
+                from_number: "%{business_phone}"
+                body: "%{params.movie_info}"
+            - play: { url: "say:Showtimes have been sent to your phone" }
+          "*":
+            - transfer: { dest: main }
 ```
 
 **Benefits:**
@@ -823,55 +837,57 @@ sections:
 
 ```yaml
 # Access caller phone number
-- say:
-    text: "You called from {{call.from}}"
+- play:
+    url: "say:You called from %{call.from}"
 
 # Access destination number
-- say:
-    text: "You called {{call.to}}"
+- play:
+    url: "say:You called %{call.to}"
 
 # Use in SMS node
 - send_sms:
-    to: "{{call.from}}"
-    from: "{{call.to}}"
-    body: "Thanks for calling! Your reference number is {{call.id}}"
+    to_number: "%{call.from}"
+    from_number: "%{call.to}"
+    body: "Thanks for calling! Your reference number is %{call.call_id}"
 
 # Access call metadata
-- condition:
-    if: "{{call.direction}} == 'inbound'"
-    then:
-      - say: { text: "This is an inbound call" }
+- cond:
+    - when: "call.direction == 'inbound'"
+      then:
+        - play: { url: "say:This is an inbound call" }
 ```
 
 ### Handling Unknown/No Input
 
 **Always handle these paths:**
-- `unknown`: Caller input doesn't match options
-- `no_input`: Caller doesn't respond
+- Unmatched input: caller input doesn't match any `switch` case (use `default`)
+- No input: caller doesn't respond (`prompt_result == 'no_input'`)
 
 **Best Practice Example:**
 
 ```yaml
+- label: menu
 - prompt:
-    say: "Press 1 for sales, 2 for support, or 0 to speak with an operator"
+    play: "say:Press 1 for sales, 2 for support, or 0 to speak with an operator"
     max_digits: 1
     digit_timeout: 5.0
-  on_success:
-    - switch:
-        variable: "{{args.result}}"
-        case:
-          "1":
-            - transfer: { dest: sales }
-          "2":
-            - transfer: { dest: support }
-          "0":
-            - transfer: { dest: operator }
-          default:
-            - say: { text: "That's not a valid option. Let me repeat the menu." }
-            - execute: { dest: main_menu }
-  on_failure:
-    - say: { text: "We didn't receive your input. Let me repeat the options." }
-    - execute: { dest: main_menu }
+- cond:
+    - when: "prompt_result == 'no_input'"
+      then:
+        - play: { url: "say:We didn't receive your input. Let me repeat the options." }
+        - goto: { label: menu, max: 3 }
+- switch:
+    variable: prompt_value
+    case:
+      "1":
+        - transfer: { dest: sales }
+      "2":
+        - transfer: { dest: support }
+      "0":
+        - transfer: { dest: operator }
+    default:
+      - play: { url: "say:That's not a valid option. Let me repeat the menu." }
+      - goto: { label: menu, max: 3 }
 ```
 
 ## Common SWML Patterns from Production
@@ -918,32 +934,36 @@ sections:
     - request:
         url: "https://timeapi.io/api/Time/current/zone?timeZone=America/Chicago"
         method: GET
-    - condition:
-        if: "{{request.response.hour}} >= 9 && {{request.response.hour}} < 17"
-        then:
-          - transfer: { dest: business_hours }
-        else:
-          - transfer: { dest: after_hours }
+        save_variables: true
+    - cond:
+        - when: "request_response.hour >= 9 && request_response.hour < 17"
+          then:
+            - transfer: { dest: business_hours }
+        - else:
+            - transfer: { dest: after_hours }
 
   business_hours:
-    - say: { text: "Our office is open. Connecting you now." }
+    - play: { url: "say:Our office is open. Connecting you now." }
     - connect:
         to: "+15551234567"
         timeout: 30
-      on_failure:
-        - transfer: { dest: voicemail }
+    - cond:
+        - when: "connect_result == 'failed'"
+          then:
+            - transfer: { dest: voicemail }
+    - hangup: {}
 
   after_hours:
-    - say:
-        text: "Our office is currently closed. We're open Monday through Friday, 9 AM to 5 PM Central Time."
+    - play:
+        url: "say:Our office is currently closed. We're open Monday through Friday, 9 AM to 5 PM Central Time."
     - transfer: { dest: voicemail }
 
   voicemail:
-    - say: { text: "Please leave a message after the beep" }
+    - play: { url: "say:Please leave a message after the beep" }
     - record:
         max_length: 120
         end_silence_timeout: 3
-    - say: { text: "Thank you. We'll return your call soon." }
+    - play: { url: "say:Thank you. We'll return your call soon." }
     - hangup: {}
 ```
 
@@ -951,46 +971,46 @@ sections:
 
 **Use Case:** Try multiple numbers sequentially
 
+The `connect` method's `serial` mode tries destinations one at a time, moving to the next if the previous fails:
+
 ```yaml
 version: 1.0.0
 sections:
   main:
     - answer: {}
-    - say: { text: "Please hold while we locate an available representative" }
-    - execute: { dest: try_office }
+    - play: { url: "say:Please hold while we locate an available representative" }
+    - connect:
+        serial:
+          - to: "+15551111111"
+            timeout: 20
+          - to: "+15552222222"
+            timeout: 20
+          - to: "+15553333333"
+            timeout: 20
+    - cond:
+        - when: "connect_result == 'failed'"
+          then:
+            - transfer: { dest: voicemail }
+    - hangup: {}
 
+  voicemail:
+    - play: { url: "say:All representatives are unavailable. Please leave a message." }
+    - record: { max_length: 120 }
+    - hangup: {}
+```
+
+If you need an announcement between attempts, use one `connect` per section and chain with `cond` on `connect_result`:
+
+```yaml
   try_office:
     - connect:
         to: "+15551111111"
         timeout: 20
-      on_success:
-        - hangup: {}
-      on_failure:
-        - execute: { dest: try_mobile }
-
-  try_mobile:
-    - say: { text: "Trying alternate number" }
-    - connect:
-        to: "+15552222222"
-        timeout: 20
-      on_success:
-        - hangup: {}
-      on_failure:
-        - execute: { dest: try_backup }
-
-  try_backup:
-    - say: { text: "Trying final contact method" }
-    - connect:
-        to: "+15553333333"
-        timeout: 20
-      on_success:
-        - hangup: {}
-      on_failure:
-        - transfer: { dest: voicemail }
-
-  voicemail:
-    - say: { text: "All representatives are unavailable. Please leave a message." }
-    - record: { max_length: 120 }
+    - cond:
+        - when: "connect_result == 'failed'"
+          then:
+            - play: { url: "say:Trying alternate number" }
+            - transfer: { dest: try_mobile }
     - hangup: {}
 ```
 
@@ -1004,33 +1024,43 @@ sections:
   main:
     - answer: {}
     - prompt:
-        say: "All agents are currently busy. Press 1 to hold, or press 2 to receive a callback when an agent is available"
+        play: "say:All agents are currently busy. Press 1 to hold, or press 2 to receive a callback when an agent is available"
         max_digits: 1
-      on_success:
-        - switch:
-            variable: "{{args.result}}"
-            case:
-              "1":
-                - transfer: { dest: hold_queue }
-              "2":
-                - transfer: { dest: schedule_callback }
+    - switch:
+        variable: prompt_value
+        case:
+          "1":
+            - transfer: { dest: hold_queue }
+          "2":
+            - transfer: { dest: schedule_callback }
 
   hold_queue:
-    - play:
-        url: "https://example.com/hold-music.mp3"
-    - say: { text: "Your call is important to us. Please continue holding." }
-    - execute: { dest: hold_queue }  # Loop hold music
+    # Wait in a named queue with hold music until an agent connects
+    # (agents dequeue callers with connect to "queue:support")
+    - enter_queue:
+        queue_name: "support"
+        wait_time: 1800
+        # Required: SWML to run after the agent bridge ends (URL or inline JSON string)
+        transfer_after_bridge: "https://yourserver.com/after-bridge.swml"
+    # queue_result: entering|connecting|connected|leaving|timeout|hangup|failed
+    - cond:
+        - when: "queue_result == 'timeout'"
+          then:
+            - transfer: { dest: schedule_callback }
+    - hangup: {}
 
   schedule_callback:
-    - say: { text: "We'll call you back at this number when an agent is available" }
+    - play: { url: "say:We'll call you back at this number when an agent is available" }
     # Make API call to queue system
     - request:
         url: "https://yourserver.com/api/callback-queue"
         method: POST
+        headers:
+          Content-Type: application/json
         body:
-          phone: "{{call.from}}"
-          timestamp: "{{call.timestamp}}"
-    - say: { text: "You've been added to our callback queue. We'll call you back shortly." }
+          phone: "%{call.from}"
+          call_id: "%{call.call_id}"
+    - play: { url: "say:You've been added to our callback queue. We'll call you back shortly." }
     - hangup: {}
 ```
 
@@ -1043,27 +1073,31 @@ version: 1.0.0
 sections:
   main:
     - answer: {}
-    - say: { text: "Thank you for calling. We'd like to ask you a brief survey question." }
-    - execute: { dest: survey }
+    - play: { url: "say:Thank you for calling. We'd like to ask you a brief survey question." }
+    - transfer: { dest: survey }
 
   survey:
     - prompt:
-        say: "On a scale of 1 to 5, how satisfied were you with your service today? Press 1 for very dissatisfied, or 5 for very satisfied."
+        play: "say:On a scale of 1 to 5, how satisfied were you with your service today? Press 1 for very dissatisfied, or 5 for very satisfied."
         max_digits: 1
-      on_success:
-        - request:
-            url: "https://yourserver.com/api/survey"
-            method: POST
-            body:
-              rating: "{{args.result}}"
-              call_id: "{{call.id}}"
-              phone: "{{call.from}}"
-        - say:
-            text: "Thank you for your feedback. Have a great day!"
-        - hangup: {}
-      on_failure:
-        - say: { text: "Thank you for calling" }
-        - hangup: {}
+    - cond:
+        - when: "prompt_result == 'match_digits'"
+          then:
+            - request:
+                url: "https://yourserver.com/api/survey"
+                method: POST
+                headers:
+                  Content-Type: application/json
+                body:
+                  rating: "%{prompt_value}"
+                  call_id: "%{call.call_id}"
+                  phone: "%{call.from}"
+            - play:
+                url: "say:Thank you for your feedback. Have a great day!"
+            - hangup: {}
+        - else:
+            - play: { url: "say:Thank you for calling" }
+            - hangup: {}
 ```
 
 ## Anti-Patterns to Avoid
@@ -1072,22 +1106,33 @@ sections:
 
 ❌ **Wrong:**
 ```yaml
-- gather:
-    type: digits
-    no_input:
-      - goto: gather  # Infinite loop!
+  get_input:
+    - prompt:
+        play: "say:Please make a selection"
+        max_digits: 1
+    - cond:
+        - when: "prompt_result == 'no_input'"
+          then:
+            - transfer: { dest: get_input }  # Infinite loop!
 ```
 
 ✅ **Right:**
 ```yaml
-- set:
-    loop: "{{loop | default(0) | int + 1}}"
-- condition:
-    if: "{{loop}} > 3"
-    then:
-      - hangup: {}
-    else:
-      - gather: {}
+  get_input:
+    - label: menu
+    - prompt:
+        play: "say:Please make a selection"
+        max_digits: 1
+    - goto:
+        label: menu
+        when: "prompt_result == 'no_input'"
+        max: 3  # Stops jumping after 3 retries
+    - cond:
+        - when: "prompt_result == 'no_input'"
+          then:
+            - play: { url: "say:We didn't receive your input. Goodbye." }
+            - hangup: {}
+    # ... continue handling prompt_value
 ```
 
 ### 2. Not Handling All Input Paths
@@ -1095,47 +1140,48 @@ sections:
 ❌ **Wrong:**
 ```yaml
 - prompt:
-    say: "Press 1 or 2"
+    play: "say:Press 1 or 2"
     max_digits: 1
-  on_success:
-    - switch:
-        variable: "{{args.result}}"
-        case:
-          "1":
-            - transfer: { dest: option1 }
-          "2":
-            - transfer: { dest: option2 }
-# Missing default and on_failure handlers!
+- switch:
+    variable: prompt_value
+    case:
+      "1":
+        - transfer: { dest: option1 }
+      "2":
+        - transfer: { dest: option2 }
+# Missing default case and no_input handling!
 ```
 
 ✅ **Right:**
 ```yaml
+- label: menu
 - prompt:
-    say: "Press 1 or 2"
+    play: "say:Press 1 or 2"
     max_digits: 1
-  on_success:
-    - switch:
-        variable: "{{args.result}}"
-        case:
-          "1":
-            - transfer: { dest: option1 }
-          "2":
-            - transfer: { dest: option2 }
-          default:
-            - say: { text: "Invalid option" }
-            - execute: { dest: main_menu }
-  on_failure:
-    - say: { text: "No input received" }
-    - execute: { dest: main_menu }
+- cond:
+    - when: "prompt_result == 'no_input'"
+      then:
+        - play: { url: "say:No input received" }
+        - goto: { label: menu, max: 3 }
+- switch:
+    variable: prompt_value
+    case:
+      "1":
+        - transfer: { dest: option1 }
+      "2":
+        - transfer: { dest: option2 }
+    default:
+      - play: { url: "say:Invalid option" }
+      - goto: { label: menu, max: 3 }
 ```
 
 ### 3. Hardcoding Values That Should Be Variables
 
 ❌ **Wrong:**
 ```yaml
-- say: { text: "Movie 1 plays at 12:45, 2:15, and 5:00" }
+- play: { url: "say:Movie 1 plays at 12:45, 2:15, and 5:00" }
 # Later in the code...
-- say: { text: "Movie 1 plays at 12:45, 2:15, and 5:00" }
+- play: { url: "say:Movie 1 plays at 12:45, 2:15, and 5:00" }
 # If times change, you must update in multiple places
 ```
 
@@ -1143,9 +1189,9 @@ sections:
 ```yaml
 - set:
     movie1_times: "Movie 1 plays at 12:45, 2:15, and 5:00"
-- say: { text: "{{movie1_times}}" }
+- play: { url: "say:%{movie1_times}" }
 # Later...
-- say: { text: "{{movie1_times}}" }
+- play: { url: "say:%{movie1_times}" }
 # Update in one place
 ```
 
@@ -1157,16 +1203,18 @@ sections:
   main:
     - answer: {}
     - prompt:
-        say: "Complex menu"
-      on_success:
-        - switch:
-            case:
-              "1":
-                - prompt:
-                    say: "Submenu"
-                  on_success:
-                    - switch:
-                        # Deeply nested, hard to maintain
+        play: "say:Complex menu"
+        max_digits: 1
+    - switch:
+        variable: prompt_value
+        case:
+          "1":
+            - prompt:
+                play: "say:Submenu"
+                max_digits: 1
+            - switch:
+                variable: prompt_value
+                # Deeply nested, hard to maintain
 ```
 
 ✅ **Right:**
@@ -1174,20 +1222,22 @@ sections:
 sections:
   main:
     - answer: {}
-    - execute: { dest: main_menu }
+    - transfer: { dest: main_menu }
 
   main_menu:
     - prompt:
-        say: "Main menu"
-      on_success:
-        - switch:
-            case:
-              "1":
-                - transfer: { dest: submenu }
+        play: "say:Main menu"
+        max_digits: 1
+    - switch:
+        variable: prompt_value
+        case:
+          "1":
+            - transfer: { dest: submenu }
 
   submenu:
     - prompt:
-        say: "Submenu"
+        play: "say:Submenu"
+        max_digits: 1
     # Separate sections are easier to understand and maintain
 ```
 
@@ -1244,7 +1294,9 @@ sections:
     - return: {}
 
   main_menu:
-    - prompt: { say: "Main menu options" }
+    - prompt:
+        play: "say:Main menu options"
+        max_digits: 1
     # ... menu logic
     - return: {}
 
@@ -1279,7 +1331,7 @@ sections:
 
 ```yaml
 # Good - tells user what to expect
-- say: { text: "Please hold while I transfer you to sales. This may take up to 30 seconds." }
+- play: { url: "say:Please hold while I transfer you to sales. This may take up to 30 seconds." }
 - connect:
     to: "+15551234567"
     timeout: 30

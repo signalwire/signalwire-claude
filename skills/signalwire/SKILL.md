@@ -1,6 +1,6 @@
 ---
 name: signalwire
-description: Use when building telephony, messaging, or video applications; implementing voice AI agents; working with SWML call flows; debugging webhook callbacks or call state issues; setting up real-time WebSocket communication; encountering authentication 401/403 errors; or troubleshooting SWAIG function errors - provides REST API patterns, SDK examples, and production-tested workflows for modern SignalWire communication systems
+description: Use when building telephony, messaging, or video applications; implementing voice AI agents; adding real-time AI coaching or call observation (ai_sidecar) to live calls; working with SWML call flows; debugging webhook callbacks or call state issues; setting up real-time WebSocket communication; encountering authentication 401/403 errors; or troubleshooting SWAIG function errors - provides REST API patterns, SDK examples, and production-tested workflows for modern SignalWire communication systems
 ---
 
 # SignalWire
@@ -46,10 +46,13 @@ These insights come from analysis of 89 SignalWire training videos, LiveWire ses
 
 **AI Voice Agents:** Start with [Voice AI](workflows/voice-ai.md) overview
 - **SDK:** [Basics](workflows/ai-agent-sdk-basics.md) | [Prompting](workflows/ai-agent-prompting.md) | [Functions](workflows/ai-agent-functions.md) | [Deployment](workflows/ai-agent-deployment.md)
+- **AI Sidecar:** [Real-time agent coaching](workflows/ai-sidecar.md) - AI observer that coaches a human agent (never speaks on the call)
 - **Best Practices:** [Patterns](workflows/ai-agent-patterns.md) | [Error Handling](workflows/ai-agent-error-handling.md) | [Security](workflows/ai-agent-security.md) | [Testing](workflows/ai-agent-testing.md) | [Debug Webhooks](workflows/ai-agent-debug-webhooks.md)
 
 **Other:**
 - [Messaging](workflows/messaging.md) | [Video](workflows/video.md) | [Fabric & Relay](workflows/fabric-relay.md) | [Webhooks & Events](workflows/webhooks-events.md)
+
+**SWML Method Reference:** [All SWML methods](workflows/swml-methods.md) - complete method catalog including queuing, conferencing, AMD, fax, transcription, streaming, taps, payment, control flow, Messaging SWML (`reply` to SMS), and variable syntax
 
 ## Quick Start Patterns
 
@@ -57,7 +60,7 @@ These insights come from analysis of 89 SignalWire training videos, LiveWire ses
 
 **Space URL:** All API requests go to `https://{space-name}.signalwire.com`
 
-**SWML Variables:** `%{call.from}`, `%{call.to}`, `%{params.custom_field}`, `%{args.user_input}`
+**SWML Variables:** `%{call.from}`, `%{call.to}`, `%{params.custom_field}`, `%{vars.my_variable}` (`%{args.x}` is SWAIG-only, inside `ai` function contexts)
 
 **Webhooks:** HTTP POST with JSON (`call_id`, `call_state`, `from`, `to`, `direction`)
 
@@ -73,14 +76,24 @@ These insights come from analysis of 89 SignalWire training videos, LiveWire ses
 
 ## Critical Pattern: Loop Protection
 
-SWML gather/prompt nodes can infinite loop. Always add counters:
+SWML menu loops (`prompt` + retry) can trap callers. Use `goto` with its built-in `max` jump limit:
 
 ```yaml
-- set:
-    loop_counter: "{{loop_counter | default(0) | int + 1}}"
-- condition:
-    if: "{{loop_counter}} > 3"
-    then: hangup  # Prevent caller stuck in loop
+- label: menu
+- prompt:
+    play: "say:Press 1 for sales, 2 for support"
+- switch:
+    variable: prompt_value
+    case:
+      "1":
+        - transfer: { dest: sales }
+      "2":
+        - transfer: { dest: support }
+    default:
+      - goto: { label: menu, max: 3 }  # retry cap prevents infinite loop
+- play:
+    url: "say:We didn't receive valid input. Goodbye."
+- hangup: {}
 ```
 
 For complete patterns, see [Inbound Call Handling](workflows/inbound-call-handling.md).
@@ -98,6 +111,8 @@ See [Voice AI workflow](workflows/voice-ai.md) "When to Pull Additional Document
 **New to SignalWire?** → [Authentication & Setup](workflows/authentication-setup.md)
 
 **Building AI voice agent?** → [Voice AI](workflows/voice-ai.md)
+
+**Coaching a live human agent with AI?** → [AI Sidecar](workflows/ai-sidecar.md)
 
 **Making/receiving calls?** → [Outbound Calling](workflows/outbound-calling.md) or [Inbound Handling](workflows/inbound-call-handling.md)
 

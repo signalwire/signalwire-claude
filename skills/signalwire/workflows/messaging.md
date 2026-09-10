@@ -133,6 +133,11 @@ response = requests.post(
 
 ## Receiving Messages
 
+There are two ways to handle inbound SMS/MMS:
+
+1. **Messaging SWML** (no server code) — point the number at a Messaging SWML document and use the `reply` method for auto-replies and keyword responders. See [Messaging SWML in the method reference](swml-methods.md#messaging-swml).
+2. **Webhook to your server** (full control) — configure a webhook and respond via REST or the Realtime SDK, as below.
+
 ### Configure Webhook
 
 1. **Dashboard**: Go to Phone Numbers → Select number → Messaging Settings
@@ -242,14 +247,14 @@ version: 1.0.0
 sections:
   main:
     - answer: {}
-    - say:
-        text: "Sending you a confirmation SMS"
+    - play:
+        url: "say:Sending you a confirmation SMS"
     - send_sms:
         to_number: "%{call.from}"
         from_number: "%{call.to}"
         body: "Thank you for calling! Your reference number is 12345"
-    - say:
-        text: "Message sent. Have a great day!"
+    - play:
+        url: "say:Message sent. Have a great day!"
     - hangup: {}
 ```
 

@@ -339,17 +339,16 @@ def verify_mfa_code():
 
 ```yaml
 # SWML for voice MFA
+# {mfa_code} is filled in server-side when your server generates this document
 version: 1.0.0
 sections:
   main:
     - answer: {}
-    - say:
-        text: "Your verification code is"
-    - say:
-        text: "{mfa_code}"
-        # Speak digits slowly and clearly
-    - say:
-        text: "I repeat, your code is {mfa_code}"
+    - play:
+        # Digits are spoken individually by the TTS engine
+        url: "say:Your verification code is {mfa_code}"
+    - play:
+        url: "say:I repeat, your code is {mfa_code}"
     - hangup: {}
 ```
 
@@ -358,35 +357,40 @@ sections:
 ```yaml
 # AI agent that verifies identity
 - ai:
-    prompt: |
-      You are a security verification agent.
+    prompt:
+      text: |
+        You are a security verification agent.
 
-      Steps:
-      1. Ask the caller to provide their 4-digit PIN
-      2. Call verify_pin function with the PIN
-      3. If verified, greet them by name and proceed
-      4. If not verified, ask them to try again (max 3 attempts)
-      5. After 3 failed attempts, disconnect the call
+        Steps:
+        1. Ask the caller to provide their 4-digit PIN
+        2. Call verify_pin function with the PIN
+        3. If verified, greet them by name and proceed
+        4. If not verified, ask them to try again (max 3 attempts)
+        5. After 3 failed attempts, disconnect the call
 
-    functions:
-      - name: verify_pin
-        purpose: "Verify caller's PIN"
-        parameters:
-          - name: pin
-            type: string
-            description: "4-digit PIN code"
-        data_map:
-          webhooks:
-            - url: "https://yourserver.com/verify-pin"
-              method: POST
-              output:
-                # Don't tell AI sensitive data - use metadata
-                response: "{{verified ? 'Caller verified' : 'Invalid PIN'}}"
-                action:
-                  - set_meta_data:
-                      verified: "{{verified}}"
-                      customer_id: "{{customer_id}}"
-                      customer_name: "{{customer_name}}"
+    SWAIG:
+      functions:
+        - function: verify_pin
+          description: "Verify caller's PIN"
+          parameters:
+            type: object
+            properties:
+              pin:
+                type: string
+                description: "4-digit PIN code"
+          data_map:
+            webhooks:
+              - url: "https://yourserver.com/verify-pin"
+                method: POST
+                output:
+                  # Don't tell AI sensitive data - use metadata.
+                  # %{...} references fields from the webhook's JSON response.
+                  response: "Verification result: %{verified}"
+                  action:
+                    - set_meta_data:
+                        verified: "%{verified}"
+                        customer_id: "%{customer_id}"
+                        customer_name: "%{customer_name}"
 ```
 
 ## Metadata for Security (Sensitive Data)
@@ -395,25 +399,27 @@ sections:
 
 ```yaml
 # SWAIG function with metadata storage
-functions:
-  - name: verify_customer
-    purpose: "Verify customer identity"
-    data_map:
-      webhooks:
-        - url: "https://yourserver.com/verify"
-          method: POST
-          output:
-            # AI only sees this response
-            response: "Customer verified successfully"
+SWAIG:
+  functions:
+    - function: verify_customer
+      description: "Verify customer identity"
+      data_map:
+        webhooks:
+          - url: "https://yourserver.com/verify"
+            method: POST
+            output:
+              # AI only sees this response
+              response: "Customer verified successfully"
 
-            # Sensitive data goes to metadata (not visible to LLM)
-            action:
-              - set_meta_data:
-                  customer_id: "{{response.id}}"
-                  account_balance: "{{response.balance}}"
-                  credit_card_last4: "{{response.card_last4}}"
-                  ssn_last4: "{{response.ssn_last4}}"
-                  auth_token: "{{response.token}}"
+              # Sensitive data goes to metadata (not visible to LLM).
+              # %{...} references fields from the webhook's JSON response.
+              action:
+                - set_meta_data:
+                    customer_id: "%{id}"
+                    account_balance: "%{balance}"
+                    credit_card_last4: "%{card_last4}"
+                    ssn_last4: "%{ssn_last4}"
+                    auth_token: "%{token}"
 ```
 
 ### Accessing Metadata in Functions
@@ -443,22 +449,25 @@ def check_balance():
 ```yaml
 # Collect payment info securely
 - ai:
-    prompt: |
-      Collect payment amount and confirm customer information.
-      Then use collect_payment function.
+    prompt:
+      text: |
+        Collect payment amount and confirm customer information.
+        Then use collect_payment function.
 
-    functions:
-      - name: collect_payment
-        purpose: "Securely collect credit card information"
-        data_map:
-          webhooks:
-            - url: "https://yourserver.com/process-payment"
-              method: POST
+    SWAIG:
+      functions:
+        - function: collect_payment
+          description: "Securely collect credit card information"
+          data_map:
+            webhooks:
+              - url: "https://yourserver.com/process-payment"
+                method: POST
 
 # Payment info bypasses LLM completely
 - pay:
-    payment_method: credit_card
-    payment_handler: "https://yourserver.com/payment-processor"
+    charge_amount: "25.00"
+    payment_method: credit-card
+    payment_connector_url: "https://yourserver.com/payment-processor"
 ```
 
 **Security Benefits:**

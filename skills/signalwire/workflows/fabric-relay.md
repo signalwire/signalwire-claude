@@ -916,9 +916,9 @@ Store sensitive data in metadata instead of LLM context:
                 response: "Customer verified"
                 action:
                   - set_meta_data:
-                      customer_id: "{{response.id}}"
-                      auth_token: "{{response.token}}"
-                      account_balance: "{{response.balance}}"
+                      customer_id: "%{response.id}"
+                      auth_token: "%{response.token}"
+                      account_balance: "%{response.balance}"
 ```
 
 **Benefits:**

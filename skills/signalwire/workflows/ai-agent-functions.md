@@ -791,12 +791,12 @@ functions:
         - url: "https://api.signalwire.com/api/datasphere/search"
           method: POST
           headers:
-            Authorization: "Basic {{base64_encoded_creds}}"
+            Authorization: "Basic <base64-encoded-credentials>"
           body:
-            query: "{{args.question}}"
+            query: "%{args.question}"
             document_id: "your-document-id"
           output:
-            response: "{{chunk.text}}"
+            response: "%{chunks[0].text}"
 ```
 
 **Use Cases:**

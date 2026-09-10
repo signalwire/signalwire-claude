@@ -293,7 +293,7 @@ def generate_vip_swml(from_number):
         "sections": {
             "main": [
                 {"answer": {}},
-                {"say": {"text": f"Welcome back, valued customer {from_number}"}},
+                {"play": {"url": f"say: Welcome back, valued customer {from_number}"}},
                 {"connect": {"to": "+15551111111"}}  # VIP queue
             ]
         }
@@ -305,12 +305,12 @@ def generate_standard_swml(from_number):
         "sections": {
             "main": [
                 {"answer": {}},
-                {"say": {"text": "Welcome to our service"}},
+                {"play": {"url": "say: Welcome to our service"}},
                 {"transfer": {"dest": "main_menu"}}
             ],
             "main_menu": [
                 {"prompt": {
-                    "say": "Press 1 for sales, 2 for support",
+                    "play": "say: Press 1 for sales, 2 for support",
                     "max_digits": 1
                 }}
             ]
@@ -830,7 +830,11 @@ def create_ticket():
 sections:
   main:
     - live_transcribe:
-        url: "wss://yourserver.com/transcribe"
+        action:
+          start:
+            webhook: "https://yourserver.com/transcribe"
+            lang: en
+            live_events: true
     - ai:
         prompt: "Your agent instructions"
 ```
@@ -876,7 +880,7 @@ Stream call audio for real-time transcription or recording:
 # SWML with audio streaming
 - stream:
     url: "wss://yourserver.com/stream"
-    track: "both"  # inbound, outbound, or both
+    track: "both_tracks"  # inbound_track, outbound_track, or both_tracks
 - ai:
     prompt: "Your instructions"
 ```

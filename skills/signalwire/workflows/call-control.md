@@ -21,26 +21,27 @@ Transfer call without announcement:
 Announce before transferring:
 
 ```yaml
-- say:
-    text: "Please hold while I transfer you"
+- play:
+    url: "say:Please hold while I transfer you"
 - connect:
     to: "+15551234567"
     timeout: 30
-  on_failure:
-    - say: { text: "Transfer failed. Please try again later" }
-    - hangup: {}
+- cond:
+    - when: "connect_result == 'failed'"
+      then:
+        - play: { url: "say:Transfer failed. Please try again later" }
+        - hangup: {}
 ```
 
 ### Transfer with Screening
 
 ```yaml
-- say:
-    text: "Transferring you now"
+- play:
+    url: "say:Transferring you now"
 - connect:
     to: "+15551234567"
     ringback:
-      - play:
-          url: "https://example.com/hold-music.mp3"
+      - "https://example.com/hold-music.mp3"
 ```
 
 ### Section Transfer
@@ -51,13 +52,16 @@ Transfer to another SWML section:
 sections:
   main:
     - prompt:
-        say: "Press 1 for sales"
+        play: "say:Press 1 for sales"
         max_digits: 1
-      on_success:
-        - transfer: { dest: sales_dept }
+    - switch:
+        variable: prompt_value
+        case:
+          "1":
+            - transfer: { dest: sales_dept }
 
   sales_dept:
-    - say: { text: "Welcome to sales" }
+    - play: { url: "say:Welcome to sales" }
     - connect: { to: "+15551111111" }
 ```
 
@@ -70,8 +74,8 @@ sections:
 - record_call:
     stereo: true
     format: "mp3"
-- say:
-    text: "This call is being recorded"
+- play:
+    url: "say:This call is being recorded"
 ```
 
 **Parameters**:
@@ -83,8 +87,8 @@ Recording URL sent to webhook when call ends.
 ### Record Message/Voicemail (SWML)
 
 ```yaml
-- say:
-    text: "Please leave a message after the beep"
+- play:
+    url: "say:Please leave a message after the beep"
 - play:
     url: "https://example.com/beep.mp3"
 - record:
@@ -149,18 +153,18 @@ client.on('call.received', async (call) => {
 ### Simple Conference (SWML)
 
 ```yaml
-- say:
-    text: "Joining conference room"
-- join_room:
+- play:
+    url: "say:Joining conference room"
+- join_conference:
     name: "my-conference"
     muted: false
-    deaf: false
+    beep: true
 ```
 
 **Parameters**:
-- `name`: Conference room name (creates if doesn't exist)
+- `name`: Conference name (creates if doesn't exist)
 - `muted`: Join with mic muted (default: `false`)
-- `deaf`: Can't hear others (default: `false`)
+- `beep`: Beep on join/leave (`true`, `false`, `onEnter`, `onExit`)
 
 ### Conference with PIN (SWML)
 
@@ -169,39 +173,36 @@ sections:
   main:
     - answer: {}
     - prompt:
-        say: "Please enter your conference PIN"
+        play: "say:Please enter your conference PIN"
         max_digits: 4
-      on_success:
-        - switch:
-            variable: "%{args.result}"
-            case:
-              "1234":
-                - transfer: { dest: valid_conference }
-              default:
-                - say: { text: "Invalid PIN" }
-                - hangup: {}
+    - switch:
+        variable: prompt_value
+        case:
+          "1234":
+            - transfer: { dest: valid_conference }
+        default:
+          - play: { url: "say:Invalid PIN" }
+          - hangup: {}
 
   valid_conference:
-    - say: { text: "Joining conference" }
-    - join_room:
+    - play: { url: "say:Joining conference" }
+    - join_conference:
         name: "secure-meeting"
 ```
 
 ### Moderator vs Participant
 
 ```yaml
-# Moderator
-- join_room:
+# Moderator - conference starts when they join, ends when they leave
+- join_conference:
     name: "meeting-123"
-    moderator: true
-    start_conference_on_enter: true
-    end_conference_on_exit: true
+    start_on_enter: true
+    end_on_exit: true
 
-# Participant
-- join_room:
+# Participant - hears hold music until a start_on_enter participant joins
+- join_conference:
     name: "meeting-123"
-    moderator: false
-    wait_for_moderator: true
+    start_on_enter: false
 ```
 
 ## Real-Time Call Control with Relay SDK
@@ -295,30 +296,27 @@ async function handleCall() {
 
 ### Queue Pattern (SWML)
 
+For real hold queues with agents dequeuing callers, use the `enter_queue` method — see [swml-methods.md](swml-methods.md#enter_queue). The pattern below is a lightweight alternative that bridges directly with ring feedback:
+
 ```yaml
 sections:
   main:
     - answer: {}
-    - say:
-        text: "All agents are busy. Please hold."
-    - execute:
-        dest: play_hold_music
+    - play:
+        url: "say:All agents are busy. Please hold."
     - connect:
         to: "+15551234567"
         timeout: 300  # 5 min timeout
-      on_failure:
-        - transfer: { dest: voicemail }
-
-  play_hold_music:
-    - play:
-        url: "https://example.com/hold-music.mp3"
-    - say:
-        text: "Your call is important to us. Please continue holding."
-    - execute:
-        dest: play_hold_music  # Loop
+        ringback:  # Hold music while dialing
+          - "https://example.com/hold-music.mp3"
+          - "say:Your call is important to us. Please continue holding."
+    - cond:
+        - when: "connect_result == 'failed'"
+          then:
+            - transfer: { dest: voicemail }
 
   voicemail:
-    - say: { text: "Please leave a message" }
+    - play: { url: "say:Please leave a message" }
     - record: { max_length: 120 }
 ```
 
@@ -339,13 +337,17 @@ sections:
 - connect:
     to: "+15551234567"
     timeout: 20
-  on_failure:
-    - say: { text: "Forwarding to mobile" }
-    - connect:
-        to: "+15559876543"
-        timeout: 20
-      on_failure:
-        - transfer: { dest: voicemail }
+- cond:
+    - when: "connect_result == 'failed'"
+      then:
+        - play: { url: "say:Forwarding to mobile" }
+        - connect:
+            to: "+15559876543"
+            timeout: 20
+        - cond:
+            - when: "connect_result == 'failed'"
+              then:
+                - transfer: { dest: voicemail }
 ```
 
 ### Sequential Forward (Try Multiple Numbers)
@@ -354,24 +356,18 @@ sections:
 sections:
   main:
     - answer: {}
-    - execute: { dest: try_office }
-
-  try_office:
     - connect:
-        to: "+15551111111"
         timeout: 20
-      on_failure:
-        - execute: { dest: try_mobile }
-
-  try_mobile:
-    - connect:
-        to: "+15552222222"
-        timeout: 20
-      on_failure:
-        - transfer: { dest: voicemail }
+        serial:  # Try each destination in order
+          - to: "+15551111111"  # Office
+          - to: "+15552222222"  # Mobile
+    - cond:
+        - when: "connect_result == 'failed'"
+          then:
+            - transfer: { dest: voicemail }
 
   voicemail:
-    - say: { text: "Please leave a message" }
+    - play: { url: "say:Please leave a message" }
     - record: {}
 ```
 
@@ -473,24 +469,28 @@ async def warm_transfer(call, agent_number):
 ```yaml
 - connect:
     to: "+15551234567"
-    caller_id: "%{call.from}"
+    from: "%{call.from}"
     answer_on_bridge: true
-    whisper:
-      say: "This is a sales call from %{call.from}"
+    confirm:  # Runs on the agent leg before bridging - caller doesn't hear it
+      - play:
+          url: "say:This is a sales call from %{call.from}"
 ```
 
 ### Call Screening with Accept/Reject
 
 ```yaml
-- say:
-    text: "Connecting you now"
+- play:
+    url: "say:Connecting you now"
 - connect:
     to: "+15551234567"
-    confirm:
-      say: "Press 1 to accept this call, 2 to send to voicemail"
-      digit: "1"
-  on_failure:
-    - transfer: { dest: voicemail }
+    confirm:  # Screening script runs on the answered leg
+      - prompt:
+          play: "say:Press 1 to accept this call"
+          max_digits: 1
+- cond:
+    - when: "connect_result == 'failed'"
+      then:
+        - transfer: { dest: voicemail }
 ```
 
 ## Error Handling
@@ -501,10 +501,12 @@ async def warm_transfer(call, agent_number):
 - connect:
     to: "+15551234567"
     timeout: 30
-  on_failure:
-    - say:
-        text: "The person you're trying to reach is unavailable"
-    - transfer: { dest: voicemail }
+- cond:
+    - when: "connect_result == 'failed'"
+      then:
+        - play:
+            url: "say:The person you're trying to reach is unavailable"
+        - transfer: { dest: voicemail }
 ```
 
 ### Busy Signal Handling
@@ -512,17 +514,19 @@ async def warm_transfer(call, agent_number):
 ```yaml
 - connect:
     to: "+15551234567"
-  on_failure:
-    - say:
-        text: "The line is busy. Please try again later"
-    - hangup: {}
+- cond:
+    - when: "connect_failed_reason == 'busy'"
+      then:
+        - play:
+            url: "say:The line is busy. Please try again later"
+        - hangup: {}
 ```
 
 ## Performance Tips
 
 1. **Use timeouts**: Always set reasonable timeout values
 2. **Provide feedback**: Tell callers what's happening ("Transferring you now...")
-3. **Handle failures**: Always have `on_failure` handlers
+3. **Handle failures**: Always check `connect_result` after every `connect`
 4. **Optimize hold music**: Use compressed, looping audio files
 5. **Monitor call quality**: Track dropped calls and connection failures
 
@@ -546,20 +550,28 @@ Traditional systems lose context during transfers:
 ```yaml
 # AI collects information
 - ai:
-    prompt: |
-      Gather: customer name, phone, issue description
-      After gathering, call send_to_agent function
-    functions:
-      - name: send_to_agent
-        web_hook: "https://yourserver.com/context-transfer"
-        parameters:
-          - name: customer_name
-          - name: customer_phone
-          - name: issue_summary
+    prompt:
+      text: |
+        Gather: customer name, phone, issue description
+        After gathering, call the send_to_agent function
+    SWAIG:
+      functions:
+        - function: send_to_agent
+          purpose: "Send gathered context to the agent dashboard"
+          web_hook_url: "https://yourserver.com/context-transfer"
+          argument:
+            type: object
+            properties:
+              customer_name:
+                type: string
+              customer_phone:
+                type: string
+              issue_summary:
+                type: string
 
 # Then transfer
 - connect:
-    to: "agent@yourspace.signalwire.com"
+    to: "sip:agent@yourspace.signalwire.com"
 ```
 
 **Server sends context to agent's browser:**
@@ -616,10 +628,13 @@ ws.on('message', (data) => {
 
 ```yaml
 - ai:
-    prompt: "Verify customer identity"
-    functions:
-      - name: verify_identity
-        web_hook: "https://yourserver.com/verify"
+    prompt:
+      text: "Verify customer identity"
+    SWAIG:
+      functions:
+        - function: verify_identity
+          purpose: "Verify the caller's identity"
+          web_hook_url: "https://yourserver.com/verify"
 
 # After verification, set variables
 - set:
@@ -629,15 +644,18 @@ ws.on('message', (data) => {
     customer_tier: "premium"
 
 # Available in subsequent steps
-- condition:
-    if: "{{caller_verified}} == true"
-    then:
-      - connect:
-          to: "{{customer_tier}}-support@yourspace.signalwire.com"
-          headers:
-            X-Account-ID: "{{account_id}}"
-            X-Issue-Type: "{{issue_type}}"
-            X-Customer-Tier: "{{customer_tier}}"
+- cond:
+    - when: "caller_verified == true"
+      then:
+        - connect:
+            to: "sip:%{vars.customer_tier}-support@yourspace.signalwire.com"
+            headers:  # Custom SIP headers (SIP destinations only)
+              - name: "X-Account-ID"
+                value: "%{vars.account_id}"
+              - name: "X-Issue-Type"
+                value: "%{vars.issue_type}"
+              - name: "X-Customer-Tier"
+                value: "%{vars.customer_tier}"
 ```
 
 ## Advanced Transfer Patterns
@@ -688,24 +706,28 @@ async def warm_transfer_with_context(call, agent_number, context):
 ```yaml
 - connect:
     to: "+15551234567"
-    caller_id: "{{call.from}}"
+    from: "%{call.from}"
     answer_on_bridge: true
-    whisper:
-      say: "Incoming call from {{caller_name}}, account {{account_id}}, issue type: {{issue_type}}"
+    confirm:  # Runs on the agent leg before bridging - caller doesn't hear it
+      - play:
+          url: "say:Incoming call from %{vars.caller_name}, account %{vars.account_id}, issue type: %{vars.issue_type}"
 ```
 
 ### Call Screening with Accept/Reject
 
 ```yaml
-- say:
-    text: "Please hold while we locate an agent"
+- play:
+    url: "say:Please hold while we locate an agent"
 - connect:
     to: "+15551234567"
-    confirm:
-      say: "You have an incoming call from {{caller_name}}. Press 1 to accept, 2 to send to voicemail, 3 to send to another agent"
-      digit: "1"
-  on_failure:
-    - transfer: { dest: voicemail }
+    confirm:  # Screening script runs on the answered leg
+      - prompt:
+          play: "say:You have an incoming call from %{vars.caller_name}. Press 1 to accept"
+          max_digits: 1
+- cond:
+    - when: "connect_result == 'failed'"
+      then:
+        - transfer: { dest: voicemail }
 ```
 
 ## Recording Best Practices
@@ -736,21 +758,16 @@ async def warm_transfer_with_context(call, agent_number, context):
 ```yaml
 - play:
     url: "say:This call may be recorded for quality assurance and training purposes"
-    bargeable: false  # Force caller to hear it
 - prompt:
-    type: digits
-    say: "Press 1 to consent to recording, or hang up if you do not wish to be recorded"
+    play: "say:Press 1 to consent to recording, or hang up if you do not wish to be recorded"
     max_digits: 1
-  on_success:
-    - condition:
-        if: "{{args.result}} == '1'"
-        then:
-          - record_call: { stereo: true, format: "mp3" }
-          - transfer: { dest: main_menu }
-        else:
-          - hangup: {}
-  on_failure:
-    - hangup: {}
+- cond:
+    - when: "prompt_value == '1'"
+      then:
+        - record_call: { stereo: true, format: "mp3" }
+        - transfer: { dest: main_menu }
+    - else:
+        - hangup: {}
 ```
 
 ### Recording Notifications
@@ -761,7 +778,7 @@ async def warm_transfer_with_context(call, agent_number, context):
 - record_call:
     stereo: true
     format: "mp3"
-    status_callback: "https://yourserver.com/recording-complete"
+    status_url: "https://yourserver.com/recording-complete"
 ```
 
 **Server receives:**
@@ -785,38 +802,34 @@ sections:
   main:
     - answer: {}
     - prompt:
-        say: "Enter your PIN followed by the pound sign"
+        play: "say:Enter your PIN followed by the pound sign"
         max_digits: 6
         terminators: "#"
-      on_success:
-        - switch:
-            variable: "{{args.result}}"
-            case:
-              "1234":
-                - transfer: { dest: moderator_conference }
-              "5678":
-                - transfer: { dest: participant_conference }
-              default:
-                - say: { text: "Invalid PIN" }
-                - hangup: {}
+    - switch:
+        variable: prompt_value
+        case:
+          "1234":
+            - transfer: { dest: moderator_conference }
+          "5678":
+            - transfer: { dest: participant_conference }
+        default:
+          - play: { url: "say:Invalid PIN" }
+          - hangup: {}
 
   moderator_conference:
-    - say: { text: "Welcome moderator. You may start the conference." }
-    - join_room:
-        name: "meeting-{{call.to}}"
-        moderator: true
-        start_conference_on_enter: true
-        end_conference_on_exit: true
+    - play: { url: "say:Welcome moderator. You may start the conference." }
+    - join_conference:
+        name: "meeting-%{call.to}"
+        start_on_enter: true
+        end_on_exit: true
         muted: false
 
   participant_conference:
-    - say: { text: "Welcome to the conference. Waiting for the moderator." }
-    - join_room:
-        name: "meeting-{{call.to}}"
-        moderator: false
-        wait_for_moderator: true
+    - play: { url: "say:Welcome to the conference. Please wait for the moderator." }
+    - join_conference:
+        name: "meeting-%{call.to}"
+        start_on_enter: false
         muted: false
-        start_muted: false
 ```
 
 ### Dynamic Conference Naming
@@ -824,14 +837,13 @@ sections:
 **Use caller-specific conference rooms:**
 
 ```yaml
-# Create unique room per account
-- join_room:
-    name: "support-{{account_id}}"
-    moderator: false
+# Create unique conference per account
+- join_conference:
+    name: "support-%{vars.account_id}"
 
-# Or use timestamp for one-time conferences
-- join_room:
-    name: "meeting-{{call.timestamp}}"
+# Or use the call ID for one-time conferences
+- join_conference:
+    name: "meeting-%{call.call_id}"
 ```
 
 ## Error Handling Patterns
@@ -839,49 +851,67 @@ sections:
 ### Timeout Handling with Escalation
 
 ```yaml
-- connect:
-    to: "+15551234567"
-    timeout: 30
-  on_failure:
-    # Try backup number
-    - say: { text: "That agent is unavailable. Trying another agent." }
+sections:
+  main:
+    - connect:
+        to: "+15551234567"
+        timeout: 30
+    - cond:
+        - when: "connect_result == 'failed'"
+          then:
+            # Try backup number
+            - transfer: { dest: try_backup }
+
+  try_backup:
+    - play: { url: "say:That agent is unavailable. Trying another agent." }
     - connect:
         to: "+15552222222"
         timeout: 30
-      on_failure:
-        # Escalate to supervisor
-        - say: { text: "Connecting you with a supervisor" }
-        - connect:
-            to: "+15553333333"
-            timeout: 30
-          on_failure:
+    - cond:
+        - when: "connect_result == 'failed'"
+          then:
+            # Escalate to supervisor
+            - transfer: { dest: try_supervisor }
+
+  try_supervisor:
+    - play: { url: "say:Connecting you with a supervisor" }
+    - connect:
+        to: "+15553333333"
+        timeout: 30
+    - cond:
+        - when: "connect_result == 'failed'"
+          then:
             # Final fallback
             - transfer: { dest: voicemail }
 ```
 
-### Forward Node Error Handling
+### Connect Failure Reason Handling
 
-**Handle all possible outcomes:**
+**Handle all possible outcomes** by branching on `connect_result` and `connect_failed_reason`:
 
 ```yaml
-- forward:
+- connect:
     to: "+15551234567"
     timeout: 30
-    paths:
-      success:
+- cond:
+    - when: "connect_result == 'connected'"
+      then:
         - hangup: {}
+- switch:
+    variable: connect_failed_reason
+    case:
       no_answer:
-        - say: { text: "No answer. Leaving voicemail." }
+        - play: { url: "say:No answer. Leaving voicemail." }
         - transfer: { dest: voicemail }
       busy:
-        - say: { text: "Line is busy. Leaving voicemail." }
+        - play: { url: "say:Line is busy. Leaving voicemail." }
         - transfer: { dest: voicemail }
       declined:
-        - say: { text: "Call was declined. Leaving voicemail." }
+        - play: { url: "say:Call was declined. Leaving voicemail." }
         - transfer: { dest: voicemail }
-      error:
-        - say: { text: "System error. Leaving voicemail." }
-        - transfer: { dest: voicemail }
+    default:
+      - play: { url: "say:System error. Leaving voicemail." }
+      - transfer: { dest: voicemail }
 ```
 
 ## Anti-Patterns to Avoid
@@ -891,7 +921,8 @@ sections:
 ❌ **Wrong:**
 ```yaml
 - ai:
-    prompt: "Collect customer information"
+    prompt:
+      text: "Collect customer information"
 # Transfer without passing context
 - connect: { to: "+15551234567" }
 ```
@@ -899,10 +930,13 @@ sections:
 ✅ **Right:**
 ```yaml
 - ai:
-    prompt: "Collect customer information"
-    functions:
-      - name: prepare_transfer
-        web_hook: "https://yourserver.com/send-context"
+    prompt:
+      text: "Collect customer information"
+    SWAIG:
+      functions:
+        - function: prepare_transfer
+          purpose: "Send collected context to the agent"
+          web_hook_url: "https://yourserver.com/send-context"
 # Context sent to agent before connection
 - connect: { to: "+15551234567" }
 ```
@@ -916,12 +950,14 @@ sections:
 
 ✅ **Right:**
 ```yaml
-- say: { text: "Please hold while I transfer you to sales. This may take up to 30 seconds." }
+- play: { url: "say:Please hold while I transfer you to sales. This may take up to 30 seconds." }
 - connect:
     to: "+15551234567"
     timeout: 30
-  on_failure:
-    - say: { text: "I'm sorry, that transfer failed. Let me try another option." }
+- cond:
+    - when: "connect_result == 'failed'"
+      then:
+        - play: { url: "say:I'm sorry, that transfer failed. Let me try another option." }
 ```
 
 ### 3. Recording Without Consent
@@ -938,7 +974,6 @@ sections:
 - answer: {}
 - play:
     url: "say:This call will be recorded"
-    bargeable: false
 - record_call: { stereo: true }
 ```
 
@@ -947,7 +982,7 @@ sections:
 ❌ **Wrong:**
 ```yaml
 - connect: { to: "+15551234567" }
-# No on_failure handler - caller hears silence
+# No failure check - caller hears silence
 ```
 
 ✅ **Right:**
@@ -955,11 +990,13 @@ sections:
 - connect:
     to: "+15551234567"
     timeout: 30
-  on_success:
-    - hangup: {}
-  on_failure:
-    - say: { text: "Transfer failed. Leaving voicemail." }
-    - transfer: { dest: voicemail }
+- cond:
+    - when: "connect_result == 'failed'"
+      then:
+        - play: { url: "say:Transfer failed. Leaving voicemail." }
+        - transfer: { dest: voicemail }
+    - else:
+        - hangup: {}
 ```
 
 ## Production Tips
@@ -1071,43 +1108,47 @@ sections:
   main:
     - answer: {}
     - ai:
-        prompt: |
-          Collect customer name, account number, and reason for calling.
-          Determine if this is: billing, technical support, or sales.
-        functions:
-          - name: lookup_account
-            web_hook: "https://yourserver.com/account"
-          - name: determine_routing
-            web_hook: "https://yourserver.com/route"
+        prompt:
+          text: |
+            Collect customer name, account number, and reason for calling.
+            Determine if this is: billing, technical support, or sales.
+        SWAIG:
+          functions:
+            - function: lookup_account
+              purpose: "Look up the customer's account"
+              web_hook_url: "https://yourserver.com/account"
+            - function: determine_routing
+              purpose: "Record the department to route to"
+              web_hook_url: "https://yourserver.com/route"
 
-    # Context stored in metadata
-    - condition:
-        if: "{{metadata.department}} == 'billing'"
-        then:
-          - transfer: { dest: billing_transfer }
-        else:
-          - condition:
-              if: "{{metadata.department}} == 'technical'"
-              then:
-                - transfer: { dest: tech_transfer }
-              else:
-                - transfer: { dest: sales_transfer }
+    # Context stored in variables by the SWAIG functions
+    - switch:
+        variable: vars.department
+        case:
+          billing:
+            - transfer: { dest: billing_transfer }
+          technical:
+            - transfer: { dest: tech_transfer }
+        default:
+          - transfer: { dest: sales_transfer }
 
   billing_transfer:
-    - say: { text: "Transferring you to billing. They'll have your account information." }
+    - play: { url: "say:Transferring you to billing. They'll have your account information." }
     - connect:
-        to: "billing@yourspace.signalwire.com"
-        headers:
-          X-Account-ID: "{{metadata.account_id}}"
-          X-Customer-Name: "{{metadata.customer_name}}"
+        to: "sip:billing@yourspace.signalwire.com"
+        headers:  # Custom SIP headers (SIP destinations only)
+          - name: "X-Account-ID"
+            value: "%{vars.account_id}"
+          - name: "X-Customer-Name"
+            value: "%{vars.customer_name}"
 
   tech_transfer:
-    - say: { text: "Connecting you with technical support." }
-    - connect: { to: "tech@yourspace.signalwire.com" }
+    - play: { url: "say:Connecting you with technical support." }
+    - connect: { to: "sip:tech@yourspace.signalwire.com" }
 
   sales_transfer:
-    - say: { text: "Connecting you with sales." }
-    - connect: { to: "sales@yourspace.signalwire.com" }
+    - play: { url: "say:Connecting you with sales." }
+    - connect: { to: "sip:sales@yourspace.signalwire.com" }
 ```
 
 ### Example 2: Recorded Conference with Participants
@@ -1117,23 +1158,22 @@ version: 1.0.0
 sections:
   main:
     - answer: {}
-    - say:
-        text: "Welcome to the conference call. This call will be recorded."
+    - play:
+        url: "say:Welcome to the conference call. This call will be recorded."
     - record_call:
         stereo: true
         format: "mp3"
-        status_callback: "https://yourserver.com/recording"
+        status_url: "https://yourserver.com/recording"
 
-    - prompt:
-        say: "Please say your name after the beep"
-        record: true
+    - play:
+        url: "say:Please say your name after the beep"
+    - record:  # Name recording available at %{record_url}
+        beep: true
         max_length: 5
-      on_success:
-        - say: { text: "Thank you. Joining the conference now." }
-        - join_room:
-            name: "weekly-standup"
-            moderator: false
-            announce_name: "{{args.recording_url}}"
+        end_silence_timeout: 2
+    - play: { url: "say:Thank you. Joining the conference now." }
+    - join_conference:
+        name: "weekly-standup"
 ```
 
 ## Next Steps

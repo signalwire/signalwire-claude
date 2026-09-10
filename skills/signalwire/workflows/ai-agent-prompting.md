@@ -671,8 +671,8 @@ self.prompt_add_section(
 **Solutions:**
 ```yaml
 # Increase loop threshold in your SWML
-- condition:
-    if: "{{loop}} > 5"  # Was 2
+- cond:
+    - when: "vars.loop > 5"  # Was 2
 ```
 
 ## Next Steps

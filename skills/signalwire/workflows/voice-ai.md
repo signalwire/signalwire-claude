@@ -53,6 +53,15 @@ Full Python SDK for building stateful, complex AI agents. Best for:
 
 **→ Go to [AI Agent SDK Basics](ai-agent-sdk-basics.md)**
 
+### 4. AI Sidecar (Observer/Coach)
+
+Real-time AI observer that watches a live call and coaches a human agent via callbacks — it never speaks on the call. Best for:
+- Live sales coaching and compliance flagging
+- Intent-based UI navigation for agent desktops
+- Supervisor-on-shoulder workflows
+
+**→ Go to [AI Sidecar](ai-sidecar.md)**
+
 ### Quick Decision Tree
 
 ```
@@ -60,6 +69,7 @@ Need database/API access? → Use SWAIG or SDK
 Need complex state management? → Use SDK
 Need multi-agent architecture? → Use SDK
 Need serverless deployment? → Use SDK
+AI coaching a HUMAN agent (not talking to caller)? → Use ai_sidecar
 Want simplest approach? → Use SWML AI
 ```
 

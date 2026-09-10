@@ -256,8 +256,8 @@ sections:
   main:
     - play:
         url: "https://example.com/audio/greeting.mp3"
-    - say:
-        text: "Thanks for calling. Connecting you now."
+    - play:
+        url: "say:Thanks for calling. Connecting you now."
     - connect:
         to: "+15551111111"
 ```
@@ -274,8 +274,8 @@ Or in JSON:
         }
       },
       {
-        "say": {
-          "text": "Thanks for calling. Connecting you now."
+        "play": {
+          "url": "say:Thanks for calling. Connecting you now."
         }
       },
       {
@@ -505,8 +505,8 @@ curl -u $SIGNALWIRE_PROJECT_ID:$SIGNALWIRE_API_TOKEN \
 version: 1.0.0
 sections:
   main:
-    - say:
-        text: "This is a test call from SignalWire"
+    - play:
+        url: "say:This is a test call from SignalWire"
     - hangup: {}
 ```
 
@@ -624,34 +624,36 @@ scheduler.start()
 
 ```yaml
 # SWML for appointment reminder
+# {clinic_name}, {appointment_time}, and {doctor_name} are filled in
+# server-side when your server generates this document.
 version: 1.0.0
 sections:
   main:
     - answer: {}
-    - say:
-        text: "Hello, this is a reminder from {clinic_name}."
-    - say:
-        text: "You have an appointment tomorrow at {appointment_time} with Dr. {doctor_name}."
+    - play:
+        url: "say:Hello, this is a reminder from {clinic_name}."
+    - play:
+        url: "say:You have an appointment tomorrow at {appointment_time} with Dr. {doctor_name}."
     - prompt:
-        say: "Press 1 to confirm, 2 to reschedule, or 3 to cancel."
+        play: "say:Press 1 to confirm, 2 to reschedule, or 3 to cancel."
         max_digits: 1
     - switch:
-        variable: "%{digits}"
+        variable: prompt_value
         case:
           "1":
-            - say:
-                text: "Thank you, your appointment is confirmed."
+            - play:
+                url: "say:Thank you, your appointment is confirmed."
             - request:
                 url: "https://yourserver.com/confirm-appointment"
                 method: POST
             - hangup: {}
           "2":
-            - say:
-                text: "Please call our office to reschedule."
+            - play:
+                url: "say:Please call our office to reschedule."
             - hangup: {}
           "3":
-            - say:
-                text: "Your appointment has been cancelled."
+            - play:
+                url: "say:Your appointment has been cancelled."
             - request:
                 url: "https://yourserver.com/cancel-appointment"
                 method: POST
@@ -667,55 +669,58 @@ sections:
   main:
     - answer: {}
     - ai:
-        prompt: |
-          You are Adam, a nursing home digital assistant conducting a weekly health assessment.
+        prompt:
+          text: |
+            You are Adam, a nursing home digital assistant conducting a weekly health assessment.
 
-          Steps:
-          1. Greet {patient_name} by name
-          2. Verify identity with 4-digit PIN
-          3. Ask standard health questions:
-             - How are you feeling today?
-             - Any pain or discomfort?
-             - Taking all medications as prescribed?
-             - Any concerns you want to discuss?
-          4. Provide guidance if needed
-          5. Thank them and end call
+            Steps:
+            1. Greet {patient_name} by name
+            2. Verify identity with 4-digit PIN
+            3. Ask standard health questions:
+               - How are you feeling today?
+               - Any pain or discomfort?
+               - Taking all medications as prescribed?
+               - Any concerns you want to discuss?
+            4. Provide guidance if needed
+            5. Thank them and end call
 
-          If patient reports serious symptoms, call transfer_to_nurse function.
-          Store summary using record_assessment function.
+            If patient reports serious symptoms, call transfer_to_nurse function.
+            Store summary using record_assessment function.
 
-        functions:
-          - name: verify_patient_pin
-            purpose: "Verify patient identity with PIN"
-            web_hook: "https://yourserver.com/verify-pin"
+        SWAIG:
+          functions:
+            - function: verify_patient_pin
+              description: "Verify patient identity with PIN"
+              web_hook_url: "https://yourserver.com/verify-pin"
 
-          - name: get_patient_history
-            purpose: "Retrieve patient medical history"
-            web_hook: "https://yourserver.com/patient-history"
+            - function: get_patient_history
+              description: "Retrieve patient medical history"
+              web_hook_url: "https://yourserver.com/patient-history"
 
-          - name: transfer_to_nurse
-            purpose: "Transfer to live nurse for serious issues"
-            web_hook: "https://yourserver.com/transfer-nurse"
+            - function: transfer_to_nurse
+              description: "Transfer to live nurse for serious issues"
+              web_hook_url: "https://yourserver.com/transfer-nurse"
 
-          - name: record_assessment
-            purpose: "Store health assessment summary"
-            web_hook: "https://yourserver.com/save-assessment"
+            - function: record_assessment
+              description: "Store health assessment summary"
+              web_hook_url: "https://yourserver.com/save-assessment"
 
-          - name: send_caregiver_sms
-            purpose: "Notify caregiver of assessment results"
-            web_hook: "https://yourserver.com/notify-caregiver"
+            - function: send_caregiver_sms
+              description: "Notify caregiver of assessment results"
+              web_hook_url: "https://yourserver.com/notify-caregiver"
 
         post_prompt_url: "https://yourserver.com/assessment-summary"
-        post_prompt: |
-          Summarize the health assessment as JSON:
-          {
-            "patient_name": "name",
-            "overall_status": "good/fair/concerning",
-            "symptoms_reported": ["list"],
-            "medication_compliance": true/false,
-            "concerns": ["list"],
-            "action_required": true/false
-          }
+        post_prompt:
+          text: |
+            Summarize the health assessment as JSON:
+            {
+              "patient_name": "name",
+              "overall_status": "good/fair/concerning",
+              "symptoms_reported": ["list"],
+              "medication_compliance": true/false,
+              "concerns": ["list"],
+              "action_required": true/false
+            }
 ```
 
 ### CRM Integration Pattern
