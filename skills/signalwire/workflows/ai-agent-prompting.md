@@ -677,6 +677,71 @@ self.prompt_add_section(
     - when: "vars.loop > 5"  # Was 2
 ```
 
+## Inner Dialog
+
+A second model watching the conversation and writing down what the agent should know. It runs on its own thread, on its own model, and never speaks to the caller.
+
+The parameters are documented at `/docs/swml/reference/calling/ai/params`. **The behavior below is not on the docs site** — it was verified against the running platform.
+
+### What it produces
+
+A journal: a bounded set of notes plus a set of numeric dials. The helper *proposes* mutations; platform code decides what actually lands — assigning ids, stamping turns, clamping values, enforcing caps, and rejecting anything malformed.
+
+The journal is rendered into every agent request as the agent's own knowledge, roughly:
+
+```
+What I know about this caller:
+- They have a negative balance of $42.10 on account 8871.
+- They are calling about the same charge as last week.
+
+How this caller seems to me:
+- frustration: 0.60
+- intent: dispute a charge
+```
+
+There is no helper persona, and no instruction telling the agent how to treat the block. That is deliberate: **anything addressed to the model can be replied to out loud.** A block that said "your assistant has observed..." would eventually get read to the caller. Written as something the agent simply knows, it cannot be.
+
+### When it runs
+
+Once per settled turn — after the user's input is in the conversation and the barge-in keep/remove/combine decision has been made. Barged turns signal as reliably as clean ones, so an agent that gets interrupted a lot is not getting worse notes.
+
+A final dials-only pass runs after the agent's last request, so closing turns are accounted for.
+
+### Parameters
+
+In `ai.params`:
+
+| Key | Type / Default | Meaning |
+|-----|----------------|---------|
+| `enable_inner_dialog` | boolean, `false` | Master switch |
+| `inner_dialog_prompt` | string | The assistant's personality, given to the helper as context. Documented default: *"The assistant is intelligent and straightforward, does its job well and is not excessively polite."* |
+| `inner_dialog_model` | string | Which model the helper uses. Defaults to `ai_model`. |
+| `inner_dialog_scorecard` | `true` or object | Defines the dials. **Setting it switches inner dialog on implicitly** — you do not also need `enable_inner_dialog`. *(Not on the docs site.)* |
+| `inner_dialog_synced` | boolean, `false` | Synchronizes the inner dialog with the main conversation flow |
+
+Default dial set: `sentiment`, `engagement`, `frustration`, `rapport`, `read_confidence`, `expertise`, `intent`, `profile`. Passing an object overrides them by key.
+
+### The practical hook: `global_data.scorecard`
+
+**The dials are published into `global_data.scorecard`.** That is where agent logic and SWAIG functions read them — it is what makes inner dialog actionable rather than merely observed.
+
+```yaml
+- ai:
+    prompt:
+      text: "You are a support agent."
+    params:
+      inner_dialog_scorecard: true      # turns inner dialog on
+    SWAIG:
+      functions:
+        - function: escalate_to_human
+          purpose: "Escalate when the caller is losing patience"
+          web_hook_url: "https://yourserver.com/escalate"
+```
+
+Your `escalate_to_human` endpoint receives `global_data.scorecard` alongside the usual payload, so it can branch on `frustration` without the model having to describe the caller's mood in words.
+
+**Bills per minute while enabled.**
+
 ## Next Steps
 
 - [AI Agent Functions](ai-agent-functions.md) - Learn SWAIG function patterns
