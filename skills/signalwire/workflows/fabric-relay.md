@@ -2,7 +2,60 @@
 
 ## Overview
 
-SignalWire Fabric is a unified communication framework using real-time WebSocket connections. Relay is the SDK for building applications that connect to Fabric.
+SignalWire Fabric is a unified communication framework. Relay is the SDK for building applications that connect to it.
+
+**Relay call control does not require a WebSocket.** There are two ways to reach it:
+
+| Path | Use when |
+|------|----------|
+| **HTTP calling commands** — `POST /api/calling/calls` | You want to act on a call from a backend, a cron job, or a webhook handler. No connection to hold open, no SDK required. |
+| **Persistent WebSocket** — the Relay SDK | You want to *receive* real-time events (`call.received`, state changes) and hold session state. |
+
+The WebSocket path is for consuming events. If all you need is to tell a live call to do something, use the HTTP endpoint — see [Calling Commands over HTTP](#calling-commands-over-http) below.
+
+## Calling Commands over HTTP
+
+```
+POST https://{space}.signalwire.com/api/calling/calls
+Content-Type: application/json
+
+{ "command": "calling.play", "id": "<call-uuid>", "params": { ... } }
+```
+
+Docs: `/docs/apis/rest/calls/call-commands`, which states: *"All commands are sent over HTTP (no persistent WebSocket connection required) and return immediately."*
+
+Commands return immediately. Operations that continue asynchronously deliver their results to your `status_url` webhooks rather than blocking the response.
+
+**Three shapes of command:**
+
+- `dial` — creates a new call.
+- `update` — modifies an active call's dialplan, or cancels/completes it.
+- Everything else — operates on an active call identified by `id`.
+
+**Watch the naming.** The API is inconsistent with itself: `dial` and `update` carry no prefix, while every other command is `calling.`-prefixed.
+
+```json
+{ "command": "dial",                "params": { "from": "+15551110000", "to": "+15552220000", "url": "https://example.com/swml" } }
+{ "command": "calling.play",        "id": "<call-uuid>", "params": { "url": "say:Please hold" } }
+{ "command": "calling.record",      "id": "<call-uuid>", "params": { "stereo": true } }
+{ "command": "calling.transfer",    "id": "<call-uuid>", "params": { "dest": "+15553330000" } }
+{ "command": "calling.end",         "id": "<call-uuid>" }
+```
+
+Commands cover play (with pause/resume/stop/volume), record, collect, detect, tap, transcribe, stream, denoise, fax, refer, user events, the `ai_*` family, and the `ai_sidecar` family. Fetch the docs page for the full list and each command's params.
+
+### Picking a path: calling commands vs the Compatibility API
+
+Two different call-control APIs exist, and they do not mix.
+
+| | Calling commands | Compatibility API |
+|---|---|---|
+| Endpoint | `POST /api/calling/calls` | `POST /api/laml/2010-04-01/Accounts/{id}/Calls` |
+| Call identifier | Call UUID | Call SID |
+| Create / modify | `dial` / `update` | `Create a call` / `Update a call` |
+| Status | Current | Maintained for Twilio migration, closed to new features |
+
+**Pick one and stay in it.** A call created through one API is not addressable by the other's identifiers. New work should use calling commands; the Compatibility API exists so a Twilio codebase can be ported without a rewrite.
 
 ## Key Concepts
 
@@ -82,6 +135,8 @@ Relay Applications are your server or client apps connected to SignalWire via pe
 - Low latency communication
 - Bidirectional control
 - Stateful connections
+
+The WebSocket earns its keep when you need to *receive* events. To only send commands to a call, [the HTTP endpoint](#calling-commands-over-http) does the same job without a connection to maintain.
 
 ## Relay SDK (Python)
 

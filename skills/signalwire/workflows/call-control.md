@@ -2,7 +2,9 @@
 
 ## Overview
 
-Control active calls with transfer, recording, conferencing, and real-time manipulation using SWML methods or Relay SDK.
+Control active calls with transfer, recording, conferencing, and real-time manipulation using SWML methods or Relay.
+
+**Relay call control is reachable over plain HTTP** — `POST /api/calling/calls` with `{"command": "...", "id": "<call-uuid>", "params": {...}}`. No persistent WebSocket is required; the SDK examples below are one way to reach the same commands, not the only way. See [Calling Commands over HTTP](fabric-relay.md#calling-commands-over-http).
 
 ## Transfer Methods
 
