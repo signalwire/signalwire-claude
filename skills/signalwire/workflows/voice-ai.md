@@ -125,6 +125,29 @@ That history is the argument for being explicit: an application relying on the d
 
 Set a voice via `voice` strings in SWML (`/docs/swml/reference/calling/ai/languages#use-voice-strings`) or `add_language()` in the SDKs (`/docs/server-sdks/guides/voice-language`). Audition voices at `/docs/platform/voice/tts`.
 
+### utility_model
+
+One parameter that changes the cost and latency profile of several background features at once.
+
+`params.utility_model` names the model used for lightweight background work. **Defaults to whatever `ai_model` is set to** — so an agent on a large frontier model is running its background chores on that model too, while the caller waits.
+
+Documented uses: redaction (`redact_prompt`) and transcription cleanup (`auto_correct`).
+
+It also covers double-turn planning, tool-result distillation, and summarization. *(Those three are not on the docs site.)*
+
+```yaml
+- ai:
+    prompt:
+      text: "You are a support agent."
+    params:
+      ai_model: gpt-4.1
+      utility_model: gpt-4.1-mini    # background work runs here instead
+```
+
+The docs recommend a small fast model — `gpt-4o-mini`, `gpt-4.1-mini`, or `gpt-4.1-nano` — because these tasks run on the caller's clock.
+
+**A typo here is invisible.** An unrecognized model name is silently ignored and the main model is used instead. No error is raised, nothing appears in your logs, and the only symptom is that the latency win you expected never materializes. Copy the model name; do not type it from memory.
+
 ### Turn Taking
 
 When the agent decides you have stopped speaking is controlled by `params.turn_detection` and `params.end_of_speech_timeout`. Turn detection is **on by default** (`both`), fusing sentence punctuation with an acoustic model.
