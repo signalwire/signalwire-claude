@@ -386,6 +386,25 @@ def handle_recording_ready():
 
 ### Verify Webhook Source
 
+#### Option 0: Request signatures (preferred where available)
+
+Every POST SignalWire makes to **fetch a SWML document** from a URL you control is signed. That is the real mechanism — reach for it before IP allowlists or shared secrets.
+
+```
+signature = hex( HMAC( signing_key, url + raw_body ) )
+```
+
+| Header | Algorithm | Present on |
+|--------|-----------|------------|
+| `X-Signalwire-Signature` | HMAC-SHA1, hex | Every signed request |
+| `X-Signalwire-SHA256-Signature` | HMAC-SHA256, hex | Call requests only |
+
+Messaging document requests carry the SHA-1 header only.
+
+**Not every request is signed.** See [Request Signing](ai-agent-security.md#request-signing) in the security workflow for what is covered, what is not, and the three mistakes that make a valid signature look invalid.
+
+Docs: `/docs/swml/guides/webhook-security`, `/docs/apis/rest/webhooks/swaig-signature-request`.
+
 #### Option 1: IP Allowlist
 
 ```python

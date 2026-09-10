@@ -2,6 +2,69 @@
 
 Best practices for securing SignalWire AI Agents.
 
+## Request Signing
+
+Verifying that SignalWire, and not someone else, sent you a request. This is the mechanism — the metadata and basic-auth patterns further down this file are complements to it, not substitutes.
+
+Docs: `/docs/swml/guides/webhook-security` and `/docs/apis/rest/webhooks/swaig-signature-request`
+
+### The mechanics
+
+```
+signature = hex( HMAC( signing_key, url + raw_body ) )
+```
+
+The `url` is the full path including query string. For call requests, basic auth credentials are stripped before signing; for messaging requests they are included as configured.
+
+| Header | Algorithm | Present on |
+|--------|-----------|------------|
+| `X-Signalwire-Signature` | HMAC-SHA1, hex | Every signed request |
+| `X-Signalwire-SHA256-Signature` | HMAC-SHA256, hex | Call requests only |
+
+Messaging document requests carry the SHA-1 header only.
+
+### What is signed, and what is not
+
+**Signed:** every POST SignalWire makes to fetch a SWML document from a URL you control — the initial fetch, and `execute` or `transfer` operations pointing at external URLs, on both the call and messaging sides.
+
+**Not signed:**
+
+| Request | Protect it with |
+|---------|-----------------|
+| POST to a SWAIG function's `web_hook_url` | HTTP basic auth in the URL, or a shared secret in a custom `X-` header |
+| The conversation summary sent to `post_prompt_url` (when you serve your own SWML) | Same |
+| The `request` method during a call | Same |
+
+The messaging counterpart of `request` *does* carry the SHA-1 header. The calling one does not.
+
+### Three things builders get wrong
+
+**1. Hash the exact public-facing URL you configured in the Dashboard.** A proxy that rewrites host or scheme changes the hashed string, and a perfectly valid signature then fails to verify. The docs' own troubleshooting section leads with this, because it is the most common cause.
+
+**2. Keep the raw body.** Verification hashes the bytes, not a re-serialized JSON object. Round-tripping through a JSON parser reorders keys and changes whitespace, and the hash no longer matches. In Express, capture `req.rawBody` *before* the JSON body parser consumes it:
+
+```js
+app.use(express.json({
+  verify: (req, res, buf) => { req.rawBody = buf.toString('utf8'); }
+}));
+```
+
+**3. Do not require a signature on every inbound request.** Signatures cover requests *for a SWML document*, not everything a document sends you. An endpoint that rejects unsigned traffic will reject SWAIG function webhooks, `status_url` callbacks, and `request` verb targets — traffic you meant to accept. Gate on signature only where a signature is actually sent.
+
+The docs carry working verification snippets in Node, Python, and Ruby, plus a "confirm your endpoint rejects forgeries" test. Adapt those rather than writing your own HMAC comparison — and use a constant-time compare.
+
+### Getting and rotating the signing key
+
+Dashboard: **API Credentials → Signing Key → Show**. Each project has its own key.
+
+Rotate via the Dashboard reset button, or the API:
+
+```
+POST https://{space}.signalwire.com/api/projects/{id}/signing-key/rotate
+```
+
+Docs: `/docs/apis/rest/projects/rotate-signing-key`. **The previous key takes about 1–2 minutes to stop working**, so rotation has a short overlap window rather than being instantaneous — deploy the new key within it, and expect a brief period where both verify.
+
 ## Authentication
 
 ### Basic Auth for Agent Endpoints
