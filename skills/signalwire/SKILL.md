@@ -13,6 +13,26 @@ SignalWire maintains compatibility APIs (LAML/CXML) that should NOT be used for 
 
 This skill documents ONLY modern APIs: REST with JSON, SWML, Relay SDK, AI Agents SDK.
 
+## Read the Live Docs
+
+SignalWire's documentation is machine-readable. Append `.md` to any page URL under `https://signalwire.com/docs` to get clean Markdown, or send `Accept: text/markdown`.
+
+Start from `https://signalwire.com/docs/llms.txt` for the root index, or go straight to a product index:
+
+| Index | Covers |
+|-------|--------|
+| `/docs/swml/llms.txt` | SWML methods and the `ai` verb |
+| `/docs/apis/llms.txt` | REST APIs, calling commands, webhook payloads |
+| `/docs/server-sdks/llms.txt` | Server SDKs and their guides |
+| `/docs/platform/llms.txt` | Voices, TTS engines, SWSH, changelog |
+| `/docs/browser-sdk/llms.txt` | Browser SDK v4 |
+
+The root index warns that it is "an orientation page and directory, not an exhaustive list" — check the product index before concluding a page does not exist.
+
+**Prefer fetching the live page over this skill's bundled reference** when the question is about an exact parameter name, a default, or an endpoint path. This skill is a snapshot; the docs are not.
+
+There is also a changelog at `/docs/platform/changelog` (append `.rss` for a feed) covering new capabilities, changed defaults, and deprecations. Defaults in particular have moved more than once — see the voice default in [Voice AI](workflows/voice-ai.md).
+
 ## SignalWire Technologies Quick Reference
 
 | Technology | Use When | Format/Protocol |
