@@ -65,6 +65,48 @@ POST https://{space}.signalwire.com/api/projects/{id}/signing-key/rotate
 
 Docs: `/docs/apis/rest/projects/rotate-signing-key`. **The previous key takes about 1–2 minutes to stop working**, so rotation has a short overlap window rather than being instantaneous — deploy the new key within it, and expect a brief period where both verify.
 
+## Content Redaction
+
+Three related params in `ai.params`. Docs: `/docs/swml/reference/calling/ai/params` and `/docs/platform/ai/content-redaction`.
+
+| Param | Type | Default | What it does |
+|-------|------|---------|--------------|
+| `redact_prompt` | **string** | — | A plain-language description of sensitive content to redact from what the platform records and transmits |
+| `auto_correct` | boolean | `false` | Cleans up the caller's transcription before the AI reads it — spoken numbers to digits, address and phone formatting, obvious mishearings — without changing meaning |
+| `enable_text_normalization` | **string** | `both` | Converts numbers, currency and dates between written and spoken forms, so the AI understands callers better and speaks more naturally |
+
+**`redact_prompt` is a string, not a switch.** You describe what to redact in plain language — "credit card numbers, CVVs, social security numbers" — and the platform masks matching text with `----`.
+
+```yaml
+- ai:
+    prompt:
+      text: "You are a payments assistant."
+    params:
+      redact_prompt: "credit card numbers, CVV codes, and social security numbers"
+      auto_correct: true
+      utility_model: gpt-4.1-mini
+```
+
+Both `redact_prompt` and `auto_correct` run on the [`utility_model`](voice-ai.md#utility_model), not the main model.
+
+### What redaction does *not* cover
+
+The name suggests more protection than it gives. **Redaction is applied to the record, not to the call.**
+
+| Masked | Not masked |
+|--------|------------|
+| Conversation text in completed-turn AI events | The live conversation — both parties hear the real content |
+| Webhook payloads | The model's input — the agent processes real words each turn |
+| Post-conversation call logs (`call_log`, `raw_call_log`) | Structured fields: entity values, tool results |
+| The call timeline | SWAIG handler arguments — your functions receive unmasked data |
+| | Audio recordings |
+
+The docs are explicit that this is best-effort and AI-driven, that values can slip through, and that it is "a strong safeguard for your logs and integrations rather than a guarantee."
+
+**So do not use `redact_prompt` as your only control on a card number.** It keeps secrets out of your log pipeline and your webhook payloads. It does not keep them out of the model, out of your SWAIG endpoint, or off the recording. For payment data that must never reach the LLM, use the [`pay`](swml-methods.md#pay) method, which bypasses the model entirely.
+
+Caller content is also redacted from logs at visible log levels.
+
 ## Authentication
 
 ### Basic Auth for Agent Endpoints
