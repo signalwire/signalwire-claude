@@ -5,8 +5,8 @@ Complete reference for advanced DataMap features including expressions, webhooks
 ## Import
 
 ```python
-from signalwire_agents import DataMap, create_simple_api_tool, create_expression_tool
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import DataMap, create_simple_api_tool, create_expression_tool
+from signalwire import FunctionResult
 ```
 
 ## Basic DataMap Review
@@ -18,7 +18,7 @@ data_map = (DataMap("function_name")
     .purpose("Description of the function")
     .parameter("param", "string", "Description", required=True)
     .webhook("GET", "https://api.example.com/data?q=${args.param}")
-    .output(SwaigFunctionResult("Result: ${response.data}")))
+    .output(FunctionResult("Result: ${response.data}")))
 
 agent.register_swaig_function(data_map.to_swaig_function())
 ```
@@ -36,15 +36,15 @@ def expression(
     self,
     test_value: str,
     pattern: Union[str, Pattern],
-    output: SwaigFunctionResult,
-    nomatch_output: Optional[SwaigFunctionResult] = None
+    output: FunctionResult,
+    nomatch_output: Optional[FunctionResult] = None
 ) -> 'DataMap'
 ```
 
 **Parameters:**
 - `test_value` - Template string to test (e.g., `"${args.command}"`)
 - `pattern` - Regex pattern to match against
-- `output` - SwaigFunctionResult to return when pattern matches
+- `output` - FunctionResult to return when pattern matches
 - `nomatch_output` - Optional result when pattern doesn't match
 
 **Example - Playback Control:**
@@ -59,7 +59,7 @@ playback_control = (DataMap("control_playback")
     .expression(
         "${args.command}",
         r"start.*",
-        SwaigFunctionResult("Starting playback").add_action(
+        FunctionResult("Starting playback").add_action(
             "playback_bg", {"file": "${args.filename}"}
         )
     )
@@ -68,7 +68,7 @@ playback_control = (DataMap("control_playback")
     .expression(
         "${args.command}",
         r"stop.*",
-        SwaigFunctionResult("Stopping playback").add_action(
+        FunctionResult("Stopping playback").add_action(
             "stop_playback_bg", {}
         )
     )
@@ -85,7 +85,7 @@ transfer_router = (DataMap("route_call")
     .expression(
         "${args.department}",
         r"sales|marketing",
-        SwaigFunctionResult("Transferring to sales").add_action(
+        FunctionResult("Transferring to sales").add_action(
             "transfer", {"dest": "sip:sales@company.com"}
         )
     )
@@ -93,7 +93,7 @@ transfer_router = (DataMap("route_call")
     .expression(
         "${args.department}",
         r"support|help|technical",
-        SwaigFunctionResult("Transferring to support").add_action(
+        FunctionResult("Transferring to support").add_action(
             "transfer", {"dest": "sip:support@company.com"}
         )
     )
@@ -101,7 +101,7 @@ transfer_router = (DataMap("route_call")
     .expression(
         "${args.department}",
         r"billing|accounts|payment",
-        SwaigFunctionResult("Transferring to billing").add_action(
+        FunctionResult("Transferring to billing").add_action(
             "transfer", {"dest": "sip:billing@company.com"}
         )
     )
@@ -119,14 +119,14 @@ search_with_fallback = (DataMap("search")
 
     # Primary API
     .webhook("GET", "https://api.primary.com/search?q=${args.query}")
-    .output(SwaigFunctionResult("Found: ${response.results[0].title}"))
+    .output(FunctionResult("Found: ${response.results[0].title}"))
 
     # Fallback API (used if primary fails)
     .webhook("GET", "https://api.backup.com/search?q=${args.query}")
-    .output(SwaigFunctionResult("Found: ${response.data.title}"))
+    .output(FunctionResult("Found: ${response.data.title}"))
 
     # Final fallback output (used if all webhooks fail)
-    .fallback_output(SwaigFunctionResult("Sorry, search is temporarily unavailable"))
+    .fallback_output(FunctionResult("Sorry, search is temporarily unavailable"))
 )
 ```
 
@@ -181,7 +181,7 @@ create_ticket = (DataMap("create_support_ticket")
         "priority": "${args.priority}",
         "source": "voice_agent"
     })
-    .output(SwaigFunctionResult("Ticket created with ID: ${response.ticket_id}"))
+    .output(FunctionResult("Ticket created with ID: ${response.ticket_id}"))
 )
 ```
 
@@ -229,7 +229,7 @@ search_docs = (DataMap("search_documents")
         "append": "- ${this.title}: ${this.summary}\n"
     })
 
-    .output(SwaigFunctionResult("Here's what I found:\n${formatted_results}"))
+    .output(FunctionResult("Here's what I found:\n${formatted_results}"))
 )
 ```
 
@@ -254,9 +254,9 @@ api_call = (DataMap("get_user")
 
     .webhook("GET", "https://api.example.com/users/${args.user_id}")
     .error_keys(["error", "error_message", "errors"])
-    .output(SwaigFunctionResult("User: ${response.name}, Email: ${response.email}"))
+    .output(FunctionResult("User: ${response.name}, Email: ${response.email}"))
 
-    .fallback_output(SwaigFunctionResult("Unable to find user information"))
+    .fallback_output(FunctionResult("Unable to find user information"))
 )
 ```
 
@@ -300,7 +300,7 @@ check_inventory = (DataMap("check_stock")
             "output": {"response": "Limited stock available: ${response.quantity} units"}
         }
     ])
-    .output(SwaigFunctionResult("In stock: ${response.quantity} units available"))
+    .output(FunctionResult("In stock: ${response.quantity} units available"))
 )
 ```
 
@@ -311,7 +311,7 @@ check_inventory = (DataMap("check_stock")
 Create a simple API tool with minimal configuration.
 
 ```python
-from signalwire_agents import create_simple_api_tool
+from signalwire import create_simple_api_tool
 
 weather_tool = create_simple_api_tool(
     name="get_weather",
@@ -334,14 +334,14 @@ agent.register_swaig_function(weather_tool.to_swaig_function())
 Create an expression-based tool for pattern matching.
 
 ```python
-from signalwire_agents import create_expression_tool
+from signalwire import create_expression_tool
 
 control_tool = create_expression_tool(
     name="volume_control",
     patterns={
-        "${args.command}": ("up|increase|louder", SwaigFunctionResult("Volume increased")),
-        "${args.command}": ("down|decrease|quieter", SwaigFunctionResult("Volume decreased")),
-        "${args.command}": ("mute|silent", SwaigFunctionResult("Audio muted"))
+        "${args.command}": ("up|increase|louder", FunctionResult("Volume increased")),
+        "${args.command}": ("down|decrease|quieter", FunctionResult("Volume decreased")),
+        "${args.command}": ("mute|silent", FunctionResult("Audio muted"))
     },
     parameters={
         "command": {
@@ -373,8 +373,8 @@ DataMap supports variable substitution in URLs, bodies, and outputs:
 
 ```python
 #!/usr/bin/env python3
-from signalwire_agents import AgentBase, DataMap
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase, DataMap
+from signalwire import FunctionResult
 
 
 class DataMapDemoAgent(AgentBase):
@@ -394,9 +394,9 @@ class DataMapDemoAgent(AgentBase):
             .parameter("action", "string", "Action: start, stop, or pause", required=True)
             .parameter("file_url", "string", "Audio file URL for start action")
             .expression("${args.action}", r"start",
-                SwaigFunctionResult("Starting audio").add_action("playback_bg", {"file": "${args.file_url}"}))
+                FunctionResult("Starting audio").add_action("playback_bg", {"file": "${args.file_url}"}))
             .expression("${args.action}", r"stop|pause",
-                SwaigFunctionResult("Stopping audio").add_action("stop_playback_bg", {})))
+                FunctionResult("Stopping audio").add_action("stop_playback_bg", {})))
 
         # API call with error handling and fallback
         lookup = (DataMap("lookup_order")
@@ -405,12 +405,12 @@ class DataMapDemoAgent(AgentBase):
             .webhook("GET", "https://api.orders.com/v1/orders/${args.order_number}",
                      headers={"Authorization": "Bearer ${env.ORDERS_API_KEY}"})
             .error_keys(["error", "not_found"])
-            .output(SwaigFunctionResult(
+            .output(FunctionResult(
                 "Order ${args.order_number}: Status is ${response.status}. "
                 "Shipped on ${response.ship_date}. "
                 "Tracking: ${response.tracking_number}"
             ))
-            .fallback_output(SwaigFunctionResult(
+            .fallback_output(FunctionResult(
                 "I couldn't find order ${args.order_number}. Please verify the number."
             )))
 
@@ -425,7 +425,7 @@ class DataMapDemoAgent(AgentBase):
                 "max": 3,
                 "append": "- ${this.name} ($${this.price}): ${this.description}\n"
             })
-            .output(SwaigFunctionResult("Found these products:\n${product_list}")))
+            .output(FunctionResult("Found these products:\n${product_list}")))
 
         # Register all functions
         self.register_swaig_function(playback.to_swaig_function())
@@ -441,5 +441,5 @@ if __name__ == "__main__":
 ## See Also
 
 - [SWAIG Functions Reference](swaig-functions.md) - Function definition patterns
-- [Function Result Reference](function-result.md) - SwaigFunctionResult actions
+- [Function Result Reference](function-result.md) - FunctionResult actions
 - [Common Patterns](../patterns/common-patterns.md) - Best practices

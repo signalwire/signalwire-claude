@@ -2,7 +2,69 @@
 
 ## Overview
 
-Build Python-based AI voice agents using the SignalWire AI Agents SDK. This guide covers installation, basic structure, and local development.
+Build AI voice agents with the SignalWire Server SDK. This guide covers installation, basic structure, and local development. Examples are Python; the same API exists in TypeScript.
+
+## One SDK Per Language
+
+SignalWire ships **one unified SDK per language**. Each package covers **AI Agents + Relay (call control) + REST (resource management)** together — the three namespaces coexist in the same application, so you do not install separate packages for agents and call control.
+
+Docs: `/docs/server-sdks`
+
+| Language | Package | Reference |
+|----------|---------|-----------|
+| Python | `signalwire-sdk` (PyPI) | `/docs/server-sdks/reference/python` |
+| TypeScript | `@signalwire/sdk` (npm) | `/docs/server-sdks/reference/typescript` |
+| Go | | `github.com/signalwire/signalwire-go` |
+| Ruby | | `github.com/signalwire/signalwire-ruby` |
+| Java | | `github.com/signalwire/signalwire-java` |
+| C# / .NET | | `github.com/signalwire/signalwire-dotnet` |
+| PHP | | `github.com/signalwire/signalwire-php` |
+| Perl | | `github.com/signalwire/signalwire-perl` |
+| C++ | | `github.com/signalwire/signalwire-cpp` |
+| Rust | | `github.com/signalwire/signalwire-rust` |
+
+**Only Python and TypeScript have reference documentation on the docs site.** The other eight link to their GitHub repositories. If you pick Rust, you are reading a README, not a reference — plan accordingly.
+
+Prerequisites: **Python 3.10+**, **Node.js 18+**.
+
+```bash
+pip install signalwire-sdk
+npm install @signalwire/sdk
+```
+
+```python
+from signalwire import AgentBase, FunctionResult
+```
+
+```typescript
+import { AgentBase, FunctionResult } from '@signalwire/sdk';
+```
+
+**`@signalwire/sdk` is ES-module only** — there is no CommonJS build. Set `"type": "module"` in `package.json` or use `.mjs`. `require()` does not work below Node 22 without `--experimental-require-module`.
+
+### Naming changes from the older Python package
+
+| Old | New |
+|-----|-----|
+| `signalwire-agents` (PyPI) | `signalwire-sdk` |
+| `from signalwire_agents import ...` | `from signalwire import ...` |
+| `from signalwire_agents.core.function_result import SwaigFunctionResult` | `from signalwire import FunctionResult` |
+| `from signalwire_agents.prefabs import ...` | `from signalwire.prefabs import ...` |
+| `SwaigFunctionResult` | `FunctionResult` |
+
+### Guides worth reading
+
+| Topic | Guide |
+|-------|-------|
+| Contexts and workflows | `/docs/server-sdks/guides/contexts-workflows` |
+| Skills | `/docs/server-sdks/guides/understanding-skills`, `adding-skills`, `builtin-skills`, `skill-config` |
+| Static vs dynamic agents, state | `/docs/server-sdks/guides/static-vs-dynamic`, `state-management` |
+| Functions | `/docs/server-sdks/guides/defining-functions`, `native-functions`, `result-actions`, `data-map` |
+| Testing and troubleshooting | `/docs/server-sdks/guides/testing`, `troubleshooting` |
+| Deployment | `/docs/server-sdks/guides/docker-kubernetes`, `serverless`, `cgi-mode`, `production`, `deploy` |
+| Relay and REST clients | `/docs/server-sdks/guides/relay-client`, `rest-client` |
+| Prefab agents | `/docs/server-sdks/guides/concierge`, `receptionist`, `survey`, `faq-bot`, `info-gatherer` |
+| MCP gateway | `/docs/server-sdks/guides/mcp-gateway` |
 
 ## Related Workflows
 
@@ -26,9 +88,9 @@ For simple conversational IVR, SWML AI is sufficient.
 ## Installation
 
 ```bash
-pip install signalwire-agents
+pip install signalwire-sdk
 # or with uv:
-# uv pip install signalwire-agents
+# uv pip install signalwire-sdk
 ```
 
 ## Basic Agent Structure
@@ -36,11 +98,11 @@ pip install signalwire-agents
 ```python
 #!/usr/bin/env -S uv run
 # /// script
-# dependencies = ["signalwire-agents"]
+# dependencies = ["signalwire-sdk"]
 # ///
 
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire import FunctionResult
 
 class MyAgent(AgentBase):
     def __init__(self):
@@ -69,7 +131,7 @@ class MyAgent(AgentBase):
         """Check account balance"""
         account_number = args.get("account_number")
         # Database lookup...
-        return SwaigFunctionResult(f"Account {account_number} has a balance of $1,234.56")
+        return FunctionResult(f"Account {account_number} has a balance of $1,234.56")
 
 if __name__ == "__main__":
     agent = MyAgent()
@@ -134,7 +196,7 @@ def function_name(self, args, raw_data):
 
     # Your logic here...
 
-    return SwaigFunctionResult("Response text the AI will speak")
+    return FunctionResult("Response text the AI will speak")
 ```
 
 **Parameter Types:**
@@ -150,24 +212,24 @@ def function_name(self, args, raw_data):
 - Automatic argument parsing
 - Error handling
 
-## SwaigFunctionResult
+## FunctionResult
 
-Return values from tools use `SwaigFunctionResult`:
+Return values from tools use `FunctionResult`:
 
 ```python
 # Simple response
-return SwaigFunctionResult("I found your order. It shipped yesterday.")
+return FunctionResult("I found your order. It shipped yesterday.")
 
 # Response with additional SWML actions
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import FunctionResult
 
-result = SwaigFunctionResult("Transferring you now")
+result = FunctionResult("Transferring you now")
 result.add_action("play", {"url": "say:Please hold"})
 result.add_action("transfer", {"dest": "tel:+15551234567"})
 return result
 
 # Chain actions fluently
-return (SwaigFunctionResult("Processing your payment")
+return (FunctionResult("Processing your payment")
     .add_action("play", {"url": "https://example.com/processing.mp3"})
     .add_action("hangup", {}))
 ```
@@ -296,11 +358,11 @@ For complete testing patterns with pytest and integration tests, see: [AI Agent 
 ```python
 #!/usr/bin/env -S uv run
 # /// script
-# dependencies = ["signalwire-agents"]
+# dependencies = ["signalwire-sdk"]
 # ///
 
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire import FunctionResult
 
 class BankingAgent(AgentBase):
     def __init__(self):
@@ -327,7 +389,7 @@ class BankingAgent(AgentBase):
         account_number = args.get("account_number")
         # Database lookup...
         balance = 1234.56  # Example
-        return SwaigFunctionResult(f"The balance for account {account_number} is ${balance:.2f}")
+        return FunctionResult(f"The balance for account {account_number} is ${balance:.2f}")
 
     @AgentBase.tool(
         name="transfer_funds",
@@ -344,7 +406,7 @@ class BankingAgent(AgentBase):
         to_account = args.get("to_account")
         amount = args.get("amount")
         # Process transfer...
-        return SwaigFunctionResult(f"Transferred ${amount} from {from_account} to {to_account}")
+        return FunctionResult(f"Transferred ${amount} from {from_account} to {to_account}")
 
 if __name__ == "__main__":
     agent = BankingAgent()
@@ -384,9 +446,9 @@ class SupportAgent(AgentBase):
         if self.verify_credentials(account_number, pin):
             self.user_data['verified'] = True
             self.user_data['account'] = account_number
-            return SwaigFunctionResult("Identity verified. How can I help you today?")
+            return FunctionResult("Identity verified. How can I help you today?")
         else:
-            return SwaigFunctionResult("Sorry, I couldn't verify your identity. Please try again.")
+            return FunctionResult("Sorry, I couldn't verify your identity. Please try again.")
 
     @AgentBase.tool(
         name="check_ticket_status",
@@ -398,11 +460,11 @@ class SupportAgent(AgentBase):
     def check_ticket_status(self, args, raw_data):
         """Check ticket status for verified user"""
         if not self.user_data.get('verified'):
-            return SwaigFunctionResult("Please verify your identity first.")
+            return FunctionResult("Please verify your identity first.")
 
         ticket_number = args.get('ticket_number')
         # Look up ticket...
-        return SwaigFunctionResult(f"Ticket {ticket_number} is in progress and will be resolved by tomorrow.")
+        return FunctionResult(f"Ticket {ticket_number} is in progress and will be resolved by tomorrow.")
 
     def verify_credentials(self, account_number, pin):
         # Actual verification logic...
@@ -449,9 +511,9 @@ class WeatherAgent(AgentBase):
             data = response.json()
             temp = data.get('temperature')
             condition = data.get('condition')
-            return SwaigFunctionResult(f"The weather in {location} is {condition} with a temperature of {temp}°F")
+            return FunctionResult(f"The weather in {location} is {condition} with a temperature of {temp}°F")
         else:
-            return SwaigFunctionResult(f"Sorry, I couldn't fetch weather for {location}")
+            return FunctionResult(f"Sorry, I couldn't fetch weather for {location}")
 
 if __name__ == "__main__":
     agent = WeatherAgent()
@@ -495,7 +557,7 @@ class DebuggableAgent(AgentBase):
         self.logger.debug(f"Function called with: {args}")
         # Your logic...
         self.logger.info("Function completed successfully")
-        return SwaigFunctionResult("Done")
+        return FunctionResult("Done")
 ```
 
 **Check logs in:**

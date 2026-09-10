@@ -180,14 +180,14 @@ class BankingAgent(AgentBase):
         # Implement rate limiting
         attempts = raw_data.get("vars", {}).get("pin_attempts", 0)
         if attempts >= 3:
-            return (SwaigFunctionResult(
+            return (FunctionResult(
                 "Too many incorrect attempts. For your security, "
                 "I'll connect you with a representative."
             )
             .add_action("transfer", {"dest": "sip:security@company.com"}))
 
         if self.validate_pin(caller, pin):
-            return (SwaigFunctionResult(
+            return (FunctionResult(
                 "Identity verified. How can I help you today?"
             )
             .add_action("set_global_data", {"verified": True})
@@ -195,7 +195,7 @@ class BankingAgent(AgentBase):
                 "active": ["get_balance", "transfer_funds"]
             }))
         else:
-            return (SwaigFunctionResult(
+            return (FunctionResult(
                 f"That PIN doesn't match. You have {2 - attempts} attempts left."
             )
             .add_action("set_global_data", {"pin_attempts": attempts + 1}))
@@ -208,7 +208,7 @@ class BankingAgent(AgentBase):
     def get_balance(self, args, raw_data):
         # Double-check verification status
         if not raw_data.get("vars", {}).get("verified"):
-            return SwaigFunctionResult(
+            return FunctionResult(
                 "I need to verify your identity first. What's your PIN?"
             )
         # Return balance...
@@ -234,14 +234,14 @@ def verify_identity(self, args, raw_data):
 
     customer = self.lookup_customer(caller)
     if not customer:
-        return SwaigFunctionResult(
+        return FunctionResult(
             "I couldn't find an account with this phone number. "
             "Would you like me to transfer you to customer service?"
         )
 
     if (customer["ssn_last4"] == ssn_last4 and
         customer["zip"] == zip_code):
-        return (SwaigFunctionResult(
+        return (FunctionResult(
             f"Thank you, {customer['name']}. How can I help you?"
         )
         .add_action("set_global_data", {
@@ -249,7 +249,7 @@ def verify_identity(self, args, raw_data):
             "customer_id": customer["id"]
         }))
     else:
-        return SwaigFunctionResult(
+        return FunctionResult(
             "That information doesn't match our records. "
             "Let me connect you with a representative."
         ).add_action("transfer", {"dest": "sip:verify@company.com"})
@@ -276,7 +276,7 @@ def lookup_order(self, args, raw_data):
 
     # Validate format (e.g., ORD-12345)
     if not re.match(r'^ORD-\d{5,10}$', order_number):
-        return SwaigFunctionResult(
+        return FunctionResult(
             "That doesn't look like a valid order number. "
             "Order numbers start with ORD- followed by digits."
         )
@@ -322,7 +322,7 @@ def send_confirmation(self, args, raw_data):
     phone = args.get("phone", "")
 
     if not is_valid_phone(phone):
-        return SwaigFunctionResult(
+        return FunctionResult(
             "I need a valid US phone number to send the confirmation."
         )
 
@@ -367,12 +367,12 @@ Don't store sensitive info in global_data (it's visible in logs):
 
 ```python
 # WRONG - sensitive data in global_data
-return SwaigFunctionResult("Verified!").add_action(
+return FunctionResult("Verified!").add_action(
     "set_global_data", {"ssn": "123-45-6789"}
 )
 
 # CORRECT - only store non-sensitive identifiers
-return SwaigFunctionResult("Verified!").add_action(
+return FunctionResult("Verified!").add_action(
     "set_global_data", {"verified": True, "customer_id": "cust_abc123"}
 )
 ```
@@ -456,7 +456,7 @@ class RateLimitedAgent(AgentBase):
         caller = raw_data.get("call", {}).get("from", "unknown")
 
         if not self._check_rate_limit(caller):
-            return SwaigFunctionResult(
+            return FunctionResult(
                 "You've made too many requests. "
                 "Please wait a minute and try again."
             )
@@ -492,11 +492,11 @@ def transfer(self, args, raw_data):
     # Only allow predefined destinations
     dest = ALLOWED_DESTINATIONS.get(department)
     if not dest:
-        return SwaigFunctionResult(
+        return FunctionResult(
             "I can only transfer to support, sales, or billing."
         )
 
-    return SwaigFunctionResult(
+    return FunctionResult(
         f"Transferring you to {department}..."
     ).add_action("transfer", {"dest": dest})
 ```

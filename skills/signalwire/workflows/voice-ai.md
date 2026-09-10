@@ -372,11 +372,11 @@ Based on the HolyGuacamole example using the Python SDK:
 ```python
 #!/usr/bin/env -S uv run
 # /// script
-# dependencies = ["signalwire-agents"]
+# dependencies = ["signalwire-sdk"]
 # ///
 
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire import FunctionResult
 
 class DriveThruAgent(AgentBase):
     def __init__(self):
@@ -423,7 +423,7 @@ Process:
         customizations = args.get("customizations")
 
         if item_name not in self.menu:
-            return SwaigFunctionResult(f"Sorry, we don't have {item_name}. Would you like something else?")
+            return FunctionResult(f"Sorry, we don't have {item_name}. Would you like something else?")
 
         price = self.menu[item_name]
         self.order.append({
@@ -435,7 +435,7 @@ Process:
 
         total = sum(item['price'] * item['quantity'] for item in self.order)
 
-        return SwaigFunctionResult(f"Added {quantity} {item_name}. Anything else? Your current total is ${total:.2f}")
+        return FunctionResult(f"Added {quantity} {item_name}. Anything else? Your current total is ${total:.2f}")
 
     @AgentBase.tool(
         name="confirm_order",
@@ -445,7 +445,7 @@ Process:
     def confirm_order(self, args, raw_data):
         """Confirm and finalize the order"""
         if not self.order:
-            return SwaigFunctionResult("You haven't ordered anything yet. What would you like?")
+            return FunctionResult("You haven't ordered anything yet. What would you like?")
 
         items = ", ".join([
             f"{item['quantity']} {item['item']}"
@@ -454,7 +454,7 @@ Process:
 
         total = sum(item['price'] * item['quantity'] for item in self.order)
 
-        return SwaigFunctionResult(f"Your order: {items}. Total: ${total:.2f}. Please pull forward to the window. Thank you!")
+        return FunctionResult(f"Your order: {items}. Total: ${total:.2f}. Please pull forward to the window. Thank you!")
 
 if __name__ == "__main__":
     agent = DriveThruAgent()
@@ -497,7 +497,7 @@ if __name__ == "__main__":
 
 **User asks for specific API details:**
 - "What are all the parameters for AgentBase constructor?" → [AgentBase API](../reference/sdk/agent-base.md)
-- "What actions can SwaigFunctionResult return?" → [SwaigFunctionResult](../reference/sdk/function-result.md)
+- "What actions can FunctionResult return?" → [FunctionResult](../reference/sdk/function-result.md)
 - "How do I configure environment variables?" → [Environment Variables](../reference/deployment/environment-variables.md)
 
 **User needs advanced features not shown in examples:**
@@ -549,7 +549,7 @@ if __name__ == "__main__":
 
 **When user needs complete API reference:**
 - [AgentBase API](../reference/sdk/agent-base.md) for constructor/method details
-- [SwaigFunctionResult](../reference/sdk/function-result.md) for action catalog
+- [FunctionResult](../reference/sdk/function-result.md) for action catalog
 - [Skills System](../reference/sdk/skills-complete.md) for built-in skills reference
 
 **When looking for working code examples:**

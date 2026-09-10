@@ -42,7 +42,7 @@ Best for:
 ```python
 #!/usr/bin/env -S uv run
 # /// script
-# dependencies = ["signalwire-agents"]
+# dependencies = ["signalwire-sdk"]
 # ///
 
 import os
@@ -111,7 +111,7 @@ CMD ["python", "agent.py"]
 **requirements.txt:**
 
 ```
-signalwire-agents
+signalwire-sdk
 ```
 
 **docker-compose.yml:**
@@ -184,8 +184,8 @@ sudo systemctl status ai-agent
 **lambda_function.py:**
 
 ```python
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire import FunctionResult
 
 # CRITICAL: Create agent instance OUTSIDE handler for cold start optimization
 class MyAgent(AgentBase):
@@ -205,7 +205,7 @@ class MyAgent(AgentBase):
         )
         def check_balance(args, raw_data):
             account_number = args.get("account_number")
-            return SwaigFunctionResult(f"Balance for {account_number}: $1,234.56")
+            return FunctionResult(f"Balance for {account_number}: $1,234.56")
 
 # Instantiate outside handler
 agent = MyAgent()
@@ -266,8 +266,8 @@ sam deploy --guided
 **main.py:**
 
 ```python
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire import FunctionResult
 
 class MyAgent(AgentBase):
     def __init__(self):
@@ -285,7 +285,7 @@ class MyAgent(AgentBase):
         )
         def check_weather(args, raw_data):
             city = args.get("city")
-            return SwaigFunctionResult(f"The weather in {city} is sunny and 72°F")
+            return FunctionResult(f"The weather in {city} is sunny and 72°F")
 
 # Instantiate outside handler
 agent = MyAgent()
@@ -298,7 +298,7 @@ def main(request):
 **requirements.txt:**
 
 ```
-signalwire-agents
+signalwire-sdk
 ```
 
 **Deploy:**
@@ -318,8 +318,8 @@ gcloud functions deploy ai-agent \
 
 ```python
 import azure.functions as func
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire import FunctionResult
 
 class MyAgent(AgentBase):
     def __init__(self):
@@ -337,7 +337,7 @@ class MyAgent(AgentBase):
         )
         def lookup_user(args, raw_data):
             user_id = args.get("user_id")
-            return SwaigFunctionResult(f"User {user_id} found: John Doe")
+            return FunctionResult(f"User {user_id} found: John Doe")
 
 # Instantiate outside handler
 agent = MyAgent()
@@ -359,7 +359,7 @@ For complete serverless deployment guide, see: [reference/deployment/serverless.
 Deploy multiple agents on one server with AgentServer:
 
 ```python
-from signalwire_agents import AgentServer
+from signalwire import AgentServer
 from agents.support import SupportAgent
 from agents.sales import SalesAgent
 from agents.faq import FAQAgent
@@ -625,13 +625,13 @@ def transfer_funds(self, args, raw_data):
 
     # Validate input
     if not isinstance(amount, (int, float)):
-        return SwaigFunctionResult("Invalid amount format")
+        return FunctionResult("Invalid amount format")
 
     if amount <= 0:
-        return SwaigFunctionResult("Amount must be positive")
+        return FunctionResult("Amount must be positive")
 
     if amount > 10000:
-        return SwaigFunctionResult("Amount exceeds daily limit")
+        return FunctionResult("Amount exceeds daily limit")
 
     # Process transfer...
 ```
@@ -657,19 +657,19 @@ def api_call(self, args, raw_data):
             timeout=5
         )
         response.raise_for_status()
-        return SwaigFunctionResult("Success")
+        return FunctionResult("Success")
 
     except requests.Timeout:
         logging.error("API timeout")
-        return SwaigFunctionResult("The service is taking too long to respond. Please try again.")
+        return FunctionResult("The service is taking too long to respond. Please try again.")
 
     except requests.HTTPError as e:
         logging.error(f"HTTP error: {e}")
-        return SwaigFunctionResult("I'm having trouble accessing that information right now.")
+        return FunctionResult("I'm having trouble accessing that information right now.")
 
     except Exception as e:
         logging.error(f"Unexpected error: {e}")
-        return SwaigFunctionResult("An unexpected error occurred. Let me transfer you to someone who can help.")
+        return FunctionResult("An unexpected error occurred. Let me transfer you to someone who can help.")
 ```
 
 For complete error handling patterns, see: [AI Agent Error Handling](ai-agent-error-handling.md)

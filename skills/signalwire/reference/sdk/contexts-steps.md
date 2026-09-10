@@ -5,7 +5,7 @@ The Contexts and Steps system provides an alternative to traditional prompt-base
 ## Import
 
 ```python
-from signalwire_agents import AgentBase, ContextBuilder, Context, Step, create_simple_context
+from signalwire import AgentBase, ContextBuilder, Context, Step, create_simple_context
 ```
 
 ## When to Use Contexts and Steps
@@ -326,7 +326,7 @@ The ContextBuilder enforces these rules:
 Create a simple context without an agent:
 
 ```python
-from signalwire_agents import create_simple_context
+from signalwire import create_simple_context
 
 context = create_simple_context("default")
 step = context.add_step("greet")
@@ -337,8 +337,8 @@ step.set_text("Greet the user.")
 
 ```python
 #!/usr/bin/env python3
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire import FunctionResult
 
 
 class AppointmentScheduler(AgentBase):
@@ -421,7 +421,7 @@ class AppointmentScheduler(AgentBase):
     )
     def set_appointment_type(self, args, raw_data):
         appt_type = args.get("type")
-        return SwaigFunctionResult(f"Appointment type set to: {appt_type}").add_action(
+        return FunctionResult(f"Appointment type set to: {appt_type}").add_action(
             "set_global_data", {"appointment_type": appt_type}
         )
 
@@ -437,7 +437,7 @@ class AppointmentScheduler(AgentBase):
         date = args.get("date")
         time = args.get("time")
         # In a real implementation, check against a calendar system
-        return SwaigFunctionResult(f"The slot on {date} at {time} is available.")
+        return FunctionResult(f"The slot on {date} at {time} is available.")
 
     @AgentBase.tool(
         name="book_appointment",
@@ -445,7 +445,7 @@ class AppointmentScheduler(AgentBase):
         parameters={}
     )
     def book_appointment(self, args, raw_data):
-        return SwaigFunctionResult("Appointment has been booked successfully.")
+        return FunctionResult("Appointment has been booked successfully.")
 
 
 if __name__ == "__main__":

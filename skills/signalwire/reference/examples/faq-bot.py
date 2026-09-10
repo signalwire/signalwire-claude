@@ -11,8 +11,8 @@ Run with: python faq-bot.py
 Test with: swaig-test faq-bot.py --dump-swml
 """
 
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire import FunctionResult
 import os
 
 # FAQ knowledge base
@@ -144,9 +144,9 @@ class FAQBot(AgentBase):
 
         faq = FAQS.get(topic)
         if faq:
-            return SwaigFunctionResult(faq["answer"])
+            return FunctionResult(faq["answer"])
         else:
-            return SwaigFunctionResult(
+            return FunctionResult(
                 "I don't have information about that topic. "
                 "Would you like me to transfer you to a customer service representative?"
             )
@@ -161,7 +161,7 @@ class FAQBot(AgentBase):
         topics = [faq["question"] for faq in FAQS.values()]
         topic_list = ". ".join(topics)
 
-        return SwaigFunctionResult(
+        return FunctionResult(
             f"I can help you with the following topics: {topic_list}. "
             "What would you like to know about?"
         )
@@ -181,7 +181,7 @@ class FAQBot(AgentBase):
         """Transfer to human support."""
         reason = args.get("reason", "Customer requested assistance")
 
-        return (SwaigFunctionResult(
+        return (FunctionResult(
             "I'll connect you with a customer service representative now. "
             "Please hold while I transfer you."
         )
@@ -195,7 +195,7 @@ class FAQBot(AgentBase):
     )
     def end_call(self, args, raw_data):
         """Politely end the call."""
-        return SwaigFunctionResult(
+        return FunctionResult(
             "Thank you for calling Acme Corp! Have a great day. Goodbye!",
             post_process=True
         ).add_action("hangup", {})

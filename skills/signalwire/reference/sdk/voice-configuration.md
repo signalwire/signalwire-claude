@@ -5,7 +5,7 @@ Complete reference for voice configuration, TTS engines, languages, fillers, and
 ## Import
 
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 ```
 
 ## Language Configuration
@@ -420,8 +420,8 @@ agent.set_post_prompt_llm_params(
 
 ```python
 #!/usr/bin/env python3
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire import FunctionResult
 
 
 class MultilingualAgent(AgentBase):
@@ -477,7 +477,7 @@ class MultilingualAgent(AgentBase):
         fillers=["Let me look that up for you", "Searching now"]
     )
     def lookup_info(self, args, raw_data):
-        return SwaigFunctionResult(f"Found information for: {args.get('query')}")
+        return FunctionResult(f"Found information for: {args.get('query')}")
 
 
 if __name__ == "__main__":

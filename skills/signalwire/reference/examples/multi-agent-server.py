@@ -9,8 +9,8 @@ Run with: python multi-agent-server.py
 Test with: swaig-test multi-agent-server.py --agent-class SupportAgent --dump-swml
 """
 
-from signalwire_agents import AgentBase, AgentServer
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase, AgentServer
+from signalwire import FunctionResult
 from pathlib import Path
 import os
 
@@ -63,7 +63,7 @@ class SupportAgent(AgentBase):
     def lookup_order(self, args, raw_data):
         order_num = args.get("order_number", "unknown")
         # In production, query your database
-        return SwaigFunctionResult(
+        return FunctionResult(
             f"Order {order_num} was shipped on Monday via FedEx. "
             "It should arrive by Friday. Would you like the tracking number?"
         )
@@ -80,7 +80,7 @@ class SupportAgent(AgentBase):
     )
     def escalate(self, args, raw_data):
         reason = args.get("reason", "Customer requested transfer")
-        return (SwaigFunctionResult(
+        return (FunctionResult(
             "I'll connect you with a support specialist who can help further. "
             "Please hold while I transfer you."
         )
@@ -128,7 +128,7 @@ class SalesAgent(AgentBase):
     def get_product_info(self, args, raw_data):
         product = args.get("product_name", "")
         # In production, query product database
-        return SwaigFunctionResult(
+        return FunctionResult(
             f"The {product} is one of our most popular items! "
             "It's priced at $99.99 and comes with a 30-day money-back guarantee. "
             "Would you like me to tell you more about its features?"
@@ -147,7 +147,7 @@ class SalesAgent(AgentBase):
         time = args.get("preferred_time", "a convenient time")
         caller = raw_data.get("call", {}).get("from", "unknown")
 
-        return (SwaigFunctionResult(
+        return (FunctionResult(
             f"I've scheduled a demo of {product} for {time}. "
             "You'll receive a confirmation email shortly with the details. "
             "Is there anything else I can help you with?"
@@ -202,13 +202,13 @@ class BillingAgent(AgentBase):
         verified = raw_data.get("vars", {}).get("verified", False)
 
         if not verified:
-            return SwaigFunctionResult(
+            return FunctionResult(
                 "For security, I need to verify your identity first. "
                 "Can you please provide the last four digits of your Social Security number?"
             )
 
         # In production, query billing system
-        return SwaigFunctionResult(
+        return FunctionResult(
             f"Your current balance for account {account} is $156.78. "
             "Your next payment is due on the 15th. "
             "Would you like to make a payment today?"
@@ -227,13 +227,13 @@ class BillingAgent(AgentBase):
         confirmed = args.get("confirm", False)
 
         if not confirmed:
-            return SwaigFunctionResult(
+            return FunctionResult(
                 f"I can process a payment of ${amount:.2f}. "
                 "This will be charged to your card on file ending in 4242. "
                 "Do you confirm this payment?"
             )
 
-        return (SwaigFunctionResult(
+        return (FunctionResult(
             f"Payment of ${amount:.2f} has been processed successfully. "
             "You'll receive a confirmation email shortly. "
             "Is there anything else I can help you with?"

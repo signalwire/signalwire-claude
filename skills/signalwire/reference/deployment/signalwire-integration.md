@@ -182,7 +182,7 @@ Use the SignalWire JavaScript SDK to connect:
 #!/usr/bin/env python3
 """Agent with WebRTC web interface."""
 
-from signalwire_agents import AgentBase, AgentServer
+from signalwire import AgentBase, AgentServer
 from pathlib import Path
 import os
 
@@ -285,8 +285,8 @@ Prerequisites:
 3. Phone number purchased (optional, for PSTN)
 """
 
-from signalwire_agents import AgentBase, AgentServer
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase, AgentServer
+from signalwire import FunctionResult
 from pathlib import Path
 import os
 import requests
@@ -330,7 +330,7 @@ class CustomerAgent(AgentBase):
         parameters={}
     )
     def end_call(self, args, raw_data):
-        return SwaigFunctionResult(
+        return FunctionResult(
             "Thank you for calling Acme Corp! Goodbye!",
             post_process=True
         ).add_action("hangup", {})

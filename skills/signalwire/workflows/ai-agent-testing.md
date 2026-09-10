@@ -172,20 +172,20 @@ class TestFunctions:
         assert len(transfer_actions) > 0
 ```
 
-### Testing SwaigFunctionResult
+### Testing FunctionResult
 
 ```python
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import FunctionResult
 
 def test_simple_result():
-    result = SwaigFunctionResult("Hello!")
+    result = FunctionResult("Hello!")
     data = result.to_dict()
 
     assert data["response"] == "Hello!"
     assert "action" not in data or data["action"] == []
 
 def test_result_with_action():
-    result = SwaigFunctionResult("Transferring...").add_action(
+    result = FunctionResult("Transferring...").add_action(
         "transfer", {"dest": "tel:+15551234567"}
     )
     data = result.to_dict()
@@ -194,7 +194,7 @@ def test_result_with_action():
     assert {"transfer": {"dest": "tel:+15551234567"}} in data["action"]
 
 def test_result_with_multiple_actions():
-    result = (SwaigFunctionResult("Done!")
+    result = (FunctionResult("Done!")
         .add_action("set_global_data", {"key": "value"})
         .add_action("hangup", {}))
 
@@ -202,7 +202,7 @@ def test_result_with_multiple_actions():
     assert len(data["action"]) == 2
 
 def test_post_process():
-    result = SwaigFunctionResult("Goodbye!", post_process=True)
+    result = FunctionResult("Goodbye!", post_process=True)
     data = result.to_dict()
 
     # Post-process adds SWML action

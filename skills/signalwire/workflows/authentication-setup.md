@@ -123,10 +123,10 @@ class MyConsumer(Consumer):
 ```python
 #!/usr/bin/env -S uv run
 # /// script
-# dependencies = ["signalwire-agents"]
+# dependencies = ["signalwire-sdk"]
 # ///
 
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class MyAgent(AgentBase):
     def __init__(self):

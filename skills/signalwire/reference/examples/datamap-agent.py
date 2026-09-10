@@ -14,9 +14,9 @@ Run with: python datamap-agent.py
 Test with: swaig-test datamap-agent.py --dump-swml
 """
 
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
-from signalwire_agents.core.data_map import DataMap
+from signalwire import AgentBase
+from signalwire import FunctionResult
+from signalwire import DataMap
 import os
 
 
@@ -66,7 +66,7 @@ class DataMapAgent(AgentBase):
                 "GET",
                 "https://wttr.in/${lc:args.city}?format=j1"
             )
-            .output(SwaigFunctionResult(
+            .output(FunctionResult(
                 "The weather in ${args.city} is currently "
                 "${response.current_condition[0].temp_F} degrees Fahrenheit "
                 "with ${response.current_condition[0].weatherDesc[0].value}. "
@@ -83,7 +83,7 @@ class DataMapAgent(AgentBase):
                 "GET",
                 "https://en.wikipedia.org/api/rest_v1/page/summary/${enc:args.query}"
             )
-            .output(SwaigFunctionResult(
+            .output(FunctionResult(
                 "${response.extract}"
             ))
         )
@@ -96,7 +96,7 @@ class DataMapAgent(AgentBase):
                 "GET",
                 "https://uselessfacts.jsph.pl/api/v2/facts/random?language=en"
             )
-            .output(SwaigFunctionResult(
+            .output(FunctionResult(
                 "Here's an interesting fact: ${response.text}"
             ))
         )
@@ -110,7 +110,7 @@ class DataMapAgent(AgentBase):
                 "GET",
                 "http://ip-api.com/json/${args.ip}"
             )
-            .output(SwaigFunctionResult(
+            .output(FunctionResult(
                 "IP address ${args.ip} is located in ${response.city}, "
                 "${response.regionName}, ${response.country}. "
                 "The ISP is ${response.isp}."
@@ -137,7 +137,7 @@ class DataMapAgent(AgentBase):
         # Only allow safe characters
         allowed = set("0123456789+-*/.() ")
         if not all(c in allowed for c in expression):
-            return SwaigFunctionResult(
+            return FunctionResult(
                 "I can only do basic math with numbers and operators. "
                 "Try something like '10 plus 5' or '100 divided by 4'."
             )
@@ -145,11 +145,11 @@ class DataMapAgent(AgentBase):
         try:
             # Evaluate safely
             result = eval(expression, {"__builtins__": {}}, {})
-            return SwaigFunctionResult(
+            return FunctionResult(
                 f"The result of {expression} is {result}."
             )
         except Exception:
-            return SwaigFunctionResult(
+            return FunctionResult(
                 "I couldn't calculate that. Could you rephrase it?"
             )
 
@@ -160,7 +160,7 @@ class DataMapAgent(AgentBase):
     )
     def end_call(self, args, raw_data):
         """End the call."""
-        return SwaigFunctionResult(
+        return FunctionResult(
             "Thanks for chatting! Have a great day. Goodbye!",
             post_process=True
         ).add_action("hangup", {})

@@ -5,7 +5,7 @@ Dynamic configuration allows you to customize agent behavior per-request based o
 ## Import
 
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 ```
 
 ## Dynamic Config Callback
@@ -85,7 +85,7 @@ def dynamic_config(query_params, body_params, headers, agent):
     agent.define_tool(
         name="custom_lookup",
         description="Look up tenant-specific data",
-        handler=lambda args, raw: SwaigFunctionResult(f"Data for {tenant_id}")
+        handler=lambda args, raw: FunctionResult(f"Data for {tenant_id}")
     )
 ```
 
@@ -273,8 +273,8 @@ agent.set_function_includes([
 
 ```python
 #!/usr/bin/env python3
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire import FunctionResult
 
 
 class MultiTenantAgent(AgentBase):
@@ -347,7 +347,7 @@ class MultiTenantAgent(AgentBase):
     def get_company_info(self, args, raw_data):
         global_data = raw_data.get("global_data", {})
         company = global_data.get("company_name", "our company")
-        return SwaigFunctionResult(f"You're speaking with {company}'s virtual assistant.")
+        return FunctionResult(f"You're speaking with {company}'s virtual assistant.")
 
 
 if __name__ == "__main__":

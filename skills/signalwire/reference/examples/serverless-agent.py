@@ -9,23 +9,23 @@ Environment variables:
     SWML_BASIC_AUTH_PASSWORD: Basic auth password (optional)
 
 AWS Lambda requirements.txt:
-    signalwire-agents>=1.0.10
+    signalwire-sdk
     h11>=0.13,<0.15
     fastapi
     mangum
     uvicorn
 
 Google Cloud Functions requirements.txt:
-    signalwire-agents>=1.0.10
+    signalwire-sdk
     functions-framework>=3.0.0
 
 Azure Functions requirements.txt:
     azure-functions>=1.17.0
-    signalwire-agents>=1.0.10
+    signalwire-sdk
 """
 
 import os
-from signalwire_agents import AgentBase, SwaigFunctionResult
+from signalwire import AgentBase, FunctionResult
 
 
 class CustomerServiceAgent(AgentBase):
@@ -76,7 +76,7 @@ class CustomerServiceAgent(AgentBase):
             order_num = args.get("order_number", "")
             # In production, query your database here
             # Example: DynamoDB, Cloud SQL, Cosmos DB, etc.
-            return SwaigFunctionResult(
+            return FunctionResult(
                 f"Order {order_num} was shipped on Monday and will arrive by Friday."
             )
 
@@ -95,7 +95,7 @@ class CustomerServiceAgent(AgentBase):
         def transfer_to_support(args, raw_data):
             reason = args.get("reason", "customer request")
             return (
-                SwaigFunctionResult(f"Transferring you to a specialist for: {reason}")
+                FunctionResult(f"Transferring you to a specialist for: {reason}")
                 .add_action("transfer", {"dest": "sip:support@example.com"})
             )
 
@@ -115,7 +115,7 @@ class CustomerServiceAgent(AgentBase):
                 platform = "Local/Unknown"
                 details = "Running locally or in unknown environment"
 
-            return SwaigFunctionResult(f"Running on {platform}. {details}")
+            return FunctionResult(f"Running on {platform}. {details}")
 
 
 # CRITICAL: Create agent instance OUTSIDE handler for cold start optimization

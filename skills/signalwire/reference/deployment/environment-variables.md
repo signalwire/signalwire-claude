@@ -189,7 +189,7 @@ Load with python-dotenv:
 from dotenv import load_dotenv
 load_dotenv()
 
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 # ... rest of agent code
 ```
 

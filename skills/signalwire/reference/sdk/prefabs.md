@@ -5,7 +5,7 @@ Prefab agents are ready-to-use agent templates for common use cases. They provid
 ## Import
 
 ```python
-from signalwire_agents.prefabs import (
+from signalwire.prefabs import (
     InfoGathererAgent,
     FAQBotAgent,
     ConciergeAgent,
@@ -52,7 +52,7 @@ Collects answers to a predefined series of questions, with optional confirmation
 ### Basic Example
 
 ```python
-from signalwire_agents.prefabs import InfoGathererAgent
+from signalwire.prefabs import InfoGathererAgent
 
 agent = InfoGathererAgent(
     questions=[
@@ -73,7 +73,7 @@ agent.run()
 For questions that vary based on request parameters:
 
 ```python
-from signalwire_agents.prefabs import InfoGathererAgent
+from signalwire.prefabs import InfoGathererAgent
 
 agent = InfoGathererAgent(name="dynamic-intake", port=3000)
 
@@ -146,7 +146,7 @@ Conducts automated surveys with various question types and response validation.
 ### Example
 
 ```python
-from signalwire_agents.prefabs import SurveyAgent
+from signalwire.prefabs import SurveyAgent
 
 agent = SurveyAgent(
     survey_name="Customer Satisfaction Survey",
@@ -236,7 +236,7 @@ Acts as a virtual concierge providing information about services, amenities, and
 ### Example
 
 ```python
-from signalwire_agents.prefabs import ConciergeAgent
+from signalwire.prefabs import ConciergeAgent
 
 agent = ConciergeAgent(
     venue_name="Grand Plaza Hotel",
@@ -298,7 +298,7 @@ Answers frequently asked questions using skills and configured knowledge.
 ### Basic Usage
 
 ```python
-from signalwire_agents.prefabs import FAQBotAgent
+from signalwire.prefabs import FAQBotAgent
 
 agent = FAQBotAgent(
     company_name="Acme Corp",
@@ -324,7 +324,7 @@ Screens incoming calls, collects caller information, and routes to appropriate d
 ### Basic Usage
 
 ```python
-from signalwire_agents.prefabs import ReceptionistAgent
+from signalwire.prefabs import ReceptionistAgent
 
 agent = ReceptionistAgent(
     company_name="Acme Corp",
@@ -356,8 +356,8 @@ agent.run()
 All prefab agents extend `AgentBase`, so you can customize them:
 
 ```python
-from signalwire_agents.prefabs import SurveyAgent
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.prefabs import SurveyAgent
+from signalwire import FunctionResult
 
 class CustomSurveyAgent(SurveyAgent):
     def __init__(self, **kwargs):
@@ -374,7 +374,7 @@ class CustomSurveyAgent(SurveyAgent):
         )
 
     def handle_escalate(self, args, raw_data):
-        return SwaigFunctionResult("Transferring you to a human agent").add_action(
+        return FunctionResult("Transferring you to a human agent").add_action(
             "transfer", {"dest": "sip:support@company.com"}
         )
 
@@ -390,8 +390,8 @@ class CustomSurveyAgent(SurveyAgent):
 Deploy multiple prefab agents together:
 
 ```python
-from signalwire_agents import AgentServer
-from signalwire_agents.prefabs import (
+from signalwire import AgentServer
+from signalwire.prefabs import (
     InfoGathererAgent,
     SurveyAgent,
     ConciergeAgent

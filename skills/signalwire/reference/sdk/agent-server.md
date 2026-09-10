@@ -5,7 +5,7 @@
 ## Import
 
 ```python
-from signalwire_agents import AgentBase, AgentServer
+from signalwire import AgentBase, AgentServer
 ```
 
 ## Constructor
@@ -26,7 +26,7 @@ AgentServer(
 ### Multiple Agents on One Server
 
 ```python
-from signalwire_agents import AgentBase, AgentServer
+from signalwire import AgentBase, AgentServer
 
 class SupportAgent(AgentBase):
     def __init__(self):
@@ -124,7 +124,7 @@ def run(self) -> None
 Common pattern for serving a web UI alongside AI agents:
 
 ```python
-from signalwire_agents import AgentBase, AgentServer
+from signalwire import AgentBase, AgentServer
 from pathlib import Path
 import os
 
@@ -228,7 +228,7 @@ HOST=127.0.0.1 PORT=8080 python my_server.py
 ## Multiple Agents with Shared Resources
 
 ```python
-from signalwire_agents import AgentBase, AgentServer
+from signalwire import AgentBase, AgentServer
 import os
 
 # Shared database connection
@@ -248,7 +248,7 @@ class OrderAgent(AgentBase):
     )
     def lookup_order(self, args, raw_data):
         order = self.db.get_order(args["order_id"])
-        return SwaigFunctionResult(f"Order status: {order.status}")
+        return FunctionResult(f"Order status: {order.status}")
 
 class AccountAgent(AgentBase):
     def __init__(self, database):
@@ -307,8 +307,8 @@ SWML_BASIC_AUTH_USER=admin SWML_BASIC_AUTH_PASSWORD=secret python server.py
 #!/usr/bin/env python3
 """Multi-agent server with static file serving."""
 
-from signalwire_agents import AgentBase, AgentServer
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase, AgentServer
+from signalwire import FunctionResult
 from pathlib import Path
 import os
 
@@ -341,7 +341,7 @@ class SupportAgent(AgentBase):
         parameters={"reason": {"type": "string", "description": "Reason"}}
     )
     def escalate(self, args, raw_data):
-        return (SwaigFunctionResult("Connecting you to a specialist.")
+        return (FunctionResult("Connecting you to a specialist.")
                 .add_action("transfer", {"dest": "sip:support@company.com"}))
 
 

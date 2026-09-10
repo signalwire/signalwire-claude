@@ -5,7 +5,7 @@ BedrockAgent extends AgentBase to support Amazon Bedrock's voice-to-voice model 
 ## Import
 
 ```python
-from signalwire_agents import BedrockAgent
+from signalwire import BedrockAgent
 ```
 
 ## Overview
@@ -124,7 +124,7 @@ agent.add_skill("math")
     parameters={"query": {"type": "string", "description": "Query"}}
 )
 def lookup_info(self, args, raw_data):
-    return SwaigFunctionResult(f"Found: {args.get('query')}")
+    return FunctionResult(f"Found: {args.get('query')}")
 ```
 
 ### Post-Prompt
@@ -165,8 +165,8 @@ These methods log warnings when called on BedrockAgent:
 
 ```python
 #!/usr/bin/env python3
-from signalwire_agents import BedrockAgent
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import BedrockAgent
+from signalwire import FunctionResult
 
 
 class CustomerServiceBedrockAgent(BedrockAgent):
@@ -228,7 +228,7 @@ class CustomerServiceBedrockAgent(BedrockAgent):
     def lookup_order(self, args, raw_data):
         order_num = args.get("order_number")
         # In real implementation, query database
-        return SwaigFunctionResult(
+        return FunctionResult(
             f"Order {order_num} shipped Monday, arriving Friday."
         )
 
@@ -238,7 +238,7 @@ class CustomerServiceBedrockAgent(BedrockAgent):
         parameters={}
     )
     def transfer_to_human(self, args, raw_data):
-        return (SwaigFunctionResult("Transferring to a specialist.")
+        return (FunctionResult("Transferring to a specialist.")
                 .add_action("transfer", {"dest": "sip:support@acme.com"}))
 
     def on_summary(self, summary=None, raw_data=None):
@@ -256,7 +256,7 @@ if __name__ == "__main__":
 Deploy Bedrock and standard agents together:
 
 ```python
-from signalwire_agents import AgentServer, AgentBase, BedrockAgent
+from signalwire import AgentServer, AgentBase, BedrockAgent
 
 server = AgentServer(host="0.0.0.0", port=3000)
 

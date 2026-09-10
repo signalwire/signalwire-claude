@@ -5,7 +5,7 @@ Deploy SignalWire AI Agents in serverless environments including AWS Lambda, Goo
 ## Import
 
 ```python
-from signalwire_agents import AgentBase, SwaigFunctionResult
+from signalwire import AgentBase, FunctionResult
 ```
 
 ## Automatic Environment Detection
@@ -39,7 +39,7 @@ The SDK automatically detects the execution environment and handles request/resp
 """AWS Lambda handler for SignalWire agent."""
 
 import os
-from signalwire_agents import AgentBase, SwaigFunctionResult
+from signalwire import AgentBase, FunctionResult
 
 
 class MyAgent(AgentBase):
@@ -83,14 +83,14 @@ class MyAgent(AgentBase):
         def lookup_order(args, raw_data):
             order_id = args.get("order_id")
             # Query DynamoDB or other backend
-            return SwaigFunctionResult(f"Order {order_id}: Shipped, arriving Friday")
+            return FunctionResult(f"Order {order_id}: Shipped, arriving Friday")
 
         @self.tool(description="Get platform runtime information")
         def get_platform_info(args, raw_data):
             region = os.getenv("AWS_REGION", "unknown")
             function_name = os.getenv("AWS_LAMBDA_FUNCTION_NAME", "unknown")
             memory = os.getenv("AWS_LAMBDA_FUNCTION_MEMORY_SIZE", "unknown")
-            return SwaigFunctionResult(
+            return FunctionResult(
                 f"Running on AWS Lambda. Function: {function_name}, "
                 f"Region: {region}, Memory: {memory}MB."
             )
@@ -116,7 +116,7 @@ def lambda_handler(event, context):
 ### requirements.txt
 
 ```
-signalwire-agents>=1.0.10
+signalwire-sdk
 h11>=0.13,<0.15
 fastapi
 mangum
@@ -206,7 +206,7 @@ aws lambda create-function \
 """Google Cloud Functions handler for SignalWire agent."""
 
 import os
-from signalwire_agents import AgentBase, SwaigFunctionResult
+from signalwire import AgentBase, FunctionResult
 
 
 class MyAgent(AgentBase):
@@ -241,7 +241,7 @@ class MyAgent(AgentBase):
         )
         def say_hello(args, raw_data):
             name = args.get("name", "World")
-            return SwaigFunctionResult(f"Hello {name}!")
+            return FunctionResult(f"Hello {name}!")
 
         @self.tool(description="Get platform runtime information")
         def get_platform_info(args, raw_data):
@@ -264,7 +264,7 @@ class MyAgent(AgentBase):
                 except Exception:
                     pass
 
-            return SwaigFunctionResult(
+            return FunctionResult(
                 f"Running on Google Cloud Functions Gen 2. "
                 f"Service: {service}, Revision: {revision}, Project: {project}."
             )
@@ -289,7 +289,7 @@ def main(request):
 ### requirements.txt
 
 ```
-signalwire-agents>=1.0.10
+signalwire-sdk
 functions-framework>=3.0.0
 ```
 
@@ -330,7 +330,7 @@ gcloud functions deploy my-agent \
 
 import os
 import azure.functions as func
-from signalwire_agents import AgentBase, SwaigFunctionResult
+from signalwire import AgentBase, FunctionResult
 
 
 class MyAgent(AgentBase):
@@ -365,7 +365,7 @@ class MyAgent(AgentBase):
         )
         def say_hello(args, raw_data):
             name = args.get("name", "World")
-            return SwaigFunctionResult(f"Hello {name}!")
+            return FunctionResult(f"Hello {name}!")
 
         @self.tool(description="Get Azure deployment information")
         def get_platform_info(args, raw_data):
@@ -374,7 +374,7 @@ class MyAgent(AgentBase):
             runtime = os.getenv("FUNCTIONS_WORKER_RUNTIME", "unknown")
             version = os.getenv("FUNCTIONS_EXTENSION_VERSION", "unknown")
 
-            return SwaigFunctionResult(
+            return FunctionResult(
                 f"Running on Azure Functions. "
                 f"App: {function_name}, Region: {region}, "
                 f"Runtime: {runtime}, Version: {version}."
@@ -436,7 +436,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 
 ```
 azure-functions>=1.17.0
-signalwire-agents>=1.0.10
+signalwire-sdk
 ```
 
 ### Deployment
@@ -470,7 +470,7 @@ For traditional CGI deployments (Apache, nginx with FastCGI):
 
 ```python
 #!/usr/bin/env python3
-from signalwire_agents import AgentBase, SwaigFunctionResult
+from signalwire import AgentBase, FunctionResult
 
 
 class MyAgent(AgentBase):
@@ -516,7 +516,7 @@ agent.run(force_mode="cgi")
 Deploy multiple agents in a single serverless function using AgentServer:
 
 ```python
-from signalwire_agents import AgentBase, AgentServer, SwaigFunctionResult
+from signalwire import AgentBase, AgentServer, FunctionResult
 
 
 class SalesAgent(AgentBase):
@@ -561,9 +561,9 @@ def main(req):
 DataMap enables SWAIG functions that execute on SignalWire servers without requiring webhook callbacks - ideal for reducing serverless complexity:
 
 ```python
-from signalwire_agents import AgentBase
-from signalwire_agents.core.data_map import DataMap
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire import DataMap
+from signalwire import FunctionResult
 
 
 class APIAgent(AgentBase):
@@ -579,10 +579,10 @@ class APIAgent(AgentBase):
             .purpose("Check weather conditions")
             .parameter("location", "string", "City or zip code", required=True)
             .webhook("GET", "https://api.weather.com/v1/current?q=${enc:args.location}")
-            .output(SwaigFunctionResult(
+            .output(FunctionResult(
                 "Current conditions in ${args.location}: ${response.condition}, ${response.temp}°F"
             ))
-            .fallback_output(SwaigFunctionResult("Weather service is currently unavailable"))
+            .fallback_output(FunctionResult("Weather service is currently unavailable"))
         )
 
         # Order status lookup
@@ -595,7 +595,7 @@ class APIAgent(AgentBase):
                 "https://api.orders.com/status/${enc:args.order_id}",
                 headers={"Authorization": "Bearer ${env.API_KEY}"}
             )
-            .output(SwaigFunctionResult(
+            .output(FunctionResult(
                 "Order ${args.order_id}: ${response.status}. "
                 "Expected delivery: ${response.delivery_date}"
             ))
@@ -607,11 +607,11 @@ class APIAgent(AgentBase):
             .purpose("Control audio volume")
             .parameter("level", "string", "Volume level", required=True)
             .expression("${args.level}", r"high|loud|up",
-                SwaigFunctionResult("Volume increased").add_action("volume", 100))
+                FunctionResult("Volume increased").add_action("volume", 100))
             .expression("${args.level}", r"low|quiet|down",
-                SwaigFunctionResult("Volume decreased").add_action("volume", 30))
+                FunctionResult("Volume decreased").add_action("volume", 30))
             .expression("${args.level}", r"mute|off",
-                SwaigFunctionResult("Audio muted").add_action("mute", True))
+                FunctionResult("Audio muted").add_action("mute", True))
         )
 
         # Register all DataMaps
@@ -764,7 +764,7 @@ Use instead:
 
 ```
 # Keep requirements.txt minimal
-signalwire-agents>=1.0.10
+signalwire-sdk
 # Only add what you actually use
 ```
 

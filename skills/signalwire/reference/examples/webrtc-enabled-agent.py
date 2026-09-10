@@ -13,8 +13,8 @@ Prerequisites:
 Run with: python webrtc-enabled-agent.py
 """
 
-from signalwire_agents import AgentBase, AgentServer
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase, AgentServer
+from signalwire import FunctionResult
 from pathlib import Path
 import os
 
@@ -81,7 +81,7 @@ class WebRTCAgent(AgentBase):
     def get_time(self, args, raw_data):
         from datetime import datetime
         now = datetime.now()
-        return SwaigFunctionResult(
+        return FunctionResult(
             f"The current time is {now.strftime('%I:%M %p')} "
             f"on {now.strftime('%A, %B %d, %Y')}."
         )
@@ -92,7 +92,7 @@ class WebRTCAgent(AgentBase):
         parameters={}
     )
     def end_call(self, args, raw_data):
-        return SwaigFunctionResult(
+        return FunctionResult(
             "Thanks for chatting! Have a great day. Goodbye!",
             post_process=True  # Let AI finish speaking before hangup
         ).add_action("hangup", {})

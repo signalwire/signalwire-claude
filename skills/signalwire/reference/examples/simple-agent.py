@@ -12,8 +12,8 @@ Run with: python simple-agent.py
 Test with: swaig-test simple-agent.py --dump-swml
 """
 
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire import FunctionResult
 
 
 class SimpleAgent(AgentBase):
@@ -62,7 +62,7 @@ class SimpleAgent(AgentBase):
         from datetime import datetime
 
         now = datetime.now()
-        return SwaigFunctionResult(
+        return FunctionResult(
             f"The current time is {now.strftime('%I:%M %p')} "
             f"on {now.strftime('%A, %B %d, %Y')}."
         )

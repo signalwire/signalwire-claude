@@ -5,7 +5,7 @@ Complete reference for all built-in skills and skill management in the SignalWir
 ## Import
 
 ```python
-from signalwire_agents import AgentBase, register_skill, add_skill_directory, list_skills_with_params
+from signalwire import AgentBase, register_skill, add_skill_directory, list_skills_with_params
 ```
 
 ## Skill Management Methods
@@ -270,8 +270,8 @@ agent.add_skill("mcp_gateway", {
 Custom skills extend `SkillBase`:
 
 ```python
-from signalwire_agents.core.skill_base import SkillBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import SkillBase
+from signalwire import FunctionResult
 
 
 class MyCustomSkill(SkillBase):
@@ -324,7 +324,7 @@ class MyCustomSkill(SkillBase):
     def handle_my_function(self, args, raw_data):
         input_val = args.get("input")
         # Do something with self.api_key and input_val
-        return SwaigFunctionResult(f"Processed: {input_val}")
+        return FunctionResult(f"Processed: {input_val}")
 ```
 
 ### Registering Custom Skills
@@ -334,7 +334,7 @@ class MyCustomSkill(SkillBase):
 Register a skill class directly:
 
 ```python
-from signalwire_agents import register_skill
+from signalwire import register_skill
 from my_skills import MyCustomSkill
 
 register_skill(MyCustomSkill)
@@ -348,7 +348,7 @@ agent.add_skill("my_custom_skill", {"api_key": "..."})
 Add a directory containing skills:
 
 ```python
-from signalwire_agents import add_skill_directory
+from signalwire import add_skill_directory
 
 add_skill_directory("/path/to/my/skills")
 
@@ -367,6 +367,9 @@ Register via setup.py for pip-installable skills:
 setup(
     name="my-skills-package",
     entry_points={
+        # NOTE: entry-point group name and the `python -m` module paths below
+        # were not re-verified against signalwire-sdk. Confirm against
+        # /docs/server-sdks/reference/python before relying on them.
         'signalwire_agents.skills': [
             'my_skill = my_package.skills:MyCustomSkill',
         ]
@@ -389,7 +392,7 @@ export SIGNALWIRE_SKILL_PATHS="/path/to/skills1:/path/to/skills2"
 Get complete schema for all available skills:
 
 ```python
-from signalwire_agents import list_skills_with_params
+from signalwire import list_skills_with_params
 
 schema = list_skills_with_params()
 print(schema)
@@ -465,8 +468,8 @@ python -m signalwire_agents.search.server \
 
 ```python
 #!/usr/bin/env python3
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire import FunctionResult
 import os
 
 

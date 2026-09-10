@@ -437,18 +437,18 @@ Our products include widgets, gadgets, and gizmos priced at $10, $20, and $30.
 @AgentBase.tool(name="get_hours", description="Get business hours", parameters={})
 def get_hours(self, args, raw_data):
     """Get business hours"""
-    return SwaigFunctionResult("We're open 9 AM to 5 PM Monday through Friday")
+    return FunctionResult("We're open 9 AM to 5 PM Monday through Friday")
 
 @AgentBase.tool(name="get_location", description="Get business location", parameters={})
 def get_location(self, args, raw_data):
     """Get business location"""
-    return SwaigFunctionResult("We're located at 123 Main St")
+    return FunctionResult("We're located at 123 Main St")
 
 @AgentBase.tool(name="get_products", description="Get product catalog", parameters={})
 def get_products(self, args, raw_data):
     """Get product catalog"""
     products = database.query("SELECT * FROM products")
-    return SwaigFunctionResult(format_product_list(products))
+    return FunctionResult(format_product_list(products))
 ```
 
 **Why:** Use functions for all data retrieval. AI can hallucinate or misremember embedded facts.

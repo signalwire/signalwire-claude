@@ -150,5 +150,5 @@ See [Voice AI workflow](workflows/voice-ai.md) "When to Pull Additional Document
 
 - Main Documentation: https://developer.signalwire.com/
 - GitHub Examples: https://github.com/signalwire
-- AI Agents SDK: https://github.com/signalwire/signalwire-agents
+- Server SDKs (10 languages, one package each): https://signalwire.com/docs/server-sdks
 - Dashboard: `https://{your-space-name}.signalwire.com`

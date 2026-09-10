@@ -1,17 +1,17 @@
-# SwaigFunctionResult Reference
+# FunctionResult Reference
 
-`SwaigFunctionResult` is the return type for all SWAIG function handlers. It encapsulates the response text and any actions to execute.
+`FunctionResult` is the return type for all SWAIG function handlers. It encapsulates the response text and any actions to execute.
 
 ## Import
 
 ```python
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import FunctionResult
 ```
 
 ## Constructor
 
 ```python
-SwaigFunctionResult(
+FunctionResult(
     response: str = None,
     post_process: bool = False
 )
@@ -26,13 +26,13 @@ SwaigFunctionResult(
 ### Simple Response
 
 ```python
-return SwaigFunctionResult("The weather in Seattle is 65°F and cloudy.")
+return FunctionResult("The weather in Seattle is 65°F and cloudy.")
 ```
 
 ### Response with Action
 
 ```python
-return SwaigFunctionResult("I'll transfer you now.").add_action(
+return FunctionResult("I'll transfer you now.").add_action(
     "transfer", {"dest": "tel:+15551234567"}
 )
 ```
@@ -40,7 +40,7 @@ return SwaigFunctionResult("I'll transfer you now.").add_action(
 ### Multiple Actions
 
 ```python
-return (SwaigFunctionResult("Let me set that up for you.")
+return (FunctionResult("Let me set that up for you.")
     .add_action("set_global_data", {"customer_verified": True})
     .add_action("toggle_functions", {"active": ["view_balance", "transfer"]}))
 ```
@@ -51,7 +51,7 @@ When `post_process=True`, the AI delivers the response BEFORE actions execute:
 
 ```python
 # AI says goodbye, THEN hangs up
-return SwaigFunctionResult(
+return FunctionResult(
     "Thank you for calling! Goodbye.",
     post_process=True
 ).add_action("hangup", {})
@@ -61,7 +61,7 @@ Without `post_process`, actions execute immediately and may interrupt:
 
 ```python
 # Hangup might occur before AI finishes speaking
-return SwaigFunctionResult("Thank you for calling!").add_action("hangup", {})
+return FunctionResult("Thank you for calling!").add_action("hangup", {})
 ```
 
 ## Methods
@@ -71,7 +71,7 @@ return SwaigFunctionResult("Thank you for calling!").add_action("hangup", {})
 Set or update the response text.
 
 ```python
-result = SwaigFunctionResult()
+result = FunctionResult()
 result.set_response("Here's the information you requested.")
 return result
 ```
@@ -81,13 +81,13 @@ return result
 Add a single action.
 
 ```python
-def add_action(self, action_name: str, action_data: dict) -> 'SwaigFunctionResult'
+def add_action(self, action_name: str, action_data: dict) -> 'FunctionResult'
 ```
 
 Returns self for method chaining.
 
 ```python
-return (SwaigFunctionResult("Transferring...")
+return (FunctionResult("Transferring...")
     .add_action("transfer", {"dest": "sip:support@company.com"}))
 ```
 
@@ -96,11 +96,11 @@ return (SwaigFunctionResult("Transferring...")
 Add multiple actions at once.
 
 ```python
-def add_actions(self, actions: list) -> 'SwaigFunctionResult'
+def add_actions(self, actions: list) -> 'FunctionResult'
 ```
 
 ```python
-return SwaigFunctionResult("Setting up your account.").add_actions([
+return FunctionResult("Setting up your account.").add_actions([
     {"set_global_data": {"account_id": "12345", "verified": True}},
     {"toggle_functions": {"active": ["view_balance"]}}
 ])
@@ -111,11 +111,11 @@ return SwaigFunctionResult("Setting up your account.").add_actions([
 Shorthand for transfer action.
 
 ```python
-def connect(self, dest: str, final: bool = True) -> 'SwaigFunctionResult'
+def connect(self, dest: str, final: bool = True) -> 'FunctionResult'
 ```
 
 ```python
-return SwaigFunctionResult("Connecting you to sales.").connect(
+return FunctionResult("Connecting you to sales.").connect(
     "sip:sales@company.com",
     final=True
 )
@@ -308,7 +308,7 @@ def get_balance(self, args, raw_data):
     account_id = args.get("account_id")
     balance = self.db.get_balance(account_id)
 
-    return SwaigFunctionResult(
+    return FunctionResult(
         f"Your current balance is ${balance:.2f}. "
         "Would you like to make a payment?"
     )
@@ -328,7 +328,7 @@ def escalate(self, args, raw_data):
     reason = args.get("reason", "Customer requested transfer")
 
     # Store context for the human agent
-    return (SwaigFunctionResult(
+    return (FunctionResult(
         "I'll connect you with a specialist who can help. "
         "Please hold for a moment."
     )
@@ -349,7 +349,7 @@ def escalate(self, args, raw_data):
 def process_request(self, args, raw_data):
     request_type = args.get("request_type")
 
-    result = SwaigFunctionResult()
+    result = FunctionResult()
 
     if request_type == "cancel":
         result.set_response("Your service has been cancelled.")
@@ -381,7 +381,7 @@ def verify_pin(self, args, raw_data):
     caller = raw_data.get("call", {}).get("from")
 
     if self.verify_customer_pin(caller, pin):
-        return (SwaigFunctionResult(
+        return (FunctionResult(
             "Thank you, your identity has been verified. "
             "How can I help you today?"
         )
@@ -393,13 +393,13 @@ def verify_pin(self, args, raw_data):
         attempts = raw_data.get("vars", {}).get("pin_attempts", 0) + 1
 
         if attempts >= 3:
-            return (SwaigFunctionResult(
+            return (FunctionResult(
                 "Too many incorrect attempts. "
                 "For your security, I'll connect you with an agent."
             )
             .add_action("transfer", {"dest": "sip:security@company.com"}))
 
-        return (SwaigFunctionResult(
+        return (FunctionResult(
             f"That PIN doesn't match. You have {3 - attempts} attempts remaining. "
             "Please try again."
         )
@@ -415,7 +415,7 @@ def verify_pin(self, args, raw_data):
     parameters={}
 )
 def end_call(self, args, raw_data):
-    return SwaigFunctionResult(
+    return FunctionResult(
         "Thank you for calling! Have a great day. Goodbye!",
         post_process=True  # Let AI finish speaking before hangup
     ).add_action("hangup", {})
@@ -431,7 +431,7 @@ def end_call(self, args, raw_data):
 )
 def long_operation(self, args, raw_data):
     # Start hold music
-    result = SwaigFunctionResult("Please hold while I process that.")
+    result = FunctionResult("Please hold while I process that.")
     result.add_action("playback_bg", {
         "file": "https://example.com/hold-music.mp3"
     })
@@ -448,10 +448,10 @@ def long_operation(self, args, raw_data):
 
 ## Serialization
 
-`SwaigFunctionResult` serializes to JSON for the SWAIG protocol:
+`FunctionResult` serializes to JSON for the SWAIG protocol:
 
 ```python
-result = (SwaigFunctionResult("Hello!")
+result = (FunctionResult("Hello!")
     .add_action("set_global_data", {"greeted": True}))
 
 # Serializes to:
@@ -466,7 +466,7 @@ result = (SwaigFunctionResult("Hello!")
 With post_process:
 
 ```python
-result = SwaigFunctionResult("Goodbye!", post_process=True).add_action("hangup", {})
+result = FunctionResult("Goodbye!", post_process=True).add_action("hangup", {})
 
 # Serializes to:
 {

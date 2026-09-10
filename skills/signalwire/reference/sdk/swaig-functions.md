@@ -17,8 +17,8 @@ SWAIG functions allow your agent to:
 The decorator approach is cleaner and keeps the function definition with its implementation.
 
 ```python
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire import FunctionResult
 
 
 class MyAgent(AgentBase):
@@ -46,7 +46,7 @@ class MyAgent(AgentBase):
         city = args.get("city")
         units = args.get("units", "fahrenheit")
         # Implementation here
-        return SwaigFunctionResult(f"Weather in {city}: 72°F and sunny")
+        return FunctionResult(f"Weather in {city}: 72°F and sunny")
 ```
 
 ### Method 2: define_tool() (Imperative)
@@ -73,7 +73,7 @@ class MyAgent(AgentBase):
 
     def handle_weather(self, args, raw_data):
         city = args.get("city")
-        return SwaigFunctionResult(f"Weather in {city}: 72°F")
+        return FunctionResult(f"Weather in {city}: 72°F")
 ```
 
 ### Method 3: DataMap (Server-Side)
@@ -81,13 +81,13 @@ class MyAgent(AgentBase):
 For functions that simply call an external API without custom logic.
 
 ```python
-from signalwire_agents.core.data_map import DataMap
+from signalwire import DataMap
 
 weather_map = (DataMap("get_weather")
     .purpose("Get current weather for a location")
     .parameter("city", "string", "City name", required=True)
     .webhook("GET", "https://api.weather.com/v1/current?q=${args.city}&key=API_KEY")
-    .output(SwaigFunctionResult("Weather in ${args.city}: ${response.temp}°F"))
+    .output(FunctionResult("Weather in ${args.city}: ${response.temp}°F"))
 )
 
 agent.register_swaig_function(weather_map.to_swaig_function())
@@ -98,7 +98,7 @@ agent.register_swaig_function(weather_map.to_swaig_function())
 All function handlers must follow this signature:
 
 ```python
-def handler(self, args: dict, raw_data: dict) -> SwaigFunctionResult:
+def handler(self, args: dict, raw_data: dict) -> FunctionResult:
     pass
 ```
 
@@ -292,7 +292,7 @@ def delete_account(self, args, raw_data):
     # Token is automatically validated by the framework
     account_id = args.get("account_id")
     # Perform deletion
-    return SwaigFunctionResult(f"Account {account_id} deleted")
+    return FunctionResult(f"Account {account_id} deleted")
 ```
 
 ## Common Patterns
@@ -317,12 +317,12 @@ def get_order_status(self, args, raw_data):
     status = self.db.get_order_status(order_num)
 
     if status:
-        return SwaigFunctionResult(
+        return FunctionResult(
             f"Order {order_num} is {status['state']}. "
             f"Expected delivery: {status['delivery_date']}"
         )
     else:
-        return SwaigFunctionResult(
+        return FunctionResult(
             f"I couldn't find order {order_num}. "
             "Please check the number and try again."
         )
@@ -351,14 +351,14 @@ def cancel_order(self, args, raw_data):
     confirmed = args.get("confirmed", False)
 
     if not confirmed:
-        return SwaigFunctionResult(
+        return FunctionResult(
             f"Are you sure you want to cancel order {order_num}? "
             "This cannot be undone. Please confirm."
         )
 
     # Perform cancellation
     self.db.cancel_order(order_num)
-    return SwaigFunctionResult(
+    return FunctionResult(
         f"Order {order_num} has been cancelled. "
         "You'll receive a confirmation email shortly."
     )
@@ -392,7 +392,7 @@ def transfer_to_agent(self, args, raw_data):
         "billing": "tel:+15551234567"
     }
 
-    return (SwaigFunctionResult(
+    return (FunctionResult(
         f"I'll transfer you to our {dept} team now. "
         "Please hold while I connect you."
     ).add_action("transfer", {"dest": destinations[dept]}))
@@ -417,12 +417,12 @@ def verify_identity(self, args, raw_data):
 
     if self.verify_pin(caller, pin):
         # Enable secure functions after verification
-        return (SwaigFunctionResult("Identity verified. How can I help you?")
+        return (FunctionResult("Identity verified. How can I help you?")
             .add_action("toggle_functions", {
                 "active": ["view_balance", "transfer_funds", "update_address"]
             }))
     else:
-        return SwaigFunctionResult(
+        return FunctionResult(
             "That PIN doesn't match our records. Please try again."
         )
 ```
@@ -442,7 +442,7 @@ def set_customer_context(self, args, raw_data):
     customer_id = args.get("customer_id")
     name = args.get("name")
 
-    return (SwaigFunctionResult(f"Hello {name}, how can I help you today?")
+    return (FunctionResult(f"Hello {name}, how can I help you today?")
         .add_action("set_global_data", {
             "customer_id": customer_id,
             "customer_name": name,
@@ -465,10 +465,10 @@ def get_account_balance(self, args, raw_data):
 
     try:
         balance = self.api.get_balance(account_id)
-        return SwaigFunctionResult(f"Your current balance is ${balance:.2f}")
+        return FunctionResult(f"Your current balance is ${balance:.2f}")
 
     except AccountNotFoundError:
-        return SwaigFunctionResult(
+        return FunctionResult(
             "I couldn't find that account. "
             "Can you verify the account number?"
         )
@@ -477,7 +477,7 @@ def get_account_balance(self, args, raw_data):
         # Log the error internally
         self.log.error("api_error", error=str(e), account_id=account_id)
         # Give user-friendly message
-        return SwaigFunctionResult(
+        return FunctionResult(
             "I'm having trouble accessing account information right now. "
             "Let me transfer you to someone who can help."
         ).add_action("transfer", {"dest": "sip:support@company.com"})
@@ -503,14 +503,14 @@ def schedule_appointment(self, args, raw_data):
         from datetime import datetime
         apt_date = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
     except ValueError:
-        return SwaigFunctionResult(
+        return FunctionResult(
             "I didn't understand that date and time. "
             "Could you say it like 'January 15th at 2 PM'?"
         )
 
     # Check if in the past
     if apt_date < datetime.now():
-        return SwaigFunctionResult(
+        return FunctionResult(
             "That time has already passed. "
             "When would you like to reschedule?"
         )
@@ -518,14 +518,14 @@ def schedule_appointment(self, args, raw_data):
     # Check availability
     if not self.calendar.is_available(apt_date):
         alternatives = self.calendar.get_alternatives(apt_date)
-        return SwaigFunctionResult(
+        return FunctionResult(
             f"That slot isn't available. "
             f"How about {alternatives[0]} or {alternatives[1]}?"
         )
 
     # Book it
     self.calendar.book(apt_date)
-    return SwaigFunctionResult(
+    return FunctionResult(
         f"I've scheduled your appointment for {apt_date.strftime('%B %d at %I:%M %p')}. "
         "You'll receive a confirmation shortly."
     )
@@ -567,14 +567,14 @@ description="Get order"
 
 ```python
 # Good
-return SwaigFunctionResult(
+return FunctionResult(
     "Your order shipped yesterday via FedEx. "
     "The tracking number is 1234567890. "
     "Would you like me to text you the tracking link?"
 )
 
 # Bad
-return SwaigFunctionResult("shipped")
+return FunctionResult("shipped")
 ```
 
 ### 4. Handle Missing Parameters
@@ -583,7 +583,7 @@ return SwaigFunctionResult("shipped")
 def handle_function(self, args, raw_data):
     required_param = args.get("required_param")
     if not required_param:
-        return SwaigFunctionResult(
+        return FunctionResult(
             "I need the order number to look that up. "
             "What's your order number?"
         )
@@ -593,15 +593,15 @@ def handle_function(self, args, raw_data):
 
 ```python
 # End conversation cleanly
-return SwaigFunctionResult("Thank you for calling!").add_action("hangup", {})
+return FunctionResult("Thank you for calling!").add_action("hangup", {})
 
 # Transfer with context
-return SwaigFunctionResult("Connecting you now...").add_action(
+return FunctionResult("Connecting you now...").add_action(
     "transfer", {"dest": "sip:agent@company.com"}
 )
 
 # Update state for future reference
-return SwaigFunctionResult("I've noted that.").add_action(
+return FunctionResult("I've noted that.").add_action(
     "set_global_data", {"preference": "email"}
 )
 ```

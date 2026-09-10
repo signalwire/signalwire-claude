@@ -21,13 +21,13 @@ def get_account_info(self, args, raw_data):
 
     try:
         account = self.api.get_account(account_id)
-        return SwaigFunctionResult(
+        return FunctionResult(
             f"Your account balance is ${account['balance']:.2f}. "
             f"Your next payment is due on {account['due_date']}."
         )
 
     except AccountNotFoundError:
-        return SwaigFunctionResult(
+        return FunctionResult(
             "I couldn't find that account number. "
             "Could you double-check it and try again?"
         )
@@ -35,14 +35,14 @@ def get_account_info(self, args, raw_data):
     except APIError as e:
         # Log for debugging, but don't expose to user
         self.log.error("api_error", error=str(e), account_id=account_id)
-        return SwaigFunctionResult(
+        return FunctionResult(
             "I'm having trouble accessing account information right now. "
             "Would you like me to transfer you to someone who can help?"
         )
 
     except Exception as e:
         self.log.error("unexpected_error", error=str(e))
-        return SwaigFunctionResult(
+        return FunctionResult(
             "Something went wrong on my end. "
             "Let me connect you with a representative."
         ).add_action("transfer", {"dest": "sip:support@company.com"})
@@ -73,21 +73,21 @@ def schedule_appointment(self, args, raw_data):
             "%Y-%m-%d %H:%M"
         )
     except ValueError:
-        return SwaigFunctionResult(
+        return FunctionResult(
             "I didn't quite catch that date and time. "
             "Could you say it like 'January 15th at 2 PM'?"
         )
 
     # Validate not in past
     if apt_datetime < datetime.now():
-        return SwaigFunctionResult(
+        return FunctionResult(
             "That time has already passed. "
             "When would you like to schedule instead?"
         )
 
     # Validate business hours
     if apt_datetime.hour < 9 or apt_datetime.hour >= 17:
-        return SwaigFunctionResult(
+        return FunctionResult(
             "We're only open from 9 AM to 5 PM. "
             "What time during business hours works for you?"
         )
@@ -114,13 +114,13 @@ def process_refund(self, args, raw_data):
 
     # Check for missing data
     if not order_number:
-        return SwaigFunctionResult(
+        return FunctionResult(
             "I'd be happy to help with that refund. "
             "What's the order number?"
         )
 
     if not reason:
-        return SwaigFunctionResult(
+        return FunctionResult(
             f"I found order {order_number}. "
             "Could you tell me why you'd like a refund?"
         )
@@ -145,25 +145,25 @@ def get_weather(self, args, raw_data):
 
     try:
         weather = self.weather_api.get_current(city)
-        return SwaigFunctionResult(
+        return FunctionResult(
             f"The weather in {city} is currently {weather['temp']}°F "
             f"and {weather['condition']}."
         )
 
     except requests.Timeout:
-        return SwaigFunctionResult(
+        return FunctionResult(
             "The weather service is taking too long to respond. "
             "Would you like me to try again?"
         )
 
     except requests.ConnectionError:
-        return SwaigFunctionResult(
+        return FunctionResult(
             "I'm having trouble reaching the weather service right now. "
             "Is there something else I can help you with?"
         )
 
     except KeyError:
-        return SwaigFunctionResult(
+        return FunctionResult(
             f"I couldn't find weather data for {city}. "
             "Could you check the spelling or try a nearby city?"
         )
@@ -190,7 +190,7 @@ def search_products(self, args, raw_data):
 
     except RateLimitError as e:
         retry_after = e.retry_after or 30
-        return SwaigFunctionResult(
+        return FunctionResult(
             "I'm getting a lot of requests right now. "
             f"Could you give me about {retry_after} seconds and ask again?"
         )
@@ -214,25 +214,25 @@ def check_inventory(self, args, raw_data):
     try:
         inventory = self.db.get_inventory(product_id)
         if inventory > 0:
-            return SwaigFunctionResult(
+            return FunctionResult(
                 f"Good news! We have {inventory} in stock."
             )
         else:
-            return SwaigFunctionResult(
+            return FunctionResult(
                 "That item is currently out of stock. "
                 "Would you like me to notify you when it's available?"
             )
 
     except DatabaseConnectionError:
         self.log.error("db_connection_failed", product_id=product_id)
-        return SwaigFunctionResult(
+        return FunctionResult(
             "I'm having trouble checking inventory at the moment. "
             "Would you like me to transfer you to someone who can check manually?"
         )
 
     except DatabaseQueryError as e:
         self.log.error("db_query_error", error=str(e), product_id=product_id)
-        return SwaigFunctionResult(
+        return FunctionResult(
             "I encountered an issue looking that up. "
             "Can you tell me the product name instead of the ID?"
         )
@@ -267,18 +267,18 @@ class ResilientAgent(AgentBase):
 
         try:
             order = self.api.get_order(order_number)
-            return SwaigFunctionResult(f"Order {order_number}: {order['status']}")
+            return FunctionResult(f"Order {order_number}: {order['status']}")
 
         except Exception as e:
             failures = self._track_failure(call_id, "lookup_order")
 
             if failures >= 3:
-                return SwaigFunctionResult(
+                return FunctionResult(
                     "I apologize - I've been unable to look up your order. "
                     "Let me connect you with someone who can help directly."
                 ).add_action("transfer", {"dest": "sip:support@company.com"})
 
-            return SwaigFunctionResult(
+            return FunctionResult(
                 "I had trouble with that lookup. "
                 "Could you repeat the order number?"
             )
@@ -315,12 +315,12 @@ def complex_search(self, args, raw_data):
 
         try:
             results = self.search_all_systems(query)
-            return SwaigFunctionResult(f"Found {len(results)} results: ...")
+            return FunctionResult(f"Found {len(results)} results: ...")
         finally:
             signal.alarm(0)  # Cancel alarm
 
     except TimeoutError:
-        return SwaigFunctionResult(
+        return FunctionResult(
             "That search is taking longer than expected. "
             "Would you like me to narrow it down? "
             "For example, you could specify a date range or category."
@@ -358,7 +358,7 @@ class LoggingAgent(AgentBase):
                     "operation": "sensitive_operation"
                 }
             )
-            return SwaigFunctionResult("Done!")
+            return FunctionResult("Done!")
 
         except Exception as e:
             # Log detailed error for debugging
@@ -375,7 +375,7 @@ class LoggingAgent(AgentBase):
             )
 
             # Return friendly message to user
-            return SwaigFunctionResult(
+            return FunctionResult(
                 "I ran into an issue. Would you like to try again "
                 "or speak with a representative?"
             )
