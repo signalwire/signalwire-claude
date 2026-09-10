@@ -353,6 +353,37 @@ sections:
     - stop_stream: {}
 ```
 
+**`stream` is one-way.** Audio leaves the call and nothing comes back. For a bidirectional media stream — the equivalent of Twilio's bidirectional Media Streams — use `connect` with a `stream:` destination instead:
+
+```yaml
+- connect:
+    to: "stream:wss://example.com/audio"
+    codec: PCMU          # PCMU (default), PCMA, G722, L16
+    realtime: true       # defaults to false — this is what makes it bidirectional
+    authorization_bearer_token: my-token
+    custom_parameters:
+      user_id: "12345"
+```
+
+That form makes the WebSocket a call leg, so audio flows both ways. Shipped January 2026, in both SWML and Relay. **Note `realtime` defaults to `false`** — omitting it gives you a stream leg that does not carry audio back.
+
+Choosing between them: use `stream` to observe (transcription, compliance capture, analytics) while the call continues its SWML; use `connect: stream:` when the far end is a participant that needs to talk back (a voice bot, a translation bridge).
+
+**Concurrency limits** *(not on the docs site)*:
+
+- Reusing a `control_id` that is already active on the call fails with `Duplicate control_id`.
+- A **per-call cap on concurrent control-based operations, default 10**, is shared across *all* of them — streams, taps, transcriptions, recordings, detectors. Exceeding it fails with `Too many concurrent operations`. A call already running a recording and two taps has fewer stream slots than you would expect from reading about streams alone.
+
+**Relay form** — the same operation over the [calling commands endpoint](fabric-relay.md#calling-commands-over-http):
+
+```json
+{ "command": "calling.stream", "id": "<call-uuid>",
+  "params": { "control_id": "stream-control-1", "url": "wss://example.com/stream", "track": "inbound_track" } }
+
+{ "command": "calling.stream.stop", "id": "<call-uuid>",
+  "params": { "control_id": "stream-control-1" } }
+```
+
 ### tap / stop_tap
 
 `tap` starts a background media tap, streaming call audio over WebSocket or RTP to a URI you control.

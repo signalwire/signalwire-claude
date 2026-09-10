@@ -879,11 +879,36 @@ Stream call audio for real-time transcription or recording:
 ```yaml
 # SWML with audio streaming
 - stream:
-    url: "wss://yourserver.com/stream"
+    url: "wss://yourserver.com/stream"   # must be wss://
     track: "both_tracks"  # inbound_track, outbound_track, or both_tracks
+    status_url: "https://yourserver.com/stream-status"
 - ai:
-    prompt: "Your instructions"
+    prompt:
+      text: "Your instructions"
 ```
+
+`stream` is one-way. For bidirectional audio use `connect: {to: "stream:wss://..."}` with `realtime: true` — see [swml-methods.md](swml-methods.md#stream--stop_stream).
+
+#### Stream Status Callback
+
+Your `status_url` receives lifecycle events. Docs: `/docs/apis/rest/webhooks/stream-status-callback`.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `event_type` | enum | Always `calling.call.stream` |
+| `event_channel` | string | |
+| `timestamp` | double | Unix seconds |
+| `project_id` / `space_id` | string | |
+| `params.call_id` | string | |
+| `params.node_id` | string | |
+| `params.segment_id` | string | |
+| `params.control_id` | string | Matches the `control_id` you set on `stream` |
+| `params.state` | enum | `streaming` or `finished` |
+| `params.url` | string | The `wss://` endpoint |
+| `params.tag` | string | Optional |
+| `params.name` | string | Optional |
+
+Two states only — `streaming` on start, `finished` on end. Match them on `params.control_id`, which is how you tell concurrent streams apart.
 
 ### WebSocket Stream Handler
 
