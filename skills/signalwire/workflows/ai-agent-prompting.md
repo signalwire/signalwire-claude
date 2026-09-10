@@ -194,14 +194,16 @@ agent.add_language("English", "en-US", "rime.spore")
 agent.add_language("English", "en-US", "rime.spore")
 agent.add_language("Spanish", "es-MX", "rime.spore")
 
-# Premium voices
+# Other engines
 agent.add_language("English", "en-US", "elevenlabs.josh")
 agent.add_language("English", "en-US", "openai.nova")
 ```
 
+**Always name the engine.** A bare voice name resolves against `elevenlabs`, and an agent with no `voice` at all gets `elevenlabs.mark` — both defaults changed in 2026. See [Voice AI](voice-ai.md#voice-selection).
+
 **Available TTS Engines:**
-- **Rime** (default, included): `rime.spore`, `rime.marsh`
-- **ElevenLabs** (premium): `elevenlabs.josh`, `elevenlabs.rachel`
+- **ElevenLabs** (default engine; `mark` is the default voice, included in the regular agent price): `elevenlabs.mark`, `elevenlabs.josh`
+- **Rime**: `rime.spore`, `rime.marsh`
 - **OpenAI**: `openai.nova`, `openai.alloy`
 - **Google**: `gcloud.en-US-Neural2-A`
 - **Azure**: `azure.en-US-JennyNeural`

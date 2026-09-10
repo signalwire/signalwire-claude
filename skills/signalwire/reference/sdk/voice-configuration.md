@@ -42,7 +42,9 @@ def add_language(
 
 #### Simple Voice Name
 ```python
-agent.add_language("English", "en-US", "en-US-Neural2-F")
+# Resolves against elevenlabs (since 2026-08-13) - NOT the engine you may expect.
+# Prefer the combined format below.
+agent.add_language("English", "en-US", "mark")
 ```
 
 #### Combined Format: engine.voice:model
@@ -93,11 +95,29 @@ agent.set_languages([
 
 ## TTS Engines and Voices
 
+### The Default Voice
+
+An AI agent that sets no `voice` speaks with **ElevenLabs "Mark"** — compiled defaults are engine `elevenlabs`, voice `mark`. Mark is included in the regular AI agent price; it is not a premium add-on.
+
+Two separate changes produced this, and they are easy to conflate:
+
+| Date | Change |
+|------|--------|
+| 2026-08-13 | A voice string with **no engine prefix** resolves against `elevenlabs` instead of `gcloud`. |
+| 2026-09-05 | An agent specifying **no `voice` at all** now gets ElevenLabs "Mark". |
+
+Sources: `/docs/platform/changelog/2026/8/13`, `/docs/platform/changelog/2026/9/5`.
+
+**Always declare the engine explicitly.** The default has moved twice in two months, and an agent that relies on it will change voice without a deploy.
+
+**This default is for AI agents.** The `play` and `prompt` verbs resolve voices through a separate mapping table and land elsewhere — do not carry this answer over to them.
+
 ### Available Engines
 
 | Engine | Description | Voice Format |
 |--------|-------------|--------------|
-| `rime` | SignalWire's default TTS | `rime.spore`, `rime.marsh` |
+| `elevenlabs` | Default engine for AI agents | `elevenlabs.mark`, `elevenlabs.josh` |
+| `rime` | Rime TTS | `rime.spore`, `rime.marsh` |
 | `elevenlabs` | ElevenLabs AI voices | `elevenlabs.josh`, `elevenlabs.rachel` |
 | `gcloud` | Google Cloud TTS | `gcloud.en-US-Neural2-A` |
 | `azure` | Microsoft Azure TTS | `azure.en-US-JennyNeural` |
@@ -106,10 +126,9 @@ agent.set_languages([
 | `deepgram` | Deepgram TTS | `deepgram.aura-asteria-en` |
 | `openai` | OpenAI TTS | `openai.nova`, `openai.alloy` |
 
-### Rime Voices (Default Engine)
+### Rime Voices
 
 ```python
-# Using rime voices (SignalWire default)
 agent.add_language("English", "en-US", "rime.spore")
 agent.add_language("English", "en-US", "rime.marsh")
 
@@ -117,9 +136,12 @@ agent.add_language("English", "en-US", "rime.marsh")
 agent.add_language("English", "en-US", "rime.spore:arcana")
 ```
 
-### ElevenLabs Voices
+### ElevenLabs Voices (Default Engine)
 
 ```python
+# Mark is the default voice - naming it explicitly pins it against future changes
+agent.add_language("English", "en-US", "elevenlabs.mark")
+
 # ElevenLabs with model
 agent.add_language("English", "en-US", "elevenlabs.josh:eleven_turbo_v2_5")
 agent.add_language("English", "en-US", "elevenlabs.rachel:eleven_multilingual_v2")

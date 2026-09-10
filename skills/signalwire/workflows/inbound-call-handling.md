@@ -181,6 +181,8 @@ There is no separate `say` method in SWML. Text-to-speech is done with `play` us
 - `say_language`: Voice language (e.g., `en-US`)
 - `say_gender`: `male` or `female`
 
+**`play` and `prompt` do not share the AI agent's voice default.** They resolve voices through a separate mapping table and land on a different default than `ai`, which uses ElevenLabs "Mark". Set `say_voice` explicitly rather than assuming either default carries over — see [Voice AI](voice-ai.md#voice-selection).
+
 Other playable sound prefixes: `silence:<seconds>` and `ring:[duration:]<country code>`.
 
 ### prompt

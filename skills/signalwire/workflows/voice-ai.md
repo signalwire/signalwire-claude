@@ -97,8 +97,27 @@ sections:
 - **post_prompt_url**: SWAIG endpoint for function calls (optional)
 - **post_prompt_auth_user/password**: HTTP Basic Auth for SWAIG (optional)
 - **language**: Voice language (default: `en-US`)
-- **voice**: Voice gender or specific voice name
+- **voice**: Voice spec — see [Voice Selection](#voice-selection) below
 - **temperature**: Creativity level 0.0-1.0 (default: 0.7)
+
+### Voice Selection
+
+**Always declare the engine explicitly.** Voice specs take the form `engine.voice:model` — for example `elevenlabs.mark:eleven_turbo_v2_5`. The engine part is what keeps your agent's voice stable.
+
+**The default changed twice in two months:**
+
+| Date | Change |
+|------|--------|
+| 2026-08-13 | A voice string with no engine prefix resolves against `elevenlabs` instead of `gcloud`. So a bare `"en-US-Neural2-F"` no longer reaches Google. |
+| 2026-09-05 | An agent that specifies no `voice` at all now speaks with ElevenLabs "Mark". Mark is **included in the regular AI agent price** — not a premium add-on. |
+
+The compiled defaults are now engine `elevenlabs`, voice `mark`.
+
+That history is the argument for being explicit: an application relying on the default changes voice without a deploy. Sources: `/docs/platform/changelog/2026/8/13` and `/docs/platform/changelog/2026/9/5`.
+
+**This is the AI agent default only.** The `play` and `prompt` verbs resolve voices through a separate mapping table and land on a different default. Any "what is the default voice" answer has to say which surface it means.
+
+Set a voice via `voice` strings in SWML (`/docs/swml/reference/calling/ai/languages#use-voice-strings`) or `add_language()` in the SDKs (`/docs/server-sdks/guides/voice-language`). Audition voices at `/docs/platform/voice/tts`.
 
 ### Multi-Language Support
 
