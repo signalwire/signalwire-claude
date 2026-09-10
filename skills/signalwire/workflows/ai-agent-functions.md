@@ -164,6 +164,63 @@ if __name__ == '__main__':
     app.run(port=5000)
 ```
 
+## MCP Servers as Tool Providers
+
+An agent can import tools from Model Context Protocol servers. Tools are discovered at session start and registered as SWAIG functions, so the model sees **one unified tool list** — you do not have to choose between MCP and webhook functions.
+
+Docs: `/docs/swml/reference/calling/ai/swaig`
+
+```yaml
+SWAIG:
+  mcp_servers:
+    - url: https://mcp.example.com/tools
+      headers:
+        Authorization: "Bearer ${global_data.token}"
+      resources: true
+      resource_vars:
+        catalog: "resource://catalog"
+  functions:
+    - function: getWeather
+      purpose: look up weather
+      web_hook_url: https://myapp.com/swaig
+```
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `mcp_servers[].url` | string, required | |
+| `mcp_servers[].headers` | object | **Auth tokens go here — there is no separate auth field.** Values support variable expansion. |
+| `mcp_servers[].resources` | boolean, default `false` | Fetch MCP resources in addition to tools |
+| `mcp_servers[].resource_vars` | object | Bind resources to variables |
+
+### The trap: `SWAIG` must be an object
+
+*(Not on the docs site.)* `mcp_servers` is only read when the `SWAIG` config block is an **object**. If `SWAIG` is given as a bare functions array, `mcp_servers` is silently ignored — no error, no log line you will see, the tools simply never appear.
+
+```yaml
+# ❌ mcp_servers has nowhere to live — silently dropped
+SWAIG:
+  - function: getWeather
+    web_hook_url: https://myapp.com/swaig
+
+# ✅
+SWAIG:
+  functions:
+    - function: getWeather
+      web_hook_url: https://myapp.com/swaig
+  mcp_servers:
+    - url: https://mcp.example.com/tools
+```
+
+If MCP tools are not showing up, check this first.
+
+### Discovery behavior
+
+Discovery happens **once per session, before the greeting**. A server that comes up later in the call is not picked up.
+
+If a server advertises neither `tools` nor `resources` in its capabilities handshake, it is skipped.
+
+SDK-side equivalent: `/docs/server-sdks/guides/mcp-gateway`.
+
 ## SwaigFunctionResult Actions
 
 Return SWML actions from functions to control the call:
