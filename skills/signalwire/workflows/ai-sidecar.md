@@ -18,7 +18,12 @@ Docs: https://signalwire.com/docs/swml/reference/calling/ai-sidecar (subpages: `
 | `ai_sidecar` | No | AI observer that coaches the human agent via callbacks |
 | `live_transcribe` | No | Plain transcription, no AI evaluation |
 
-**One transcriber per call:** `ai_sidecar` and `live_transcribe` cannot run on the same call simultaneously — starting one while the other is active is rejected.
+**`ai_sidecar` starts its own transcription — there is no `live_transcribe` prerequisite.** You do not need to start a `live_transcribe` before attaching a sidecar, and adding one is unnecessary rather than required. The two *can* coexist on a call if you want a plain transcript alongside the coaching, because the sidecar's transcribe runs under its own separate handle.
+
+The only thing rejected is a **second sidecar** on the same call, which fails with `there is already a sidecar attached to this call`.
+
+> **Not currently documented publicly — and the docs state the opposite.**
+> `/docs/swml/reference/calling/ai-sidecar` says "One transcriber per call. `ai_sidecar` and plain `live_transcribe` cannot run on the same call at the same time — starting one while the other is active is rejected." That is incorrect; the behavior above was verified against the running platform. Do not revert this section to match the docs page.
 
 ## How It Works
 
@@ -30,6 +35,20 @@ Each time the customer finishes speaking, the sidecar evaluates the conversation
 4. Tools the model calls run through your SWAIG functions / MCP servers.
 5. Every step fires a structured callback.
 
+Underneath, the sidecar is `live_transcribe` running in an extended mode — the same media bug, recognizer, and conversation log. A separate worker watches for customer turn-end and drives the ticks.
+
+### A bootstrap tick fires on attach
+
+Before any customer has spoken, the sidecar runs one tick immediately, carrying a synthetic transcript delta:
+
+```
+[SIDECAR_START] Call has begun. Initialize per your instructions.
+```
+
+So expect an early `turn` and `request` callback — and possibly an `insight` or `skip` — before the first real customer utterance. This is deliberate: it lets your prompt seed state or emit greeting-time guidance. **It looks like a bug if you are not expecting it.** The tick counter increments from there, and every callback carries the resulting `tick_id`.
+
+> Not currently documented publicly. Verified against the running platform.
+
 ## Properties
 
 | Property | Type | Description |
@@ -37,8 +56,8 @@ Each time the customer finishes speaking, the sidecar evaluates the conversation
 | `prompt` | string/object | Operator prompt for coaching behavior. Plain string, POM, or server-side file. Optional but strongly recommended (falls back to minimal default). SignalWire adds built-in sidecar role instructions automatically. |
 | `lang` | string | Single BCP-47 tag (e.g. `en-US`). Sets ASR language, shared with model as hint. |
 | `model` | string | Model for advice and end-of-call summaries. Suggested: `gpt-4o-mini`, `gpt-4.1-mini`, `gpt-4.1-nano`. |
-| `direction` | array | Call legs to observe: `remote-caller`, `local-caller`. Both legs required; defaults to both. Single-leg is rejected. |
-| `customer_leg` | string | Which leg is the customer (turn-end trigger source): `remote-caller` or `local-caller`. |
+| `direction` | array | Call legs to observe. **Must contain both `remote-caller` and `local-caller`.** Defaults to both; a single-leg value is rejected at start. |
+| `customer_role` | string, default `remote-caller` | Which leg is the customer, used as the turn-end trigger source. Strict enum: `remote-caller` or `local-caller`. |
 | `url` | string | Webhook URL for callbacks. When unset, callbacks publish only on relay topic `calling.ai.sidecar` (relay always fires; webhook is opt-in). Basic auth embeddable: `username:password@url`. |
 | `SWAIG` | object | Functions and MCP servers available to the sidecar (see below). |
 | `permissions` | object | SWAIG permission overrides. Defaults to all enabled. |
@@ -46,6 +65,10 @@ Each time the customer finishes speaking, the sidecar evaluates the conversation
 | `hints` | array | ASR hints biasing recognition toward terms (product names, jargon, SWAIG enum values). Strongly recommended. Example: `["ACME", "Globex", "FedRAMP", "SOC 2"]`. |
 | `params` | object | Tuning options (see Tuning Params below). |
 | `action` | object | `action.summarize` generates a one-off conversation summary and returns instead of attaching a sidecar. `summarize.webhook` (defaults to `url`) and `summarize.prompt` (defaults to `ai_summary_prompt`). |
+
+**The field is `customer_role`, not `customer_leg`.** There is no `customer_leg` field — it is silently ignored if you set it, and the sidecar falls back to the `remote-caller` default. This is the single most likely configuration mistake.
+
+**Both legs are the constraint people actually hit.** `direction: ["remote-caller"]` is rejected at start with `sidecar requires both legs (remote-caller and local-caller)`. The requirement is documented; the error string is not.
 
 ### Permissions
 
@@ -61,13 +84,13 @@ All optional.
 
 **Reaction:**
 
-| Param | Range | Description |
-|-------|-------|-------------|
-| `idle_timeout_ms` | 50–5000 | Silence (ms) after customer finishes before evaluation. Lower = faster reaction. If the agent speaks while the customer's turn is pending, evaluation runs immediately. |
-| `min_interval_ms` | 0–60000 | Minimum time between evaluations — throttle for busy calls. |
-| `max_iters_per_tick` | 1–20 | Max tool calls chained in one evaluation before advice must be produced. |
-| `max_history_tokens` | 1000–200000 | Token budget for running history; oldest messages dropped past it. |
-| `act_on_channel` | boolean | Whether tool actions (transfer, hangup, etc.) take effect on the call or are report-only. |
+| Param | Range / Default | Description |
+|-------|-----------------|-------------|
+| `idle_timeout_ms` | 50–5000, default `200` | Silence (ms) after customer finishes before evaluation. Lower = faster reaction. If the agent speaks while the customer's turn is pending, evaluation runs immediately. |
+| `min_interval_ms` | 0–60000, default `0` | Minimum time between evaluations — throttle for busy calls. |
+| `max_iters_per_tick` | 1–20, default `5` | Max tool calls chained in one evaluation before advice must be produced. |
+| `max_history_tokens` | 1000–200000, default `8000` | Token budget for running history; oldest messages dropped past it. |
+| `act_on_channel` | boolean, default `true` | Whether tool actions (transfer, hangup, etc.) take effect on the call or are report-only. |
 
 **Summaries:**
 
@@ -256,6 +279,32 @@ Within one evaluation (`request`/`thought`/`tool_call`/`tool_result`/`insight`),
 | `webhook_http_failure` | Tool webhook failed; carries `function`, `http_code`, `curl_code` |
 | `event_log_truncated` | Event log hit size limit; older entries dropped |
 
+## Runtime Control (Relay Only)
+
+The SWML `ai_sidecar` method only *attaches* the sidecar. Asking it questions, nudging it, checking its state, and stopping it all go through the calling commands endpoint — there is no SWML equivalent.
+
+```
+POST https://{space}.signalwire.com/api/calling/calls
+Content-Type: application/json
+```
+
+```json
+{ "command": "calling.ai_sidecar.ask",  "params": { "text": "What objections has the customer raised so far?" } }
+{ "command": "calling.ai_sidecar.poke", "params": { "text": "The customer just mentioned a competitor — suggest a comparison." } }
+{ "command": "calling.ai_sidecar.status" }
+{ "command": "calling.ai_sidecar.stop" }
+```
+
+**`ask` and `poke` are not the same thing.** `ask` requests an answer out of band — it does not disturb the normal advice cadence, and the reply comes back as `ask_answer` callbacks tagged with the `ask_id`. `poke` drives a normal advice tick *early*, as though the customer had just finished a turn. Reach for `poke` when your UI knows something the transcript does not; reach for `ask` when a human wants to query the sidecar. Both return a correlation id.
+
+## Billing
+
+The sidecar bills **per minute for as long as its transcribe is attached**. Its own LLM ticks and its final summary are not billed separately — they are included.
+
+Raw-call summaries (`action.summarize`) are the exception: each run adds a one-shot summarization charge.
+
+> Not currently documented publicly. Verified against the running platform.
+
 ## Complete Example
 
 ```yaml
@@ -265,6 +314,8 @@ sections:
     - answer: {}
     - ai_sidecar:
         prompt: "You are a real-time sales copilot. After each customer turn, give the agent one concise piece of advice or call sidecar_skip if no advice is needed."
+        direction: [remote-caller, local-caller]   # both legs required
+        customer_role: remote-caller               # not `customer_leg`
         lang: "en-US"
         url: "https://your-app.example.com/sidecar/events"
         hints: ["ACME", "Globex", "FedRAMP", "SOC 2"]
@@ -290,8 +341,8 @@ sections:
 
 ## Limitations
 
-- One transcriber per call — cannot run with `live_transcribe`
-- Both legs required — single-leg `direction` rejected
+- One sidecar per call — a second attach is rejected (`live_transcribe` is *not* a conflict; see above)
+- Both legs required — single-leg `direction` rejected at start
 - Turn detection calibrated for Deepgram (the default engine)
 - No voice on the call — `say` reports as a callback instead of speaking
 - Stops when the call ends (fires `final` first)
