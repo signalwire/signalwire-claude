@@ -149,6 +149,69 @@ Add multiple languages for automatic detection:
 
 The AI automatically detects and responds in the caller's language.
 
+### Multilingual — switching language mid-call
+
+`languages` configures a **fixed set**. `multilingual` (shipped 2026-08-19) continuously detects the other party's language and switches TTS voice and language when it changes.
+
+**They are mutually exclusive.** Per the docs: *"`multilingual` and `languages` are mutually exclusive. If both are set, SignalWire uses `multilingual` and ignores `languages` entirely."* Setting both does not merge them and does not error — `languages` is simply dropped. This is the first thing people get wrong.
+
+Docs: `/docs/swml/reference/calling/ai/multilingual`
+
+```yaml
+ai:
+  multilingual:
+    start_language: en
+    allowed: [en, es, fr]
+    languages:
+      - language: default          # fallback voice
+        voice: elevenlabs.rachel
+      - language: es
+        voice: elevenlabs.maria
+      - language: fr
+        voice: gcloud.fr-FR-Neural2-B
+```
+
+Note the `language: default` entry — that is the fallback, not a language code.
+
+**Top-level keys:**
+
+| Key | Type | Default |
+|-----|------|---------|
+| `languages` | object[] | required |
+| `allowed` | string[] | — (restricts which languages may be switched to) |
+| `engine` | string | `deepgram` |
+| `model` | string | `nova-3` |
+| `provider` | string | — |
+| `start_language` | string | `en` |
+| `min_switch_words` | integer | `2` |
+| `fillers` | string[] \| object | — |
+| `function_fillers` | string[] \| object | — |
+| `turn_fillers` | string[] \| object | — |
+
+`engine` and `model` here select the **recognizer**, not the TTS voice — TTS is per-language inside `languages[]`.
+
+**Inside `languages[]`:**
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `language` | string, required | Language code, or `default` for the fallback |
+| `voice` | string | TTS voice spec |
+| `model` | string | TTS model |
+| `engine` | string | **Deprecated** — put the engine in the `voice` spec instead (`elevenlabs.maria`) |
+| `params` | object | Per-voice tuning, e.g. ElevenLabs `stability` and `similarity` |
+
+```json
+{ "ai": { "multilingual": {
+  "min_switch_words": 1,
+  "languages": [
+    {"language": "default", "voice": "elevenlabs.josh", "params": {"stability": 0.6, "similarity": 0.8}},
+    {"language": "es", "voice": "elevenlabs.maria", "params": {"stability": 0.4, "similarity": 0.9}}
+  ]
+}}}
+```
+
+`min_switch_words` is the hysteresis knob: how many words in the new language before the agent commits to switching. Lower it for snappier switching, raise it if the agent flips language on a stray loanword.
+
 ## SWAIG (SignalWire AI Gateway)
 
 SWAIG allows your AI agent to call server-side functions via HTTP POST.
