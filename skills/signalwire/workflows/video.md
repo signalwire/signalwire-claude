@@ -216,13 +216,68 @@ json={
 
 ## Browser Client (JavaScript)
 
-### Installation
+> **Browser SDK v4 is an RxJS-based rewrite.** The `Video.RoomSession` examples further down this section are the v3 API. A v3 codebase does **not** port by bumping the version number — see below, and the migration guide at `/docs/browser-sdk/v4/guides/migrate-from-v3`.
+
+### Installation (v4)
 
 ```bash
-npm install @signalwire/js
+npm install @signalwire/js@latest rxjs
 ```
 
-### Basic Room Join
+**RxJS is a peer dependency.** The SDK uses observables for all reactive state, which is the breaking change from v3. Primer: `/docs/browser-sdk/v4/guides/rxjs-primer`.
+
+### Two paths
+
+**1. Full control** — your own UI, driven by `client.dial()` and observables.
+
+```js
+import { SignalWire, StaticCredentialProvider } from "@signalwire/js";
+
+const client = new SignalWire(
+  new StaticCredentialProvider({ token: "YOUR_SUBSCRIBER_ACCESS_TOKEN" })
+);
+
+await client.dial("/public/test-room", {
+  audio: true, video: true,
+  receiveAudio: true, receiveVideo: true
+});
+```
+
+**2. Web components** — one element, a styled working call UI:
+
+```html
+<sw-call-widget></sw-call-widget>
+<sw-click-to-call></sw-click-to-call>
+```
+
+This is the right answer for marketing sites and click-to-call buttons. Do not hand-build a call UI for those. Guide: `/docs/browser-sdk/v4/guides/web-components`.
+
+### Authentication
+
+A **Subscriber Access Token (SAT)**, minted from the Dashboard's Subscribers section.
+
+For public widgets — chatbots, click-to-call — an **embed token** works with no backend at all. Guide: `/docs/browser-sdk/v4/guides/authentication`.
+
+For a mobile or long-lived browser client, use device-bound tokens refreshed by proof of possession (DPoP):
+
+```
+POST /api/fabric/subscriber/devices/token
+POST /api/fabric/subscriber/devices/refresh
+```
+
+### No-build option
+
+Load as an ES module from a CDN that rewrites Node built-ins — `esm.sh`, `jspm.io`, `skypack`:
+
+```html
+<script type="module">
+  import { SignalWire, StaticCredentialProvider } from "https://esm.sh/@signalwire/js@4";
+</script>
+```
+
+**Pin a version rather than `@latest`** for script-tag setups, so a CDN update cannot change your page's behavior without a deploy.
+
+### Basic Room Join (v3 API)
 
 ```html
 <!DOCTYPE html>
