@@ -62,6 +62,12 @@ Real-time AI observer that watches a live call and coaches a human agent via cal
 
 **→ Go to [AI Sidecar](ai-sidecar.md)**
 
+### Reaching an agent by text
+
+The same agent definition can be chatted with over text instead of voice, via a JSON-RPC endpoint. Billing is per turn rather than per minute.
+
+**→ Go to [AI Agent Chat](ai-agent-chat.md)**
+
 ### Quick Decision Tree
 
 ```

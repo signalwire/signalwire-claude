@@ -67,6 +67,7 @@ These insights come from analysis of 89 SignalWire training videos, LiveWire ses
 **AI Voice Agents:** Start with [Voice AI](workflows/voice-ai.md) overview
 - **SDK:** [Basics](workflows/ai-agent-sdk-basics.md) | [Prompting](workflows/ai-agent-prompting.md) | [Functions](workflows/ai-agent-functions.md) | [Deployment](workflows/ai-agent-deployment.md)
 - **Conversation Feel:** [Turn Taking](workflows/ai-agent-turn-taking.md) - when the agent decides you stopped talking; fixes interrupting and dead air
+- **Text Chat:** [AI Agent Chat](workflows/ai-agent-chat.md) - reach the same agents by text over JSON-RPC
 - **AI Sidecar:** [Real-time agent coaching](workflows/ai-sidecar.md) - AI observer that coaches a human agent (never speaks on the call)
 - **Best Practices:** [Patterns](workflows/ai-agent-patterns.md) | [Error Handling](workflows/ai-agent-error-handling.md) | [Security](workflows/ai-agent-security.md) | [Testing](workflows/ai-agent-testing.md) | [Debug Webhooks](workflows/ai-agent-debug-webhooks.md)
 
