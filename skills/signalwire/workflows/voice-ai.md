@@ -119,6 +119,12 @@ That history is the argument for being explicit: an application relying on the d
 
 Set a voice via `voice` strings in SWML (`/docs/swml/reference/calling/ai/languages#use-voice-strings`) or `add_language()` in the SDKs (`/docs/server-sdks/guides/voice-language`). Audition voices at `/docs/platform/voice/tts`.
 
+### Turn Taking
+
+When the agent decides you have stopped speaking is controlled by `params.turn_detection` and `params.end_of_speech_timeout`. Turn detection is **on by default** (`both`), fusing sentence punctuation with an acoustic model.
+
+If the agent interrupts callers or leaves dead air, that is the knob — see [Turn Taking](ai-agent-turn-taking.md). The published docs describe an older behavior, so start there rather than at `/docs/swml/reference/calling/ai/params`.
+
 ### Multi-Language Support
 
 Add multiple languages for automatic detection:

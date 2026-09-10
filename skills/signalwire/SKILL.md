@@ -66,6 +66,7 @@ These insights come from analysis of 89 SignalWire training videos, LiveWire ses
 
 **AI Voice Agents:** Start with [Voice AI](workflows/voice-ai.md) overview
 - **SDK:** [Basics](workflows/ai-agent-sdk-basics.md) | [Prompting](workflows/ai-agent-prompting.md) | [Functions](workflows/ai-agent-functions.md) | [Deployment](workflows/ai-agent-deployment.md)
+- **Conversation Feel:** [Turn Taking](workflows/ai-agent-turn-taking.md) - when the agent decides you stopped talking; fixes interrupting and dead air
 - **AI Sidecar:** [Real-time agent coaching](workflows/ai-sidecar.md) - AI observer that coaches a human agent (never speaks on the call)
 - **Best Practices:** [Patterns](workflows/ai-agent-patterns.md) | [Error Handling](workflows/ai-agent-error-handling.md) | [Security](workflows/ai-agent-security.md) | [Testing](workflows/ai-agent-testing.md) | [Debug Webhooks](workflows/ai-agent-debug-webhooks.md)
 
@@ -131,6 +132,8 @@ See [Voice AI workflow](workflows/voice-ai.md) "When to Pull Additional Document
 **New to SignalWire?** → [Authentication & Setup](workflows/authentication-setup.md)
 
 **Building AI voice agent?** → [Voice AI](workflows/voice-ai.md)
+
+**Agent interrupts callers, or leaves dead air?** → [Turn Taking](workflows/ai-agent-turn-taking.md)
 
 **Coaching a live human agent with AI?** → [AI Sidecar](workflows/ai-sidecar.md)
 
