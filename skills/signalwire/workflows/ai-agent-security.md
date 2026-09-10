@@ -6,7 +6,9 @@ Best practices for securing SignalWire AI Agents.
 
 Verifying that SignalWire, and not someone else, sent you a request. This is the mechanism — the metadata and basic-auth patterns further down this file are complements to it, not substitutes.
 
-Docs: `/docs/swml/guides/webhook-security` and `/docs/apis/rest/webhooks/swaig-signature-request`
+Docs: `/docs/swml/guides/webhook-security`
+
+*(Not to be confused with `/docs/apis/rest/webhooks/swaig-signature-request`, which is about SWAIG's `get_signature` function-discovery call — a different meaning of "signature" entirely. See [SWAIG Includes](ai-agent-functions.md#swaig-includes--remote-function-discovery).)*
 
 ### The mechanics
 

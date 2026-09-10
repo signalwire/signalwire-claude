@@ -248,6 +248,8 @@ SWAIG:
 
 **`functions` is required, and it is a filter you write, not a discovery wildcard.** During initialization SWAIG sends a signature request listing exactly these names to your `url`, and your server returns the matching definitions. A name you leave out is not imported; there is no "give me everything" form.
 
+**The signature request** always carries `action: "get_signature"` and `content_type: "text/swaig"`, plus optional `project_id`, `space_id` and your `meta_data`. Your endpoint may reply with an array of definitions, a single definition, or an object of `{functions, defaults}` — and should return definitions matching the shape of `SWAIG.functions` whether or not they were specifically asked for. SignalWire may sign this request with an `X-SignalWire-Signature` header. Payload reference: `/docs/apis/rest/webhooks/swaig-signature-request`.
+
 The fetch happens **when the SWML document loads**, before any interaction with the caller. If your catalog endpoint is slow or down, that cost lands on call setup.
 
 Compare with [`mcp_servers`](#mcp-servers-as-tool-providers): includes pull SWAIG function definitions from an endpoint you control and speak SWAIG's own signature protocol; MCP servers speak MCP and get translated. Both end up in the same unified tool list the model sees.
