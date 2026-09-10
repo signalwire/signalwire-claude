@@ -207,7 +207,7 @@ agent.add_language("English", "en-US", "openai.nova")
 - **OpenAI**: `openai.nova`, `openai.alloy`
 - **Google**: `gcloud.en-US-Neural2-A`
 - **Azure**: `azure.en-US-JennyNeural`
-- **Amazon Polly**: `polly.Matthew`, `polly.Joanna`
+- **Amazon Polly**: `amazon.Matthew`, `amazon.Joanna`
 - **Deepgram**: `deepgram.aura-asteria-en`
 
 For complete voice configuration (fillers, pronunciation, hints), see: [reference/sdk/voice-configuration.md](../reference/sdk/voice-configuration.md)

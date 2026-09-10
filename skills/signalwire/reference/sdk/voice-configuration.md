@@ -50,7 +50,7 @@ agent.add_language("English", "en-US", "mark")
 #### Combined Format: engine.voice:model
 ```python
 agent.add_language("English", "en-US", "elevenlabs.josh:eleven_turbo_v2_5")
-agent.add_language("English", "en-US", "rime.spore:arcana")
+agent.add_language("English", "en-US", "rime.spore:coda")
 ```
 
 #### Explicit Parameters
@@ -114,17 +114,68 @@ Sources: `/docs/platform/changelog/2026/8/13`, `/docs/platform/changelog/2026/9/
 
 ### Available Engines
 
-| Engine | Description | Voice Format |
-|--------|-------------|--------------|
-| `elevenlabs` | Default engine for AI agents | `elevenlabs.mark`, `elevenlabs.josh` |
-| `rime` | Rime TTS | `rime.spore`, `rime.marsh` |
-| `elevenlabs` | ElevenLabs AI voices | `elevenlabs.josh`, `elevenlabs.rachel` |
-| `gcloud` | Google Cloud TTS | `gcloud.en-US-Neural2-A` |
-| `azure` | Microsoft Azure TTS | `azure.en-US-JennyNeural` |
-| `polly` | Amazon Polly | `polly.Matthew`, `polly.Joanna` |
-| `cartesia` | Cartesia AI voices | `cartesia.default` |
-| `deepgram` | Deepgram TTS | `deepgram.aura-asteria-en` |
-| `openai` | OpenAI TTS | `openai.nova`, `openai.alloy` |
+Voice specs take the form **`engine.voice:model`** — engine and voice required, model optional and not supported by every engine. The format is case-insensitive.
+
+Each engine has its own page carrying its voice list, supported languages, and per-engine parameters. **Fetch that page rather than trusting any voice list written down here** — catalogs change often.
+
+| Identifier | Engine | Page under `/docs/platform/voice/tts/` |
+|------------|--------|----------------------------------------|
+| `amazon` | Amazon Polly | `amazon-polly` |
+| `azure` | Azure | `azure` |
+| `cartesia` | Cartesia | `cartesia` |
+| `deepgram` | Deepgram | `deepgram` |
+| `elevenlabs` | ElevenLabs — **default for AI agents** | `elevenlabs` |
+| `fish` | Fish Audio | `fish` |
+| `gcloud` | Google Cloud | `gcloud` |
+| `grok` | Grok (xAI) | `grok` |
+| `groq-tts` | Groq | `groq-tts` |
+| `inworld` | Inworld | `inworld` |
+| `minimax` | MiniMax | `minimax` |
+| `mistral` | Mistral | `mistral` |
+| `openai` | OpenAI | `openai` |
+| `rime` | Rime | `rime` |
+| `smallest` | Smallest.ai | `smallest` |
+| `speechify` | Speechify | `speechify` |
+
+**The Amazon identifier is `amazon`, not `polly`.**
+
+### Renames and Deprecations
+
+Older code will hit these (source: `/docs/platform/changelog/2026/8/5`):
+
+- **`playai-turbo` is now `groq-tts`.** Groq retired PlayAI in December 2025 and repointed the engine at Canopy Labs' Orpheus, defaulting to `canopylabs/orpheus-v1-english`. Arabic is available via the `canopylabs/orpheus-arabic-saudi` model, shorthand `arabic`.
+- **Rime's `arcana` model is deprecated.** Applications invoking it fall back to `coda`, which shares voice names. `coda` now accepts the same sampling parameters as other Rime models: `repetition_penalty`, `temperature`, `top_p`, `max_tokens`.
+
+### Inline Expression Tags Differ by Engine
+
+**These are not interchangeable.** Using the wrong syntax puts literal bracket text into the audio.
+
+| Engine | Syntax | Notes |
+|--------|--------|-------|
+| ElevenLabs (`eleven_v3`) | `[square]` | Open vocabulary — emotions, reactions, delivery, even accents |
+| Fish | `[square]` and `(paren)` | Square for free-form direction, parens for paralanguage: `(break)`, `(laugh)`, `(sigh)` |
+| Inworld | `[square]` | One turn-initial emotion tag plus inline sounds. English only, marked experimental |
+| Groq | `<angle>` | `<laugh>`, `<sigh>`, `<cough>` … |
+| Cartesia | `[laughter]`, `[laughs]` | Broader emotion is a parameter, not a tag |
+| Rime | **none**, except `spell()` | No SSML, no `<break>`, no emotion tags |
+| Azure | SSML | |
+| MiniMax | — | Has an `emotion` parameter instead |
+| All others | — | No inline markup |
+
+Per-language ElevenLabs parameters can be set in the `languages` block — worked example at `/docs/swml/reference/calling/ai/languages`.
+
+### Voice Format Examples
+
+| Engine | Example spec |
+|--------|--------------|
+| `elevenlabs` | `elevenlabs.mark`, `elevenlabs.josh:eleven_turbo_v2_5` |
+| `rime` | `rime.spore`, `rime.spore:coda` |
+| `gcloud` | `gcloud.en-US-Neural2-A` |
+| `azure` | `azure.en-US-JennyNeural` |
+| `amazon` | `amazon.Matthew`, `amazon.Joanna` |
+| `cartesia` | `cartesia.default` |
+| `deepgram` | `deepgram.aura-asteria-en` |
+| `openai` | `openai.nova`, `openai.alloy` |
 
 ### Rime Voices
 
@@ -133,7 +184,7 @@ agent.add_language("English", "en-US", "rime.spore")
 agent.add_language("English", "en-US", "rime.marsh")
 
 # With model specification
-agent.add_language("English", "en-US", "rime.spore:arcana")
+agent.add_language("English", "en-US", "rime.spore:coda")
 ```
 
 ### ElevenLabs Voices (Default Engine)
@@ -171,8 +222,8 @@ agent.add_language("English", "en-US", "azure.en-US-GuyNeural")
 ### Amazon Polly Voices
 
 ```python
-agent.add_language("English", "en-US", "polly.Matthew")
-agent.add_language("English", "en-US", "polly.Joanna")
+agent.add_language("English", "en-US", "amazon.Matthew")
+agent.add_language("English", "en-US", "amazon.Joanna")
 ```
 
 ### OpenAI Voices
