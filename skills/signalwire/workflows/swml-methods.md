@@ -295,6 +295,42 @@ sections:
     - transcribe_stop: {}
 ```
 
+**Neither `transcribe` nor `transcribe_stop` takes a `control_id`.** The parameter was removed in March 2026; if you pass one it is ignored. This is a real difference between the SWML verb and the Relay method — the Relay form below *does* take one. *(The removal is not noted on the docs site.)*
+
+**`transcribe` vs `live_transcribe`.** The names invite confusion and they do different jobs:
+
+| | `transcribe` | `live_transcribe` |
+|---|---|---|
+| Delivery | Whole call, at the end | Real time, as speech is recognized |
+| Configured by | `status_url` | `action.start` with `webhook`, `lang`, `live_events` |
+| Use for | Records, QA review, post-call analytics | Live captions, agent assist, anything reacting mid-call |
+
+The docs put it plainly: *"Transcribe the entire call in the background. Use live_transcribe for real-time transcription."*
+
+**Relay form** — over the [calling commands endpoint](fabric-relay.md#calling-commands-over-http). Unlike the SWML verb, this one takes a `control_id`:
+
+```json
+{ "command": "calling.transcribe", "id": "<call-uuid>",
+  "params": { "control_id": "transcribe-control-1", "status_url": "https://example.com/transcribe-status" } }
+
+{ "command": "calling.transcribe.stop", "id": "<call-uuid>",
+  "params": { "control_id": "transcribe-control-1" } }
+```
+
+**Status callback payload** (`/docs/apis/rest/webhooks/transcribe-status-callback`):
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `event_type` | enum | `calling.transcript.completed` or `calling.transcript.failed` |
+| `timestamp` | double | Unix seconds |
+| `project_id` / `space_id` | string | |
+| `params.id` | string | Transcript identifier |
+| `params.call_id` | string | |
+| `params.segment_id` | string | Which call leg was transcribed |
+| `params.text` | string, optional | Omitted when there is no transcribed text |
+
+These are advisory, best-effort notifications — delivery can be delayed. Do not build a flow that blocks on one arriving promptly.
+
 ## Audio Processing
 
 ### denoise / stop_denoise
