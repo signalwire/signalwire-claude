@@ -59,7 +59,7 @@ These insights come from analysis of 89 SignalWire training videos, LiveWire ses
 ## Workflows by Use Case
 
 **Getting Started:**
-- [Authentication & Setup](workflows/authentication-setup.md) | [Number Management](workflows/number-management.md)
+- [Authentication & Setup](workflows/authentication-setup.md) | [Number Management](workflows/number-management.md) | [SWSH CLI](workflows/swsh-cli.md)
 
 **Voice Calls:**
 - [Outbound Calling](workflows/outbound-calling.md) | [Inbound Handling](workflows/inbound-call-handling.md) | [Call Control](workflows/call-control.md)
@@ -131,6 +131,8 @@ See [Voice AI workflow](workflows/voice-ai.md) "When to Pull Additional Document
 ## Finding the Right Workflow
 
 **New to SignalWire?** → [Authentication & Setup](workflows/authentication-setup.md)
+
+**Changing something on an account (numbers, SIP, projects)?** → [SWSH CLI](workflows/swsh-cli.md) — usually a one-liner
 
 **Building AI voice agent?** → [Voice AI](workflows/voice-ai.md)
 
