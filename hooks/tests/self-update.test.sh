@@ -126,7 +126,7 @@ make_stub_bin() {
   STUB_BIN="${SANDBOX}/bin"
   mkdir -p "$STUB_BIN"
   local tool path
-  for tool in bash env basename dirname date mkdir mv rm rmdir find sort tail head cat grep wc tr touch git printf; do
+  for tool in bash env basename dirname date mkdir mv rm rmdir find sort tail head cat grep wc tr touch chmod git printf; do
     path="$(command -v "$tool" 2>/dev/null)" && ln -sf "$path" "${STUB_BIN}/${tool}"
   done
   for tool in jq python3; do
