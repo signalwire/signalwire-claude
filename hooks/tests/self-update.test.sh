@@ -66,8 +66,8 @@ setup_sandbox() {
   MKT="testmkt"
   ID="${PLUGIN}@${MKT}"
   PLUGINS_ROOT="${SANDBOX}/config/plugins"
-  STAMP_DIR="${PLUGINS_ROOT}/.update-stamps"
-  STAMP="${STAMP_DIR}/${ID}"
+  STAMP_DIR="${PLUGINS_ROOT}/data/${PLUGIN}-${MKT}"
+  STAMP="${STAMP_DIR}/update-stamp"
   PLUGIN_ROOT="${PLUGINS_ROOT}/cache/${MKT}/${PLUGIN}/${installed}"
   MKT_DIR="${PLUGINS_ROOT}/marketplaces/${MKT}"
 
@@ -109,6 +109,19 @@ EOF
 
 # A PATH containing only the real tools the script may use, plus a stub
 # `claude`. Built by symlink so individual tests can drop jq/python3.
+
+# Write an executable stub, removing any existing entry first.
+#
+# ALWAYS use this instead of a bare `> "${STUB_BIN}/name"`. Most entries in
+# STUB_BIN are symlinks to real system tools, and a `>` redirect follows the
+# symlink and overwrites its target. Writing a fake python3 over the symlink
+# destroys the machine's actual python3 binary. Ask how this comment got here.
+stub() { # stub <name> <script-body>
+  rm -f "${STUB_BIN}/$1"
+  printf '%s\n' "$2" > "${STUB_BIN}/$1"
+  chmod +x "${STUB_BIN}/$1"
+}
+
 make_stub_bin() {
   STUB_BIN="${SANDBOX}/bin"
   mkdir -p "$STUB_BIN"
@@ -124,6 +137,7 @@ make_stub_bin() {
   # from the marketplace manifest, not from the CLI, so no canned output is
   # needed -- `claude plugin list --available` omits installed plugins and can
   # never report a plugin's own version.
+  rm -f "${STUB_BIN}/claude"
   cat > "${STUB_BIN}/claude" <<'STUB'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$CLAUDE_LOG"
@@ -421,8 +435,8 @@ test_opt_out_env_silences_notify() {
 test_opt_out_file() {
   describe "opt-out: .no-auto-update file disables check"
   setup_sandbox 1.4.0 1.5.0
-  mkdir -p "$STAMP_DIR"
-  touch "${STAMP_DIR}/.no-auto-update"
+  mkdir -p "$PLUGINS_ROOT"
+  touch "${PLUGINS_ROOT}/.no-auto-update"
   "$SUT" check >/dev/null 2>&1
   assert_eq "0" "$(claude_call_count)" "claude invocations"
   teardown_sandbox
@@ -454,12 +468,11 @@ test_unknown_mode_is_silent() {
 }
 
 test_stamp_follows_relocated_config() {
-  describe "layout: stamp lands beside the plugin cache, not in ~/.claude"
+  describe "layout: stamp follows CLAUDE_CONFIG_DIR, never ~/.claude"
   setup_sandbox
   "$SUT" notify >/dev/null 2>&1
-  if [ -f "$STAMP" ] && [ ! -e "${HOME}/.claude/plugins/.update-stamps/${ID}" ]; then
-    ok "$current_test"
-  else nope "stamp was not written to ${STAMP}"; fi
+  if [ -f "$STAMP" ] && [ ! -e "${HOME}/.claude" ]; then ok "$current_test"
+  else nope "stamp missing at ${STAMP}, or something was written under \$HOME/.claude"; fi
   teardown_sandbox
 }
 
@@ -497,6 +510,68 @@ test_check_ignores_other_plugins_in_manifest() {
   if claude_called_with "plugin update"; then
     nope "matched another plugin's version; log was [$(cat "$CLAUDE_LOG")]"
   else ok "$current_test"; fi
+  teardown_sandbox
+}
+
+test_state_uses_plugin_data_dir() {
+  describe "layout: state lives in the conventional plugins/data directory"
+  setup_sandbox
+  "$SUT" notify >/dev/null 2>&1
+  if [ -f "${PLUGINS_ROOT}/data/${PLUGIN}-${MKT}/update-stamp" ]; then ok "$current_test"
+  else nope "no stamp at ${PLUGINS_ROOT}/data/${PLUGIN}-${MKT}/update-stamp"; fi
+  teardown_sandbox
+}
+
+test_check_passes_install_scope() {
+  describe "check: passes the recorded install scope to plugin update"
+  setup_sandbox 1.4.0 1.5.0
+  cat > "${PLUGINS_ROOT}/installed_plugins.json" <<EOF
+{"version":2,"plugins":{"${ID}":[{"scope":"project","installPath":"${PLUGIN_ROOT}","version":"1.4.0"}]}}
+EOF
+  "$SUT" check >/dev/null 2>&1
+  if claude_called_with "plugin update ${ID} --scope project"; then ok "$current_test"
+  else nope "scope not passed; log was [$(cat "$CLAUDE_LOG")]"; fi
+  teardown_sandbox
+}
+
+test_check_defaults_scope_when_unrecorded() {
+  describe "check: still updates when no install record exists"
+  setup_sandbox 1.4.0 1.5.0
+  "$SUT" check >/dev/null 2>&1
+  if claude_called_with "plugin update ${ID}"; then ok "$current_test"
+  else nope "no update without an install record; log was [$(cat "$CLAUDE_LOG")]"; fi
+  teardown_sandbox
+}
+
+test_refuses_macos_python_stub() {
+  describe "portability: never runs python3 on macOS without Command Line Tools"
+  setup_sandbox 1.4.0 1.5.0
+  rm -f "${STUB_BIN}/jq"
+  stub uname        '#!/usr/bin/env bash
+echo Darwin'
+  stub xcode-select '#!/usr/bin/env bash
+exit 2'
+  stub python3      '#!/usr/bin/env bash
+echo PYTHON_RAN >> "$CLAUDE_LOG"
+exit 0'
+  "$SUT" check >/dev/null 2>&1
+  if claude_called_with "PYTHON_RAN"; then
+    nope "ran the python3 stub; it would pop the Xcode installer dialog"
+  else ok "$current_test"; fi
+  teardown_sandbox
+}
+
+test_allows_python_with_clt() {
+  describe "portability: uses python3 on macOS when Command Line Tools are present"
+  setup_sandbox 1.4.0 1.5.0
+  rm -f "${STUB_BIN}/jq"
+  stub uname        '#!/usr/bin/env bash
+echo Darwin'
+  stub xcode-select '#!/usr/bin/env bash
+echo /Library/Developer/CommandLineTools'
+  "$SUT" check >/dev/null 2>&1
+  if claude_called_with "plugin update ${ID}"; then ok "$current_test"
+  else nope "python3 path did not resolve the version; log [$(cat "$CLAUDE_LOG")]"; fi
   teardown_sandbox
 }
 
