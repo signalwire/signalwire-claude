@@ -134,6 +134,23 @@ cd signalwire-builder
 ./install.sh
 ```
 
+### Automatic updates
+
+From 1.1.0 on, a marketplace install keeps itself current. Once a day the
+plugin checks its marketplace and installs a newer version if one has been
+published, which takes effect the next time you start Claude Code. It tells you
+the first time it runs and again whenever it updates itself.
+
+- **Marketplace installs only.** A manual or archive install has no marketplace
+  to check, so the update check does nothing there and you keep updating by
+  hand. Everything else about the plugin works the same.
+- **One manual update to get it.** The mechanism ships *inside* 1.1.0, so an
+  existing install can't use it to reach 1.1.0. Run `/plugin update
+  signalwire-builder` once; after that it is automatic.
+
+To turn it off, set `SKILL_AUTO_UPDATE=0` in the environment Claude Code starts
+with, or create an empty `~/.claude/plugins/.no-auto-update` file.
+
 ## Uninstallation
 
 To remove the plugin:
