@@ -1,6 +1,6 @@
 {
   "name": "signalwire-builder",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Expert knowledge for building SignalWire applications including all SDKs, REST APIs, SWML, Relay/Fabric, AI Agents, and modern JSON/YAML-based communication systems",
   "author": {
     "name": "SignalWire",
