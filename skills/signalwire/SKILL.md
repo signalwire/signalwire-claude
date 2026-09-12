@@ -144,6 +144,8 @@ See [Voice AI workflow](workflows/voice-ai.md) "When to Pull Additional Document
 
 **Debugging webhooks/callbacks?** → [Webhooks & Events](workflows/webhooks-events.md)
 
+**Billing or metering question?** → [Voice AI](workflows/voice-ai.md) "AI Billing & Metering"
+
 **Need real-time control?** → [Fabric & Relay](workflows/fabric-relay.md)
 
 ## Additional Resources
