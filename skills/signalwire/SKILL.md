@@ -31,7 +31,16 @@ The root index warns that it is "an orientation page and directory, not an exhau
 
 **Prefer fetching the live page over this skill's bundled reference** when the question is about an exact parameter name, a default, or an endpoint path. This skill is a snapshot; the docs are not.
 
+If you cannot fetch URLs in this environment, answer from the bundled reference and say which detail the user should confirm against the live page.
+
 There is also a changelog at `/docs/platform/changelog` (append `.rss` for a feed) covering new capabilities, changed defaults, and deprecations. Defaults in particular have moved more than once — see the voice default in [Voice AI](workflows/voice-ai.md).
+
+## With or Without a Terminal
+
+This skill loads in Claude Code, Cowork, and claude.ai chat. What you can do with it depends on whether you can run commands and write files.
+
+- **You can run commands** (Claude Code, Cowork on the user's machine): write the files, run the code, use `swaig-test` and `swsh` yourself, and verify before reporting.
+- **You cannot** (chat): give complete, copy-paste-ready SWML, code, and commands, tell the user where each piece goes (file name, Dashboard page, or terminal), and say what output to expect so they can tell whether it worked. Don't describe a step as done when the user still has to run it.
 
 ## SignalWire Technologies Quick Reference
 

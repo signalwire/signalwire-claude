@@ -224,6 +224,16 @@ test_notify_never_calls_network() {
   teardown_sandbox
 }
 
+test_notify_silent_without_cli() {
+  describe "notify: promises nothing when the claude CLI is absent"
+  setup_sandbox
+  rm -f "${STUB_BIN}/claude"
+  local out; out="$("$SUT" notify 2>/dev/null)"
+  assert_empty "$out" "notify output"
+  assert_empty "$(read_stamp_key disclosed)" "disclosed"
+  teardown_sandbox
+}
+
 test_stamp_survives_awkward_notice() {
   describe "stamp: round-trips spaces, arrows and quotes"
   setup_sandbox

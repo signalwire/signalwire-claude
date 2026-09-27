@@ -1,15 +1,19 @@
-# SignalWire Builder - Claude Code Plugin
+# SignalWire Plugin for Claude
 
-A comprehensive Claude Code plugin that transforms Claude into an expert SignalWire developer, combining complete API documentation with practical production knowledge from real-world deployments.
+A Claude plugin for building on SignalWire. It combines API documentation with practical knowledge from production deployments, and works in claude.ai chat, Cowork, and Claude Code.
 
 ## Quick install
 
-From inside a Claude Code session:
+**claude.ai and Cowork:** go to **Customize > Plugins > Add > Add marketplace**, enter `signalwire/signalwire-claude`, and install **SignalWire**.
 
-```bash
-/plugin marketplace add signalwire/signalwire-claude
-/plugin install signalwire-builder
+**Claude Code:**
+
 ```
+/plugin marketplace add signalwire/signalwire-claude
+/plugin install signalwire@signalwire
+```
+
+See [INSTALL.md](INSTALL.md) for updating, upgrading from `signalwire-builder`, and testing a local copy.
 
 ## Features
 
@@ -91,39 +95,9 @@ Each workflow combines technical API documentation with practical implementation
 4. **Preserve Context Through Transfers** - 72% of customers expect it
 5. **Implement Loop Protection** - Always protect gather/prompt nodes
 
-## Installation
-
-### Option 1: Install from Marketplace (Recommended)
-
-Install the plugin directly using Claude Code:
-
-```bash
-/plugin marketplace add signalwire/signalwire-claude
-/plugin install signalwire-builder
-```
-
-The plugin will be installed to `~/.claude/plugins/signalwire-builder/` and will be available in all your Claude Code sessions.
-
-### Option 2: Manual Installation
-
-Clone the repository and install manually:
-
-```bash
-# Clone the repository
-git clone https://github.com/signalwire/signalwire-claude.git
-cd signalwire-claude
-
-# Run installer
-./install.sh
-```
-
-### Verify Installation
-
-Restart Claude Code after installation. The plugin will automatically activate when you work with SignalWire applications.
-
 ## Usage
 
-Once installed, Claude will automatically use this plugin when:
+Once installed, Claude uses the plugin on its own when you are:
 
 - Building telephony, messaging, or video applications with SignalWire
 - Working with SignalWire REST APIs, SWML, or SDKs
@@ -132,7 +106,25 @@ Once installed, Claude will automatically use this plugin when:
 - Debugging SignalWire webhooks or API responses
 - Answering questions about SignalWire capabilities or best practices
 
-The plugin activates automatically based on your conversation context - no manual invocation needed.
+You don't need to invoke it. For common jobs there are also three commands:
+
+| Command | What it does |
+|---|---|
+| `/signalwire:new-agent` | Builds a voice AI agent from a description |
+| `/signalwire:call-flow` | Writes a SWML call flow (IVR, routing, voicemail) |
+| `/signalwire:debug` | Diagnoses failed calls, missing webhooks, auth errors, and SWAIG problems |
+
+In Claude Code and Cowork you type these directly. In chat, describe what you want and Claude applies the matching one.
+
+### Where it runs
+
+| | Chat | Cowork | Claude Code |
+|---|---|---|---|
+| SignalWire skill | Yes | Yes | Yes |
+| Commands | Applied when relevant | Yes | Yes |
+| Automatic updates | No | No | Marketplace installs |
+
+In chat, Claude can't run the code it writes, so it gives you complete code and commands to run yourself and tells you what a working result looks like. In Claude Code and Cowork it can write the files and run the tests itself.
 
 ## Examples of What Claude Can Do
 
@@ -184,14 +176,16 @@ Claude: [Generates secure token creation, frontend client with never-expose-API-
 ## Plugin Structure
 
 ```
-signalwire-builder/
+signalwire-claude/
 ├── .claude-plugin/
 │   ├── plugin.json                    # Plugin manifest
 │   └── marketplace.json               # Marketplace listing
+├── commands/                          # new-agent, call-flow, debug
+├── hooks/                             # Daily self-update check (Claude Code)
 ├── skills/
 │   └── signalwire/                    # SignalWire skill
 │       ├── SKILL.md                   # Main entry point
-│       ├── workflows/                 # 24 workflow files, 17,150 lines total
+│       ├── workflows/                 # 24 workflow files, 17,100+ lines total
 │       │   ├── inbound-call-handling.md       # 1,350 lines: SWML, loops, IVR
 │       │   ├── video.md                       # 1,287 lines: WebRTC, Browser SDK v4
 │       │   ├── messaging.md                   # 1,233 lines: SMS, Messaging SWML
@@ -222,7 +216,6 @@ signalwire-builder/
 │           └── examples/              # 6 complete agent examples
 ├── README.md                          # This file
 ├── INSTALL.md                         # Installation guide
-├── install.sh                         # Installation script
 └── LICENSE
 ```
 
@@ -237,8 +230,8 @@ Each workflow file includes:
 
 ## Requirements
 
-- Claude Code (with skills support)
-- No additional dependencies required for the skill itself
+- claude.ai chat, Cowork, or Claude Code
+- No additional dependencies for the plugin itself
 - For running generated code: Python 3.10+ with uv, or Node.js 18+ (`pip install signalwire-sdk` / `npm install @signalwire/sdk`)
 
 ## Updates
@@ -263,7 +256,7 @@ To update or improve this plugin:
 4. Include working code examples
 5. Add to Best Practices, Common Patterns, or Anti-Patterns sections
 6. Update this README if adding new workflows
-7. Test the plugin structure follows Claude Code requirements
+7. Run `claude plugin validate .` and try your change with `claude --plugin-dir .`
 8. Submit a pull request
 
 ## License
@@ -280,6 +273,4 @@ For SignalWire API questions:
 
 For plugin issues:
 - GitHub Issues: https://github.com/signalwire/signalwire-claude/issues
-- Check that files are in `~/.claude/plugins/signalwire-builder/`
-- Verify plugin.json and SKILL.md are present
-- Restart Claude Code after installation
+- In Claude Code, `/plugin` shows whether the plugin is installed and enabled

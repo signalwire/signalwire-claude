@@ -23,6 +23,9 @@ case "$root" in
   *) exit 0 ;;
 esac
 
+# Without the CLI there is nothing to update with, so don't promise updates.
+command -v claude >/dev/null 2>&1 || exit 0
+
 version=$(basename "$root")
 plugin=$(basename "$(dirname "$root")")
 marketplace=$(basename "$(dirname "$(dirname "$root")")")
@@ -189,7 +192,6 @@ do_check() {
   local now; now=$(date +%s)
   [ $(( now - ${last_checked:-0} )) -lt "$CHECK_INTERVAL" ] && return 0
 
-  have claude || return 0
   local mkt_dir; mkt_dir="$(marketplace_dir)"
   marketplace_is_pristine "$mkt_dir" || return 0
 
