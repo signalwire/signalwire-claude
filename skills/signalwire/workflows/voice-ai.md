@@ -41,7 +41,7 @@ Add server-side functions your AI can call during conversations. Best for:
 - Business logic integration
 - State management
 
-**→ See [SWAIG Functions](#swaig-signalwire-ai-gateway) below or [AI Agent Functions](ai-agent-functions.md)**
+**→ See [SWAIG Functions](#swaig-signalwire-ai-gateway) below or [AI Agent Functions](ai-agent-functions.md).** Hold an irreversible function until a yes/no check passes: [Semantic gates](ai-agent-functions.md#semantic-gates).
 
 ### 3. AI Agents SDK (Most Powerful)
 

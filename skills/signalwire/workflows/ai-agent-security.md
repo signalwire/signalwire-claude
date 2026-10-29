@@ -515,3 +515,4 @@ def transfer(self, args, raw_data):
 - [ ] **HTTPS**: Production uses SSL/TLS
 - [ ] **Secure Functions**: Destructive operations marked secure
 - [ ] **Data Protection**: Minimal data in global_data
+- [ ] **Semantic gates**: Irreversible SWAIG actions (cancel, refund, share account data, move money) sit behind a gate — one question, threshold `0.9` or higher. See [Semantic gates](ai-agent-functions.md#semantic-gates)
