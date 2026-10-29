@@ -11,7 +11,7 @@ SWML (SignalWire Markup Language) is a YAML/JSON document format for scripting c
 | `amazon_bedrock` | Amazon Bedrock voice agent interaction | [below](#amazon-bedrock) |
 | `answer` | Answer an inbound call | [call-control.md](call-control.md), [inbound-call-handling.md](inbound-call-handling.md) |
 | `cond` | Branch on JavaScript conditions | [below](#cond) |
-| `connect` | Dial a destination (phone/SIP/stream) and bridge it to the call | [call-control.md](call-control.md), [outbound-calling.md](outbound-calling.md) |
+| `connect` | Dial a destination (phone/SIP/queue/call/stream) and bridge it to the call | [below](#connect), [call-control.md](call-control.md) |
 | `denoise` | Start noise reduction | [below](#denoise--stop_denoise) |
 | `detect_machine` | Answering machine (AMD) + fax detection | [below](#detect_machine) |
 | `enter_queue` | Place the call in a named queue | [below](#enter_queue) |
@@ -96,19 +96,20 @@ sections:
 
 ### enter_queue
 
-Place the call in a named queue (auto-created if missing). Callers hear hold music while waiting; an agent connects to the queue with `connect`, bridging caller and agent. After the bridge ends, execution continues with the SWML in `transfer_after_bridge`.
+Place the call in a named queue (auto-created if missing). Callers hear hold music while waiting; an agent connects to the queue with `connect`, bridging caller and agent. After the bridge ends, execution continues with the SWML in `execute_after_queue`, or the call hangs up if that property is omitted. If the call leaves without being bridged (`wait_time` expires or the caller hangs up), `execute_after_queue` is not used and the script continues; check `queue_result`.
 
 Docs: https://signalwire.com/docs/swml/reference/calling/enter-queue
 
 | Property | Type / Default | Description |
 |----------|----------------|-------------|
 | `queue_name` | string, required | Queue to enter; auto-created if it doesn't exist |
-| `transfer_after_bridge` | string, required | SWML to run after the bridge completes — a URL returning SWML, or an inline SWML document (JSON string) |
+| `execute_after_queue` | string, optional | SWML to run after the bridge ends — a URL returning SWML, or an inline SWML document (JSON string). Omitted = hang up when the bridge ends. Not used when the call leaves unbridged |
 | `status_url` | string | HTTP(S) URL for queue status events (`calling.call.queue` with `status`: `enqueue`, `leave`, `dequeue`) |
 | `wait_url` | string | URL of hold media (WAV, MP3, AIFF, GSM, μ-law), fetched via GET. Default hold music if unset |
-| `wait_time` | integer, `3600` | Max seconds to wait in the queue before timeout |
+| `wait_time` | integer, `180` | Max seconds to wait in the queue before timeout |
+| `whisper_url` | string | SWML to run on the queued call when another call connects, before the two calls are bridged — a URL (fetched with POST) or an inline SWML document (JSON string) |
 
-**Variables set:** `queue_result` (`entering` \| `connecting` \| `connected` \| `leaving` \| `timeout` \| `hangup` \| `failed`), `wait_time` (seconds waited, `-1` if unavailable), `entry_position`, `entry_size` (position/queue size on entry, `-1` if unavailable).
+**Variables set:** `queue_result` (`connected` \| `timeout` \| `hangup` \| `failed`), `wait_time` (seconds waited, as a string, `-1` if unavailable), `entry_position`, `entry_size` (position/queue size on entry, as strings, `-1` if unavailable). `wait_time`, `entry_position`, and `entry_size` are set only when the queue operation returns results; when `queue_result` is `failed` they may be unset or left over from an earlier `enter_queue`.
 
 ```yaml
 version: 1.0.0
@@ -118,8 +119,27 @@ sections:
         queue_name: "sales_queue"
         status_url: "https://example.com/queue-status"
         wait_time: 1800
-        transfer_after_bridge: "https://example.com/post-call-swml"
+        whisper_url: "https://example.com/whisper-swml"
+        execute_after_queue: "https://example.com/post-call-swml"
+    - cond:
+        - when: "queue_result == 'timeout' || queue_result == 'hangup' || queue_result == 'failed'"
+          then:
+            - play: { url: "say: We could not connect you." }
 ```
+
+### connect
+
+Dial one destination, or several with `parallel`, `serial`, or `serial_parallel`, and bridge the answered one. A single `to` may be an E.164 number (the leading `+` is required; `15552345678` is rejected), a SIP URI, a Resource Address, `queue:<name>`, `call:<id>` (a call in progress in the same project), or `stream:wss://`. An unencrypted `stream:ws://` URL is rejected. `queue:`, `call:`, and `stream:` must be lowercase.
+
+`parallel`, `serial`, and `serial_parallel` dial at most **20 destinations in total** (`serial_parallel` counts across groups). Any destination after the 20th never rings, and `connect` reports no error for it. Relay `dial` and `call.connect` have the same cap: at most 20 devices in total, and any device after the 20th is skipped.
+
+A `queue:` or `call:` destination can't be combined with any other destination. Once a queued call has been bridged, the script does not continue past `connect`; the call hangs up when the bridge ends unless `execute_after_queue` is set. If no queued call is bridged, `connect_result` is `failed` and `result` runs.
+
+`codecs` is a comma-separated string or an array of strings. Each SIP destination can set its own `headers`, `codecs`, and `session_timeout` (per-destination `headers` replace the top-level list). A header `name` is 3–256 characters and must start with `X-` or be `Privacy`, `P-Asserted-Identity`, or `User-to-User`. Names starting with `SignalWire`, `X-SignalWire`, `X-CID`, or `X-SW-Xregion` are reserved. `value` can't be empty or contain line breaks.
+
+`ringback: false` turns off SignalWire's ringback and passes the destination's early media through. `stop_all_on_reject` (default `false`) stops the other ringing destinations when one rejects: `true`, or a non-empty array of `busy`, `decline`, and `noAnswer`.
+
+Docs: https://signalwire.com/docs/swml/reference/calling/connect
 
 ## Conferencing
 
@@ -134,14 +154,16 @@ Docs: https://signalwire.com/docs/swml/reference/calling/join-conference
 | `name` | string, required | Conference name |
 | `muted` | boolean, `false` | Join muted |
 | `beep` | string, `true` | Join/leave beep: `true`, `false`, `onEnter`, `onExit` |
-| `start_on_enter` | boolean, `true` | Start the conference when this participant joins |
+| `start_on_enter` | boolean, `true` | This participant can start the conference, once `min_participants` is also reached |
 | `end_on_exit` | boolean, `false` | End the conference when this participant leaves |
 | `wait_url` | string | URL fetched (POST, document-fetching webhook body) for SWML to play while waiting for the conference to start. Default hold music if unset |
-| `max_participants` | integer, `100000` | Participant cap |
+| `max_participants` | integer, `250` | Participant cap, itself capped at 250. Set when the conference is created |
+| `min_participants` | integer, `2` | Participants required before the conference starts (1 up to `max_participants`). A single participant with `start_on_enter` can start it when this is `1` |
+| `emit_call_quality` | boolean, `false` | When `true`, send `participant-call-quality` when this participant leaves, if statistics are available. Include `leave` in `status_callback_event` |
 | `record` | string, `do-not-record` | `do-not-record` or `record-from-start` |
 | `region` | string | Hosting region: `global`, `us`, `eu`, `ch` |
 | `trim` | string, `trim-silence` | `trim-silence` removes leading silence from the recording; `do-not-trim` keeps it |
-| `coach` | string | Call SID of an in-progress conference participant to coach |
+| `coach` | string | Call SID of one in-progress participant. The coach hears the conference but is heard only by that participant (a whisper) |
 | `status_callback_event` | string | Space-separated events to report: `start`, `end`, `join`, `leave`, `mute`, `hold`, `modify`, `speaker`, `announcement` |
 | `status_callback_event_type` | string | Callback content type: `cxml`, `laml`, `relay` |
 | `status_callback` | string | URL for status events |
@@ -150,12 +172,11 @@ Docs: https://signalwire.com/docs/swml/reference/calling/join-conference
 | `recording_status_callback_method` | string, `POST` | `GET` or `POST` |
 | `recording_status_callback_event` | string | `in-progress`, `completed`, `absent` |
 | `recording_status_callback_event_type` | string | `cxml`, `laml`, `relay` |
-| `result` | object | Custom action on conference result — a `switch` object or `cond` array |
-| `stream` | object | Attach a bidirectional WebSocket stream to the conference (below) |
+| `stream` | object | Attach a WebSocket stream to the conference (below) |
 
-`stream` sub-object: `url` (required, `wss://` only), `name`, `codec` (`PCMU`, `PCMA`, `G722`, `L16`, with optional rate/ptime modifiers like `L16@24000h@40i`), `status_url`, `status_url_method` (`POST` default), `realtime` (boolean, `false` — enables audio back into the conference), `authorization_bearer_token`, `custom_parameters` (key-value pairs delivered on connect).
+`stream` sub-object: `url` (required, `wss://` only), `name`, `codec` (`PCMU`, `PCMA`, `G722`, `L16`, with optional rate/ptime modifiers like `L16@24000h@40i`), `status_url`, `status_url_method` (`POST` default), `realtime` (boolean, accepted, default `false`; **has no effect** on conference streams), `authorization_bearer_token`, `custom_parameters` (key-value pairs delivered on connect).
 
-**Variables set:** `join_conference_result` (`completed` \| `answered` \| `no-answer` \| `failed` \| `canceled`), `return_value` (same value).
+**Variables set:** `join_conference_result` (`joined` \| `failed`). There is no `return_value`. The value is set when `join_conference` finishes, not at the moment the participant joins.
 
 Status callbacks POST `calling.conference` events; `params.status` identifies the event (`conference-start`, `conference-end`, `participant-join`, `participant-leave`, `participant-mute`/`unmute`, `participant-hold`/`unhold`, `participant-speech-start`/`stop`, `participant-modify`, `record-start`/`pause`/`resume`/`stop`). `conference-end` and `record-stop` include `recording_url`, `recording_duration`, `recording_file_size` when a recording exists.
 
@@ -171,7 +192,7 @@ sections:
         stream:
           url: "wss://example.com/conference-audio"
           codec: "PCMU"
-          realtime: true
+          realtime: false
 ```
 
 ### join_room
@@ -524,12 +545,13 @@ Docs: https://signalwire.com/docs/swml/reference/calling/sip-refer
 
 | Property | Type / Default | Description |
 |----------|----------------|-------------|
-| `to_uri` | string, required | SIP URI to REFER to |
+| `to_uri` | string | SIP URI to REFER to. At least one of `to_uri` or `to` is required. When both are set, `to_uri` wins unless it is empty after variable expansion |
+| `to` | string | Alias for `to_uri`, used when `to_uri` is unset or empty after variable expansion |
 | `status_url` | string | URL for `calling.call.refer` status events |
 | `username` | string | SIP authentication username |
 | `password` | string | SIP authentication password |
 
-**Variables set:** `sip_refer_to` (the URI the recipient is to INVITE), `sip_refer_result` (overall result), `return_value` (same value), `sip_refer_response_code` (response to the REFER request), `sip_refer_to_response_code` (INVITE response to the recipient).
+**Variables set:** `sip_refer_to` (the URI the recipient is to INVITE), `sip_refer_result` (`success` \| `cancel` \| `noAnswer` \| `busy` \| `error`), `sip_refer_response_code` (response to the REFER request), `sip_refer_to_response_code` (INVITE response to the recipient). There is no `return_value`. `success` does not by itself confirm that the refer target answered (also reported when the device sent no NOTIFY, the call ended early, or the target was still ringing after two minutes). After `success`, the app must hang up SignalWire's leg.
 
 ```yaml
 version: 1.0.0
@@ -537,8 +559,19 @@ sections:
   main:
     - sip_refer:
         to_uri: 'sip:alice@example.com'
-    - play:
-        url: 'say: The SIP refer result is ${sip_refer_result}'
+    - switch:
+        variable: sip_refer_result
+        case:
+          "success":
+            - hangup: {}
+          "busy":
+            - play: { url: 'say: That line is busy.' }
+          "noAnswer":
+            - play: { url: 'say: No answer.' }
+          "cancel":
+            - hangup: {}
+        default:
+          - play: { url: 'say: The transfer failed.' }
 ```
 
 ## Payments
@@ -551,28 +584,29 @@ Docs: https://signalwire.com/docs/swml/reference/calling/pay
 
 | Property | Type / Default | Description |
 |----------|----------------|-------------|
-| `payment_connector_url` | string, required | URL POSTed with the gathered payment details; must return the transaction result |
+| `payment_connector_url` | string, required | HTTPS URL (or a variable that resolves to one) POSTed with the gathered payment details; must return the transaction result |
 | `charge_amount` | string | Amount to charge (float as string, no currency prefix). `0`/omitted = tokenization |
 | `currency` | string, `usd` | ISO 4217 currency code |
 | `description` | string | Custom payment description passed in the request |
 | `input` | string, `dtmf` | Collection method (`dtmf` only). While entering, `#` submits immediately, `*` cancels |
 | `language` | string, `en-US` | Prompt language |
-| `max_attempts` | integer, `1` | Retries for collecting payment details |
+| `max_attempts` | integer, `1` | Attempts per payment detail, from `1` to `3`. Values outside that range are ignored and `1` is used |
 | `min_postal_code_length` | integer, `0` | Minimum postal code length |
 | `parameters` | array of `{name, value}` | Custom key-value parameters forwarded to your processor |
-| `payment_method` | string | `credit-card` only |
-| `postal_code` | boolean\|string, `true` | Prompt for postal code, or supply a known postcode |
+| `payment_method` | string, `credit-card` | `credit-card` or `ach-debit` (routing number and account number) |
+| `bank_account_type` | string, `consumer-checking` | Sent for `ach-debit`: `consumer-checking`, `consumer-savings`, or `commercial-checking` |
+| `postal_code` | string, `"true"` | Quoted string. An unquoted boolean is rejected. `"true"` prompts; `"false"` (and `f`/`no`/`off`/`disabled`/`inactive`/`disallow`/`0`) skips; any other value is the postal code sent to the connector |
 | `prompts` | array | Custom prompts per step (below); defaults used for omitted steps |
-| `security_code` | boolean, `true` | Whether to prompt for the CVV |
+| `security_code` | string, `"true"` | Quoted string. An unquoted boolean is rejected. `"true"` (and `t`/`yes`/`on`/`enabled`/`active`/`allow`, or a non-zero whole number) prompts; any other value turns the prompt off |
 | `status_url` | string | URL POSTed on each status change (`calling.call.pay`) |
-| `timeout` | integer, `5` | Seconds to wait for the next digit before validating |
+| `timeout` | integer, `5` | Seconds to wait for the next digit before validating. Values below `3` are ignored and `5` is used |
 | `token_type` | string, `reusable` | `one-time` or `reusable` |
 | `valid_card_types` | string, `visa mastercard amex` | Space-separated allowed card types (`visa`, `mastercard`, `amex`, `maestro`, `discover`, `jcb`, `diners-club`) |
 | `voice` | string, `woman` | TTS voice for prompts |
 
-Each `prompts[]` entry: `for` (step: `payment-card-number`, `expiration-date`, `security-code`, `postal-code`, `payment-processing`, `payment-completed`, `payment-failed`, `payment-canceled`), `actions` (array of `{type: Say|Play, phrase}`), plus optional `attempts`, `card_type`, and `error_type` filters (error types include `timeout`, `invalid-card-number`, `invalid-date`, `invalid-security-code`, `card-declined`, etc.).
+Each `prompts[]` entry: `for` (step: `payment-card-number`, `expiration-date`, `security-code`, `postal-code`, `payment-processing`, `payment-completed`, `payment-failed`, `payment-canceled`), `play` (array of `{type: audio|tts|silence|ringtone, params}`; when present, even empty, it takes precedence), or `actions` (array of `{type: Say|Play, phrase}`, ignored when `play` is set), plus optional `attempt` (space-separated `"1"`, `"2"`, `"3"`, default `"1 2 3"`; counted per payment detail), `card_type`, and `error_type` filters (error types include `timeout`, `invalid-card-number`, `invalid-date`, `invalid-security-code`, `card-declined`, `bank-account-declined`, etc.). `payment-completed` plays on any HTTP `200` from the connector, including a decline, so check `pay_result`.
 
-**Connector contract:** SignalWire POSTs `transaction_id`, `method`, `cardnumber`, `cvv`, `expiry_month`, `expiry_year`, `postal_code`, `chargeAmount`, `currency_code`, `token_type`, `description`. Respond `200` with `{"charge_id": "...", "error_code": null, "error_message": null}` (charge) or `{"token_id": "...", ...}` (tokenization); non-200 with `error_code`/`error_message` set triggers the `payment-failed` prompt.
+**Connector contract:** SignalWire POSTs `transaction_id`, `method` (`credit-card` or `ach-debit`), `cardnumber`, `cvv`, `expiry_month`, `expiry_year`, `postal_code` (card only), `routing_number`, `account_number`, `account_type` (ACH only), `chargeAmount`, `currency_code`, `token_type`, `description`. Respond `200` with `charge_id` for a charge or `token_id` for tokenization, not both — a body that includes `charge_id` is treated as a charge. A non-`200` plays `payment-failed`. A `200` plays `payment-completed` even when the body is a decline or doesn't count as success; check `pay_result`.
 
 **Variables set:** `pay_result` (`success` \| `too-many-failed-attempts` \| `payment-connector-error` \| `caller-interrupted-with-star` \| `relay-pay-stop` \| `caller-hung-up` \| `validation-error` \| `internal-error`) and `pay_payment_results` — nested object with `payment_token`, `payment_confirmation_code`, `payment_card_number` (redacted), `payment_card_type`, `payment_card_expiration_date`, `payment_card_security_code` (redacted), `payment_card_postal_code`, `payment_error`, `payment_error_code`, and `connector_error.{code,message}`. Access with dot notation: `${pay_payment_results.payment_token}`.
 
@@ -682,9 +716,9 @@ Docs: https://signalwire.com/docs/swml/reference/calling/goto and `/label`
 |-------------------|----------------|-------------|
 | `label` | string, required | Label in the current section to jump to |
 | `when` | string | JavaScript condition; jump only if `true`. Omitted = unconditional |
-| `max` | integer, `100` | Max number of jumps (1–100) |
+| `max` | integer \| string, `100` | Max jumps to this label (1–100). An integer, or a variable such as `${vars.max_retries}` that resolves to a count in that range |
 
-**Retry-cap pattern:** the `max` property is the built-in loop limiter — with `max: 3` the labeled block runs 4 times total (1 initial pass + 3 jumps), then execution falls through. Combine with `when` for a conditional retry loop:
+The jump count belongs to the **target label**, shared by every `goto` that jumps there. Each `goto` compares its own `max` against that shared count. Once the count reaches `max`, the jump is skipped and execution continues with the next method. With `max: 3` the labeled block runs 4 times total (1 initial pass + 3 jumps), then execution falls through. Combine with `when` for a conditional retry loop:
 
 ```yaml
 version: 1.0.0
