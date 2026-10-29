@@ -13,7 +13,7 @@ Every SignalWire Space has:
 - **API Token**: Secret key for authentication. Treat it as an opaque string — don't parse it, match a pattern, or assume a length. Project tokens begin with `swapi_` (42 characters) or `PT` (50 characters). Both authenticate the same way.
 - **Space Name**: Your subdomain (e.g., `mycompany` for `mycompany.signalwire.com`)
 
-A **personal access token** authenticates you as a person (your Space role), not as a project. They begin with `swpat_` (42 characters, no scopes, with a checksum so a mistype returns `401`) or `pat_`. Send one with Basic auth and an empty username: `-u ":swpat_..."`. It is accepted on `/api/space` and on the Projects and Project Tokens APIs. Docs: https://signalwire.com/docs/apis/authorization#personal-access-tokens
+A **personal access token** authenticates you as a person (your Space role), not as a project. It begins with `swpat_` (42 characters, no scopes, with a checksum so a mistype returns `401`) or `pat_`. Send one with Basic auth and an empty username: `-u ":swpat_..."`. It is accepted on `/api/space` and on the Projects and Project Tokens APIs. Docs: https://signalwire.com/docs/apis/authorization#personal-access-tokens
 
 ### Finding Your Credentials
 
