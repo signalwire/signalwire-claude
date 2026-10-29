@@ -13,6 +13,12 @@ SignalWire maintains compatibility APIs (LAML/CXML) that should NOT be used for 
 
 This skill documents ONLY modern APIs: REST with JSON, SWML, Relay SDK, AI Agents SDK.
 
+## Code Governs, the Prompt Guides
+
+Code owns the conversation's steps, its data, and its rules. The model handles intent and phrasing: what the caller wants, and how to say the reply. A prompt guides. It cannot enforce. Treating the prompt as the safety mechanism is prompt and pray. Put anything that must happen on every call in code — identity checks, prices, and whether a charge, transfer, or hangup runs — so the same input does the same thing. Leave the model the judgment calls you cannot write as a procedure.
+
+See [Patterns](workflows/ai-agent-patterns.md).
+
 ## Read the Live Docs
 
 SignalWire's documentation is machine-readable. Append `.md` to any page URL under `https://signalwire.com/docs` to get clean Markdown, or send `Accept: text/markdown`.

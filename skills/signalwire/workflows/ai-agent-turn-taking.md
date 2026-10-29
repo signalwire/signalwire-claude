@@ -116,6 +116,16 @@ The neural components of the veto panel depend on model bundles being present on
 
 So describe veto behavior as what the platform does, not as a guarantee. Do not write an example whose correctness depends on a hold firing — an agent that only collects a phone number correctly because the digit hold caught the pause between groups is an agent that will sometimes fail. Validate the collected value and re-prompt.
 
+## Latency Is a Sum
+
+The pause the caller hears is the sum of what is still on the path: audio transport, the turn decision, speech recognition, the language model, speech synthesis, and each vendor hop. Streaming overlaps some of those stages. It does not remove a hop. Inside inference and synthesis, model choice dominates: picking a slow model costs more than moving synthesis from the slowest engine to the fastest.
+
+Tool turns are the ones that feel slow, because the agent goes quiet while the tool runs. Speech fillers on the tool play immediately and cut that perceived wait. They do not make the tool faster.
+
+Turn settings belong in code. `end_of_speech_timeout` is how much silence closes a turn. `barge_min_words` is how many words count as an interruption. Set them with `set_params`. They apply to the whole call (steps have no params of their own), so choose values that fit the step that needs the most patience: collecting an account number needs more silence than confirming yes. A prompt cannot hold the floor open: the turn boundary is decided before the model sees text.
+
+[latency_checker](https://github.com/signalwire/latency_checker) measures a recording from the end of the caller's speech to the agent's first audio, on any platform.
+
 ## Related
 
 - [Voice AI](voice-ai.md) — agent overview and voice selection

@@ -157,7 +157,7 @@ step.add_bullets("Requirements", [
 
 ### set_step_criteria()
 
-Define when this step is considered complete.
+Define when this step is considered complete. This guides the model. It is not a hard gate. Check anything that must be true in your code.
 
 ```python
 step.set_step_criteria("User provides and confirms their email address")
@@ -167,12 +167,14 @@ step.set_step_criteria("User provides and confirms their email address")
 
 Restrict which functions are available in this step.
 
+Set `functions` on every step. Pass `[]` (or `"none"`) when the step should have no tools. A step that omits the list keeps the previous step's tools.
+
 ```python
 # Specific functions only
 step.set_functions(["save_name", "validate_email"])
 
-# No functions
-step.set_functions("none")
+# No functions. Omitting this call keeps the previous step's tools.
+step.set_functions([])
 ```
 
 ### set_valid_steps()
