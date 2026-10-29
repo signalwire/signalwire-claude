@@ -18,12 +18,7 @@ Docs: https://signalwire.com/docs/swml/reference/calling/ai-sidecar (subpages: `
 | `ai_sidecar` | No | AI observer that coaches the human agent via callbacks |
 | `live_transcribe` | No | Plain transcription, no AI evaluation |
 
-**`ai_sidecar` starts its own transcription — there is no `live_transcribe` prerequisite.** You do not need to start a `live_transcribe` before attaching a sidecar, and adding one is unnecessary rather than required. The two *can* coexist on a call if you want a plain transcript alongside the coaching, because the sidecar's transcribe runs under its own separate handle.
-
-The only thing rejected is a **second sidecar** on the same call, which fails with `there is already a sidecar attached to this call`.
-
-> **Not currently documented publicly — and the docs state the opposite.**
-> `/docs/swml/reference/calling/ai-sidecar` says "One transcriber per call. `ai_sidecar` and plain `live_transcribe` cannot run on the same call at the same time — starting one while the other is active is rejected." That is incorrect; the behavior above was verified against the running platform. Do not revert this section to match the docs page.
+The sidecar runs its own transcription, separate from `live_transcribe`, so the two can run on the same call. A call can have only one sidecar.
 
 ## How It Works
 
@@ -35,7 +30,7 @@ Each time the customer finishes speaking, the sidecar evaluates the conversation
 4. Tools the model calls run through your SWAIG functions / MCP servers.
 5. Every step fires a structured callback.
 
-Underneath, the sidecar is `live_transcribe` running in an extended mode — the same media bug, recognizer, and conversation log. A separate worker watches for customer turn-end and drives the ticks.
+The sidecar's transcription is separate from `live_transcribe`.
 
 ### A bootstrap tick fires on attach
 
@@ -53,7 +48,7 @@ So expect an early `turn` and `request` callback — and possibly an `insight` o
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `prompt` | string/object | Operator prompt for coaching behavior. Plain string, POM, or server-side file. Optional but strongly recommended (falls back to minimal default). SignalWire adds built-in sidecar role instructions automatically. |
+| `prompt` | string/object | Operator prompt for coaching behavior. Plain string or POM (`text` / `pom`). Optional but strongly recommended (falls back to minimal default). SignalWire adds built-in sidecar role instructions automatically. |
 | `lang` | string | Single BCP-47 tag (e.g. `en-US`). Sets ASR language, shared with model as hint. |
 | `model` | string | Model for advice and end-of-call summaries. Suggested: `gpt-4o-mini`, `gpt-4.1-mini`, `gpt-4.1-nano`. |
 | `direction` | array | Call legs to observe. **Must contain both `remote-caller` and `local-caller`.** Defaults to both; a single-leg value is rejected at start. |
@@ -64,7 +59,7 @@ So expect an early `turn` and `request` callback — and possibly an `insight` o
 | `global_data` | object | Initial key-value data. Reference in prompt via `${global_data.key}`; included in tool requests; persists across sessions on the same call leg as `${ai_agents_global_data.key}`. |
 | `hints` | array | ASR hints biasing recognition toward terms (product names, jargon, SWAIG enum values). Strongly recommended. Example: `["ACME", "Globex", "FedRAMP", "SOC 2"]`. |
 | `params` | object | Tuning options (see Tuning Params below). |
-| `action` | object | `action.summarize` generates a one-off conversation summary and returns instead of attaching a sidecar. `summarize.webhook` (defaults to `url`) and `summarize.prompt` (defaults to `ai_summary_prompt`). |
+| `action` | object | `action.summarize` asks a sidecar already attached to the call for a one-off summary. Without one, the request fails and no sidecar is started. `summarize.webhook` defaults to the sidecar `url`. `summarize.prompt` defaults to `params.transcribe_prompt`, then built-in summary instructions. |
 
 **The field is `customer_role`, not `customer_leg`.** There is no `customer_leg` field — it is silently ignored if you set it, and the sidecar falls back to the `remote-caller` default. This is the single most likely configuration mistake.
 
@@ -75,8 +70,8 @@ So expect an early `turn` and `request` callback — and possibly an `insight` o
 All default to enabled. Setting `params.act_on_channel: false` overrides all of them — actions fire as callbacks but never apply to the call.
 
 - `swaig_allow_swml` — whether tools may run SWML on the call
-- `swaig_allow_settings` — whether tools may change sidecar settings (e.g. model)
-- `swaig_set_global_data` — whether tools may set global data
+- `swaig_allow_settings` — whether a `settings` action is accepted. It does not change evaluations, which keep the sidecar's `model` and default model settings
+- `swaig_set_global_data` — has no effect; tools can set and unset global data either way. Use `act_on_channel: false` to keep tool actions from taking effect
 
 ### Tuning Params (`params`)
 
@@ -88,7 +83,7 @@ All optional.
 |-------|-----------------|-------------|
 | `idle_timeout_ms` | 50–5000, default `200` | Silence (ms) after customer finishes before evaluation. Lower = faster reaction. If the agent speaks while the customer's turn is pending, evaluation runs immediately. |
 | `min_interval_ms` | 0–60000, default `0` | Minimum time between evaluations — throttle for busy calls. |
-| `max_iters_per_tick` | 1–20, default `5` | Max tool calls chained in one evaluation before advice must be produced. |
+| `max_iters_per_tick` | 1–20, default `5` | Max model steps in one evaluation. Each step is one model response and can call several tools. |
 | `max_history_tokens` | 1000–200000, default `8000` | Token budget for running history; oldest messages dropped past it. |
 | `act_on_channel` | boolean, default `true` | Whether tool actions (transfer, hangup, etc.) take effect on the call or are report-only. |
 
@@ -108,16 +103,16 @@ All optional.
 | `live_events` | Emit a callback per utterance the recognizer produces. |
 | `verbose_utterances` | Include full ASR detail (word timings, alternatives) per utterance. Increases callback size. |
 | `speech_engine` | `deepgram` (default) or `google`. Turn-end detection is calibrated for Deepgram. |
-| `speech_timeout` | ms the recognizer waits before finalizing speech. |
-| `vad_silence_ms` | Silence (ms) used to detect end of speech. |
-| `vad_thresh` | Speech-detection sensitivity. |
-| `transcribe_prompt` | Bias prompt passed to the ASR for expected terms (distinct from operator `prompt`). |
+| `speech_timeout` | ms the recognizer waits before finalizing speech. Omitted or `0` uses `60000`. Range 0–600000. |
+| `vad_silence_ms` | Silence (ms) used to detect end of speech. Omitted or `0` uses `700` on Deepgram and `500` on Google. |
+| `vad_thresh` | Speech-detection sensitivity. Omitted or `0` uses `400`. |
+| `transcribe_prompt` | Default prompt for `action.summarize` when that sets no `prompt`. Not sent to the recognizer; use `hints` for recognition terms. |
 
 **Debug:** `debug_level` (speech-engine verbosity, 0–100), `debug` (verbose sidecar logging).
 
 ## Prompt Forms
 
-Three forms (markdown-formatted prompts recommended). If both `file` and `pom`/`text` are set, `file` wins.
+Two forms (markdown-formatted prompts recommended): text and POM.
 
 ```yaml
 # Text (bare string, or {text: "..."})
@@ -132,10 +127,6 @@ prompt:
       bullets:
         - "Watch for buying signals."
         - "Call lookup_competitor when a competitor is mentioned."
-
-# File — server-side file path whose contents become the prompt
-prompt:
-  file: "/path/to/prompt.md"
 ```
 
 POM sections support `title`, `body`, `bullets`, nested `subsections`, `numbered`, `numberedBullets`.
@@ -164,11 +155,11 @@ SWAIG:
       # per-function web_hook_url / auth override defaults
   mcp_servers:
     - url: "https://crm.example.com/mcp"
-      headers:                           # auth goes in headers; supports variable expansion
-        Authorization: "Bearer ${global_data.crm_token}"
+      headers:                           # sent as written; ${...} is not expanded
+        Authorization: "Bearer crm-token"
       resources: true                    # fetch server resources into global_data
-      resource_vars:
-        customer_id: "${global_data.customer_id}"
+      resource_vars:                     # fills {customer_id} in resource URIs; not ${} expansion
+        customer_id: "cust_123"
 ```
 
 **Parameter schema restriction:** each property allows only `type`, `description`, `enum`, `default`. Validation keywords (`pattern`, `minimum`, `maximum`) are rejected — express constraints in the description and validate server-side.
@@ -201,12 +192,12 @@ Platform POSTs JSON to the function's `web_hook_url` (smaller field set than the
 | `user_event` | Emits your topic + payload — the primary way to surface UI alerts and intent navigation. |
 | `set_global_data` / `unset_global_data` | Merge into / remove from `global_data`. Fires `global_data_change`; persists across sessions on the leg. |
 | `set_session_metadata` / `unset_session_metadata` | Session metadata changes. |
-| `transfer` | Transfer call to phone number, SIP URI, or SWML URL. Ends sidecar and transcription. Optional summary on transfer. |
+| `transfer` | Object with `dest` (phone number, SIP URI, or SWML URL). Ends sidecar and transcription. |
 | `hangup` | Terminate the call. Ends sidecar and transcription. |
 | `stop` | Stop the sidecar only; transcription continues. |
 | `say` / TTS | Report-only — sidecar has no voice. Fires an `action` callback with `spoken: false`, `reason: "no_tts_in_sidecar"`. |
 | `toggle_functions` | Enable/disable functions mid-conversation (`function` name + active state). |
-| `set_model` | Change model settings. Gated by `swaig_allow_settings`. |
+| `settings` | Accepted when `swaig_allow_settings` is true. Does not change evaluations; they keep the sidecar `model` and default model settings. |
 | `SWML` | Run a SWML document on the call. Gated by `swaig_allow_swml`; `transfer: true` variant ends the sidecar. |
 | `inject_message` | Inject a message and trigger a new evaluation — send the sidecar a question/instruction mid-call. |
 | `tool_chaining_control` | `true` or `"forever"` — whether/how the model may chain tool calls. |
@@ -258,6 +249,7 @@ Unwrap `sidecar_event` before reading `type`. Every callback carries `type`, `ts
 | `global_data_change` | Global data changed | `key`, `old_value?`, `new_value?` |
 | `history_pruned` | History trimmed to token budget | `dropped_count`, `kept_count`, `tokens_before`, `tokens_after` |
 | `error` | Failure or anti-loop guard | `error_reason`, `detail?` |
+| `malformed_tool_call` | Model returned tool calls that can't be answered (missing or repeated id, no function name, or a malformed list). Dropped and not run | `stripped`, `detail` |
 | `ask_request` | An `ai_sidecar.ask` call command was queued | `question`, `ask_id` |
 | `ask_answer` | Answer to an `ai_sidecar.ask` | `raw`, `iter`, `total_iters`, `ask_id`, `triggered_by` |
 | `stop` | Sidecar shutting down | `stop_reason` |

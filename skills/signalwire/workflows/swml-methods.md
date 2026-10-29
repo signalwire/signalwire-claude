@@ -235,7 +235,7 @@ sections:
             speech_engine: deepgram
 ```
 
-Note: `live_transcribe` cannot run alongside `ai_sidecar` — one transcriber per call.
+`live_transcribe` and `ai_sidecar` can run on the same call. A call can have only one sidecar.
 
 ### live_translate
 

@@ -1,6 +1,6 @@
 # DataMap Advanced Reference
 
-Complete reference for advanced DataMap features including expressions, webhooks with fallbacks, array processing, and error handling.
+Complete reference for advanced DataMap features including expressions, webhooks, array processing, and error handling.
 
 ## Import
 
@@ -43,7 +43,7 @@ def expression(
 
 **Parameters:**
 - `test_value` - Template string to test (e.g., `"${args.command}"`)
-- `pattern` - Regex pattern to match against
+- `pattern` - Regex pattern to match against. Case-insensitive unless written as `/pattern/flags`. `nomatch-output` (`nomatch_output`) returns when the expression doesn't match; when omitted, the next expression is tried
 - `output` - FunctionResult to return when pattern matches
 - `nomatch_output` - Optional result when pattern doesn't match
 
@@ -108,25 +108,16 @@ transfer_router = (DataMap("route_call")
 )
 ```
 
-## Multiple Webhooks with Fallback
+## Webhooks
 
-You can chain multiple webhooks that act as fallbacks if earlier ones fail.
+Only the first webhook that is called is used. Later webhooks are not called, even when the request fails or `error_keys` marks the response failed. The function then falls back to top-level `output`.
 
 ```python
-search_with_fallback = (DataMap("search")
-    .purpose("Search for information with fallback APIs")
+search = (DataMap("search")
+    .purpose("Search for information")
     .parameter("query", "string", "Search query", required=True)
-
-    # Primary API
     .webhook("GET", "https://api.primary.com/search?q=${args.query}")
     .output(FunctionResult("Found: ${response.results[0].title}"))
-
-    # Fallback API (used if primary fails)
-    .webhook("GET", "https://api.backup.com/search?q=${args.query}")
-    .output(FunctionResult("Found: ${response.data.title}"))
-
-    # Final fallback output (used if all webhooks fail)
-    .fallback_output(FunctionResult("Sorry, search is temporarily unavailable"))
 )
 ```
 
@@ -149,16 +140,16 @@ def webhook(
 ```
 
 **Parameters:**
-- `method` - HTTP method (GET, POST, PUT, DELETE)
+- `method` - `GET` or `POST` only. A body (including `params`, or `input_args_as_params`) forces `POST`
 - `url` - API endpoint URL (supports `${args.param}` substitution)
 - `headers` - Optional HTTP headers
 - `form_param` - Send JSON body as single form parameter
 - `input_args_as_params` - Merge function arguments into params
-- `require_args` - Only execute if these arguments are present
+- `require_args` - With a list, the webhook runs if any one listed argument is present. An empty list means the webhook is never used
 
 ### body()
 
-Set the request body for POST/PUT webhooks.
+Set the request body. A body forces the request to `POST`, whatever `method` is.
 
 ```python
 def body(self, data: Dict[str, Any]) -> 'DataMap'
