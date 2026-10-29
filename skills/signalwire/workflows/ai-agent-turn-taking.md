@@ -80,6 +80,7 @@ Diagnosing from symptoms:
 |-------|---------|---------|
 | `turn_detection_min_length` | `0` (0–1000) | Minimum transcript characters before punctuation alone can end the turn. In `both`, the acoustic signal can still end a short complete reply such as "Yes." |
 | `turn_detection_timeout` | value of `end_of_speech_timeout` (0–10000; `0` uses that default) | Milliseconds to wait after deciding the turn ended before finalizing the transcript. A partial inside the window cancels the decision. Values below `500` degrade accuracy. Lowering it does not make the agent answer faster. |
+| `speech_event_timeout` | `0` (0–10000) | Milliseconds to wait for a speech event. `0` or unset lets the recognizer set this timing itself. Normally leave unset. |
 
 ## Choosing a Recognizer
 

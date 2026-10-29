@@ -98,6 +98,7 @@ sections:
 ### AI Parameters
 
 - **prompt**: System instruction for the AI (personality, role, guidelines). Required unless `agent` is set
+- **prompt.temperature**: Randomness, 0.0–1.5 (default: 1.0). Lower is less random
 - **agent**: ID of an AI agent saved in the Space. Use it instead of an inline configuration. Other `ai` properties next to it are ignored; if `prompt` is also set, the inline configuration runs and `agent` is ignored
 - **post_prompt_url**: Where the end-of-call summary report is POSTed (optional). Not the SWAIG function endpoint — functions use `SWAIG` `web_hook_url`
 - **post_prompt_auth_user/password**: HTTP Basic Auth for `post_prompt_url` (optional)
@@ -166,6 +167,8 @@ If the agent interrupts callers or leaves dead air, that is the knob — see [Tu
 ```yaml
 - ai:
     prompt: "You are a customer service agent."
+    params:
+      double_turns: true   # double_turn_fillers only play when this is on
     languages:
       - name: "English"
         code: "en-US"

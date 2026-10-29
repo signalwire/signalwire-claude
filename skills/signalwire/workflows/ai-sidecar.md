@@ -18,7 +18,7 @@ Docs: https://signalwire.com/docs/swml/reference/calling/ai-sidecar (subpages: `
 | `ai_sidecar` | No | AI observer that coaches the human agent via callbacks |
 | `live_transcribe` | No | Plain transcription, no AI evaluation |
 
-The sidecar runs its own transcription, separate from `live_transcribe`, so the two can run on the same call. A call can have only one sidecar.
+The sidecar runs its own transcription, separate from `live_transcribe`, so the two can run on the same call. A call can have only one sidecar; attaching a second fails with `there is already a sidecar attached to this call`.
 
 ## How It Works
 
@@ -29,8 +29,6 @@ Each time the customer finishes speaking, the sidecar evaluates the conversation
 3. The model returns one line of agent-facing advice (an `insight`), or calls the built-in `sidecar_skip` tool to stay silent.
 4. Tools the model calls run through your SWAIG functions / MCP servers.
 5. Every step fires a structured callback.
-
-The sidecar's transcription is separate from `live_transcribe`.
 
 ### A bootstrap tick fires on attach
 
