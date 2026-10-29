@@ -67,6 +67,19 @@ sections:
     - connect: { to: "+15551111111" }
 ```
 
+### In-Session Transfer from a SWAIG Function (Agents SDK)
+
+Inside a live AI session, execute transfers with the SDK's `connect()` helper rather than injecting a document that contains a `connect` verb:
+
+```python
+return FunctionResult(
+    "Connecting you now.",
+    post_process=True
+).connect("tel:+15551234567", final=True)
+```
+
+An injected document containing `connect` only succeeds when the action carries the `transfer` flag **beside** the SWML document — the shape both `connect()` and `execute_swml(doc, transfer=True)` emit. If the flag ends up *inside* the document (for example, in hand-built action JSON), the platform ignores it, so the nested `connect` fast-fails — `connect_result=failed` within seconds, no B-leg dialed — while the identical document works at the top level of a call.
+
 ## Recording
 
 ### Record Entire Call (SWML)
@@ -485,6 +498,15 @@ for log in stale:
 - **busy**: Destination is busy
 - **failed**: Call failed to connect
 - **no-answer**: Destination didn't answer
+
+### Disconnect vs. End
+
+Two commands sound alike and behave very differently:
+
+- `calling.disconnect` — **unbridges** connected legs. Nothing hangs up: both legs stay active (and billing) until `max_duration`, a remote hangup, or an explicit end.
+- `calling.end` — actually hangs up, with a `reason`. RELAY (Python): `await call.hangup(reason="hangup")`. REST (Python): `client.calling.end(call_id, reason="hangup")`.
+
+Cleanup jobs and reapers must use `calling.end`, never `disconnect`. To enumerate the live SWML/AI calls to end, use the List Voice Logs API — its log `id` is the call ID `calling.end` accepts. (In the raw REST command payload, the call `id` rides at the root of the command object, not in `params` — distinct from the SDK method signatures shown here.)
 
 ## Advanced Patterns
 
