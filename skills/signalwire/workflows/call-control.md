@@ -8,6 +8,8 @@ Control active calls with transfer, recording, conferencing, and real-time manip
 
 ## Transfer Methods
 
+**Connect limits.** Phone numbers need a leading `+`. `parallel`, `serial`, and `serial_parallel` dial at most 20 destinations in total; extras never ring and `connect` reports no error. Relay `dial` / `call.connect` skip devices past the same cap. A `queue:` or `call:` destination can't be mixed with others, and once a queued call is bridged the script does not continue past `connect` (`connect_result` is `failed` when nothing was bridged). `ringback: false` passes the destination's early media. See [swml-methods.md](swml-methods.md#connect).
+
 ### Blind Transfer (SWML)
 
 Transfer call without announcement:

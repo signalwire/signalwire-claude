@@ -1042,11 +1042,13 @@ sections:
     - enter_queue:
         queue_name: "support"
         wait_time: 1800
-        # Required: SWML to run after the agent bridge ends (URL or inline JSON string)
-        transfer_after_bridge: "https://yourserver.com/after-bridge.swml"
-    # queue_result: entering|connecting|connected|leaving|timeout|hangup|failed
+        # Optional: SWML after a successful bridge (URL or inline JSON string).
+        # Omitted, the call hangs up when the bridge ends.
+        # An unbridged leave (timeout, hangup) skips this and continues below.
+        execute_after_queue: "https://yourserver.com/after-bridge.swml"
+    # queue_result: connected|timeout|hangup|failed
     - cond:
-        - when: "queue_result == 'timeout'"
+        - when: "queue_result == 'timeout' || queue_result == 'hangup' || queue_result == 'failed'"
           then:
             - transfer: { dest: schedule_callback }
     - hangup: {}
