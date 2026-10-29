@@ -251,7 +251,10 @@ Configure agents via environment variables:
 # SignalWire credentials (required for Fabric API)
 export SIGNALWIRE_SPACE_NAME="myspace"
 export SIGNALWIRE_PROJECT_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-export SIGNALWIRE_TOKEN="PTxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+export SIGNALWIRE_TOKEN="swapi_0123456789ab0123456789ab0123456789ab"
+
+# New project tokens begin with swapi_. Older PT tokens still work.
+# Treat the value as opaque: don't parse it or assume a length.
 
 # Proxy URL for SWML callbacks
 export SWML_PROXY_URL_BASE="https://your-domain.com"

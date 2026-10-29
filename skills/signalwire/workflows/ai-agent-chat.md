@@ -45,7 +45,11 @@ Every response carries `jsonrpc: "2.0"` and echoes the request `id`.
 
 **`create_conversation` is idempotent by identifier.** Calling it with an `id` that already exists returns `status: "exists"` rather than erroring or clobbering. Pass `reinit` to force a fresh start under the same id.
 
-**`end_conversation` and `delete` are different.** Ending closes the conversation but leaves it readable via `chat_log`. Deleting removes it.
+**`chat` with `config_url` creates the conversation if it does not exist, and never returns `initial_message`.** Only `create_conversation` returns the greeting.
+
+**`end_conversation` and `delete` are different.** Ending closes the conversation but leaves it readable via `chat_log`, and posts the summary to `post_prompt_url`. Deleting removes it: nothing is post-processed and no webhook fires.
+
+A conversation ID keeps only letters, digits, `_`, `-`, `.`, and `:`. Any other character is dropped with no error, so `rider~2` is stored as `rider2`. An ended conversation cannot be reopened. A later `chat` that passes `config_url` under that same ID starts a new conversation with no memory of the old one.
 
 ## Typical flow
 
@@ -76,7 +80,17 @@ The agent is defined by the SWML at `config_url` — the same document that woul
 
 ## Errors
 
-JSON-RPC errors come back in the standard `error` object rather than as HTTP status codes. Codes are listed with the rest of the API errors at `/docs/apis/error-codes`.
+Check the HTTP status before the body.
+
+- **401** — credentials are wrong, or the token does not have the **Chat** permission.
+- **400** — the body was not valid JSON.
+
+Errors from AI chat itself come back as **HTTP 200** with an `error` object instead of `result`:
+
+- `-32001`, Conversation not found — the ID is not a live conversation (misspelled, ended, or idle past `conversation_timeout`).
+- `-32002`, Configuration error — SignalWire could not fetch the agent from `config_url`.
+
+Other codes are listed at `/docs/apis/rest/ai-chat/chat-methods`.
 
 ## Python SDK
 
@@ -89,6 +103,8 @@ Two wrappers, so you do not have to hand-roll JSON-RPC:
 
 Use `ChatGateway` for anything a browser touches. Shipping project credentials to the client is the failure mode it exists to prevent.
 
+Localhost is always allowed, so the gateway runs locally with no origin list. Set `allowed_origins` to your production site origin. A copied publishable key still works from a script that omits the `Origin` header.
+
 ## Reading chat logs
 
 `chat_log` returns the transcript for one conversation. For querying across conversations there is a separate REST surface:
@@ -98,6 +114,18 @@ GET /api/fabric/resources/ai_agents/:id/conversation_logs
 GET /api/fabric/resources/chats
 GET /api/fabric/resources/chats/:id/events
 ```
+
+## Webhooks
+
+Tool calls (`web_hook_url`) and the post-prompt summary (`post_prompt_url`) are the same webhooks as a voice session. Both set `conversation_type` to `chat`. `conversation_id` is your chat ID on both. On the tool webhook, `call_id` is the conversation ID; on the post-prompt callback, `call_id` is a separate UUID.
+
+`chat_log` and the post-prompt `call_log` include the system prompt, `system` messages, and tool entries. Filter to `user` and `assistant` before showing a transcript. The gateway's `log` already does.
+
+## SMS and voice handoff
+
+An inbound message webhook can bridge SMS into AI chat: build a stable conversation ID from the sender (the guide uses `sms.` plus the number without `+`) and return messaging SWML whose `reply` is the agent's text. Guide: https://signalwire.com/docs/platform/ai/guides/chat
+
+A page can move that chat onto a call with `HandoffRouter` mounted beside `ChatGateway`. The browser dials with the chat handle and a nonce in `userVariables`. That path ends the text leg when the call starts. Returning to text continues under a new ID, `<id>.1`.
 
 ## Billing
 
