@@ -47,6 +47,26 @@ HTTP Basic Auth with Project ID and API Token (see [Authentication](authenticati
 - **params.timeout**: Ring timeout in seconds
 - **params.max_duration**: Maximum call duration in seconds (default 14400 = 4 hours). There are no Space-level duration or spend caps — set this yourself on long-running or AI calls
 
+### SIP Transport and Custom Headers
+
+When `to` is an external `sip:` or `sips:` URI, `dial` accepts two more `params`:
+
+- **params.transport**: `udp`, `tcp`, or `tls`. Only when `to` is an external `sip:` or `sips:` URI; any other destination returns 422. It must match a transport already on the URI (`sips:` means `tls`). When neither is set, SignalWire chooses from DNS (NAPTR, then SRV) and falls back to `udp`. `udp` and `tcp` send unencrypted RTP. `tls`, or no transport set, offers SRTP and accepts RTP if the destination declines it.
+- **params.headers**: custom SIP headers on the INVITE, at most 20, or the request returns 422. Each entry is `{name, value}`. `name` is one SIP header token: letters, digits, and the symbols ! # $ % & ' * + - . ^ _ ` | ~, with no spaces. `Identity` and `X-ProjectID` are reserved in any letter case. `value` must be non-empty, must not contain CR, LF, or null, and is at most 1024 bytes.
+
+```json
+{
+  "command": "dial",
+  "params": {
+    "from": "+15551234567",
+    "to": "sips:dest@sip.example.com",
+    "url": "https://example.com/swml",
+    "transport": "tls",
+    "headers": [{ "name": "X-Custom-Header", "value": "custom-value" }]
+  }
+}
+```
+
 ### Response
 
 ```json

@@ -1,6 +1,6 @@
 # AI Agent Text Chat
 
-Talk to an AI agent by text instead of by voice. Agents that were reachable only over a phone call can now back a web chat widget, a support inbox, or an automated test harness. Shipped 2026-08-17.
+Talk to an AI agent by text instead of by voice. The same agent that answers calls can back a web chat widget, a support inbox, or an automated test harness.
 
 Docs: `/docs/apis/rest/ai-chat/chat-methods`
 
@@ -123,9 +123,7 @@ Tool calls (`web_hook_url`) and the post-prompt summary (`post_prompt_url`) are 
 
 ## SMS and voice handoff
 
-An inbound message webhook can bridge SMS into AI chat: build a stable conversation ID from the sender (the guide uses `sms.` plus the number without `+`) and return messaging SWML whose `reply` is the agent's text. Guide: https://signalwire.com/docs/platform/ai/guides/chat
-
-A page can move that chat onto a call with `HandoffRouter` mounted beside `ChatGateway`. The browser dials with the chat handle and a nonce in `userVariables`. That path ends the text leg when the call starts. Returning to text continues under a new ID, `<id>.1`.
+A chat can be bridged to SMS or handed off to a voice call (and back). For the setup, see the chat guide: https://signalwire.com/docs/platform/ai/guides/chat
 
 ## Billing
 

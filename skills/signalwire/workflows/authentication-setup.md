@@ -10,10 +10,10 @@ Before using any SignalWire API or SDK, you need proper authentication credentia
 
 Every SignalWire Space has:
 - **Project ID**: Unique identifier for your project (format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`)
-- **API Token**: Secret key for authentication. Treat it as an opaque string — don't parse it, match a pattern, or assume a length. New project tokens begin with `swapi_` and are 42 characters. Older tokens begin with `PT` and are 50 characters. Both authenticate the same way. `PT` tokens are not deprecated and have no end date.
+- **API Token**: Secret key for authentication. Treat it as an opaque string — don't parse it, match a pattern, or assume a length. Project tokens begin with `swapi_` (42 characters) or `PT` (50 characters). Both authenticate the same way.
 - **Space Name**: Your subdomain (e.g., `mycompany` for `mycompany.signalwire.com`)
 
-A **personal access token** authenticates you as a person (your Space role), not as a project. New ones begin with `swpat_`, are 42 characters, include a checksum (a mistype returns `401`), and have no scopes. Older `pat_` tokens still work. Send one with Basic auth and an empty username: `-u ":swpat_..."`. It is accepted on `/api/space` and on the Projects and Project Tokens APIs. Docs: https://signalwire.com/docs/apis/authorization#personal-access-tokens
+A **personal access token** authenticates you as a person (your Space role), not as a project. They begin with `swpat_` (42 characters, no scopes, with a checksum so a mistype returns `401`) or `pat_`. Send one with Basic auth and an empty username: `-u ":swpat_..."`. It is accepted on `/api/space` and on the Projects and Project Tokens APIs. Docs: https://signalwire.com/docs/apis/authorization#personal-access-tokens
 
 ### Finding Your Credentials
 
@@ -90,16 +90,6 @@ const response = await axios.post(
     }
   }
 );
-```
-
-**REST `dial` to an external SIP URI** accepts two more `params`:
-
-- `transport`: `udp`, `tcp`, or `tls`. Only when `to` is an external `sip:` or `sips:` URI; any other destination returns 422. It must match a transport already on the URI (`sips:` means `tls`). When neither is set, SignalWire chooses from DNS (NAPTR, then SRV) and falls back to `udp`. `udp` and `tcp` send unencrypted RTP. `tls`, or no transport set, offers SRTP and accepts RTP if the destination declines it.
-- `headers`: custom SIP headers on the INVITE, at most 20, or the request returns 422. Each entry is `{name, value}`. `name` is one SIP header token: letters, digits, and the symbols ! # $ % & ' * + - . ^ _ ` | ~, with no spaces. `Identity` and `X-ProjectID` are reserved in any letter case. `value` must be non-empty, must not contain CR, LF, or null, and is at most 1024 bytes.
-
-```json
-"transport": "tls",
-"headers": [{ "name": "X-Custom-Header", "value": "custom-value" }]
 ```
 
 ### SDK Authentication

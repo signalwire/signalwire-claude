@@ -10,7 +10,7 @@ Required for SignalWire platform features (Fabric API, calling, SMS).
 |----------|-------------|
 | `SIGNALWIRE_SPACE_NAME` | Your SignalWire space (e.g., `myspace.signalwire.com` or just `myspace`) |
 | `SIGNALWIRE_PROJECT_ID` | Project ID from SignalWire dashboard |
-| `SIGNALWIRE_TOKEN` | API token from the SignalWire dashboard. Opaque: new project tokens begin with `swapi_`; older `PT` tokens still work. Don't parse the value or assume a length. |
+| `SIGNALWIRE_TOKEN` | API token from the SignalWire dashboard. Opaque: project tokens begin with `swapi_` or `PT`. Don't parse the value or assume a length. |
 
 **Example:**
 

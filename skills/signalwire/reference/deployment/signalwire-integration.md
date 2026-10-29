@@ -27,7 +27,7 @@ All methods require registering your agent with SignalWire's Fabric platform.
 export SIGNALWIRE_SPACE_NAME="myspace"
 export SIGNALWIRE_PROJECT_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 export SIGNALWIRE_TOKEN="swapi_0123456789ab0123456789ab0123456789ab"
-# New project tokens begin with swapi_. Older PT tokens still work. Treat the value as opaque.
+# Project tokens begin with swapi_ or PT. Treat the value as opaque.
 ```
 
 ## Fabric API Integration
@@ -231,12 +231,17 @@ curl -X POST "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/relay/rest/pho
   -d '{"number": "+12065551234"}'
 ```
 
-The Server SDK imports `RestClient` from `signalwire.rest` and passes the same parameter name:
+The Server SDK imports `RestClient` from `signalwire.rest` and passes the same parameter name. With no arguments, `RestClient()` reads `SIGNALWIRE_PROJECT_ID`, `SIGNALWIRE_API_TOKEN`, and `SIGNALWIRE_SPACE` (the full host, e.g. `myspace.signalwire.com`), so pass the values explicitly when using the variable names above:
 
 ```python
+import os
 from signalwire.rest import RestClient
 
-client = RestClient()  # SIGNALWIRE_PROJECT_ID, SIGNALWIRE_API_TOKEN, SIGNALWIRE_SPACE
+client = RestClient(
+    project=os.environ["SIGNALWIRE_PROJECT_ID"],
+    token=os.environ["SIGNALWIRE_TOKEN"],
+    host=f"{os.environ['SIGNALWIRE_SPACE_NAME']}.signalwire.com",
+)
 available = client.phone_numbers.search(areacode="512")
 ```
 

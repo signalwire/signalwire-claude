@@ -253,7 +253,7 @@ export SIGNALWIRE_SPACE_NAME="myspace"
 export SIGNALWIRE_PROJECT_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 export SIGNALWIRE_TOKEN="swapi_0123456789ab0123456789ab0123456789ab"
 
-# New project tokens begin with swapi_. Older PT tokens still work.
+# Project tokens begin with swapi_ or PT.
 # Treat the value as opaque: don't parse it or assume a length.
 
 # Proxy URL for SWML callbacks
