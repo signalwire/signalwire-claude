@@ -190,7 +190,8 @@ class ReceptionistAgent(AgentBase):
 # Add language with specific voice
 agent.add_language("English", "en-US", "rime.spore")
 
-# Multiple languages for auto-detection
+# A second language is another fixed voice, not an answer in the caller's language.
+# Answering in the caller's language needs ai.multilingual. code "multi" is Deepgram-only and still uses this entry's one voice.
 agent.add_language("English", "en-US", "rime.spore")
 agent.add_language("Spanish", "es-MX", "rime.spore")
 
@@ -214,11 +215,7 @@ For complete voice configuration (fillers, pronunciation, hints), see: [referenc
 
 ### Multi-Language Support
 
-**Auto-Detection Capability:**
-- Add multiple languages in the Languages tab
-- AI automatically detects and responds in the caller's language
-- No need to write separate prompts per language
-- Supports 10+ languages with Nova 3
+`add_language` builds `languages`: each entry is one voice. `code` `"multi"` works only with Deepgram and the agent still answers in that entry's voice. To answer in the caller's language, set `ai.multilingual` (mutually exclusive with `languages`).
 
 **Example:**
 
@@ -227,7 +224,7 @@ class MultilingualAgent(AgentBase):
     def __init__(self):
         super().__init__(name="multilingual")
 
-        # Auto-detect and respond in caller's language
+        # Fixed voices. This does not switch the reply language to the caller.
         self.add_language("English", "en-US", "rime.spore")
         self.add_language("Spanish", "es-MX", "rime.spore")
         self.add_language("French", "fr-FR", "rime.spore")
@@ -717,7 +714,7 @@ In `ai.params`:
 | `inner_dialog_prompt` | string | The assistant's personality, given to the helper as context. Documented default: *"The assistant is intelligent and straightforward, does its job well and is not excessively polite."* |
 | `inner_dialog_model` | string | Which model the helper uses. Defaults to `ai_model`. |
 | `inner_dialog_scorecard` | `true` or object | Defines the dials. **Setting it switches inner dialog on implicitly** — you do not also need `enable_inner_dialog`. *(Not on the docs site.)* |
-| `inner_dialog_synced` | boolean, `false` | Synchronizes the inner dialog with the main conversation flow |
+| `inner_dialog_synced` | boolean | Has no effect. `prompt.confidence` and `post_prompt.confidence` also have no effect |
 
 Default dial set: `sentiment`, `engagement`, `frustration`, `rapport`, `read_confidence`, `expertise`, `intent`, `profile`. Passing an object overrides them by key.
 

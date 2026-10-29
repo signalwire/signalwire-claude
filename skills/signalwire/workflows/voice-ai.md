@@ -90,25 +90,31 @@ sections:
     - answer: {}
     - ai:
         prompt: "You are a helpful customer service agent for Acme Corp. Answer questions about our products and services politely."
-        post_prompt_url: "https://example.com/swaig"
-        post_prompt_auth_user: "username"
-        post_prompt_auth_password: "password"
-        language: "en-US"
-        voice: "female"
+        post_prompt_url: "https://example.com/summary"
+        voice: "elevenlabs.mark"
 ```
 
 ### AI Parameters
 
-- **prompt**: System instruction for the AI (personality, role, guidelines)
-- **post_prompt_url**: SWAIG endpoint for function calls (optional)
-- **post_prompt_auth_user/password**: HTTP Basic Auth for SWAIG (optional)
-- **language**: Voice language (default: `en-US`)
-- **voice**: Voice spec — see [Voice Selection](#voice-selection) below
-- **temperature**: Creativity level 0.0-1.0 (default: 0.7)
+- **prompt**: System instruction for the AI (personality, role, guidelines). Required unless `agent` is set
+- **agent**: ID of an AI agent saved in the Space. Use it instead of an inline configuration. Other `ai` properties next to it are ignored; if `prompt` is also set, the inline configuration runs and `agent` is ignored
+- **post_prompt_url**: Where the end-of-call summary report is POSTed (optional). Not the SWAIG function endpoint — functions use `SWAIG` `web_hook_url`
+- **post_prompt_auth_user/password**: HTTP Basic Auth for `post_prompt_url` (optional)
+- **voice**: `<engine>.<voice>[:model]` when neither `languages` nor `multilingual` is set. See [Voice Selection](#voice-selection)
+- **params.double_turns**: `false` by default. A planning model (`utility_model`, else `ai_model`) reviews the turn before each reply. Cover the wait with `languages[].double_turn_fillers`
+- **params.visual_input**: How many of the caller's newest video frames `get_visual_input` sends (`true` = 1, or 1–5). Default `1`
+- **params.video_blank_image**: HTTPS or HTTP URL of a PNG shown on a video call that has no avatar clips
+- **params.barge_functions**: `false` by default. When `false`, functions are not executed while the user is speaking
+- **params.tts_number_format**: `e164` (default), `international`, or `national`
+- **params.attention_timeout**: ms before the attention prompt. `0` disables; otherwise `1000`–`600000`. Default `5000`
+- **params.digit_timeout**: ms at the end of digit input. `1`–`29999`; any other value keeps the default `3000`
+- **params.hard_stop_time**: Max time the agent stays active, as `HH:MM:SS`, `MM:SS`, or a whole number of seconds. Unit suffixes such as `30m` are not converted (`30m` is 30 seconds)
+
+These parameters are accepted and have no effect: `max_emotion`, `speech_timeout`, `verbose_logs`, `inner_dialog_synced`, `max_response_tokens`, `prompt.confidence`, `post_prompt.confidence`.
 
 ### Voice Selection
 
-**Always declare the engine explicitly.** Voice specs take the form `engine.voice:model` — for example `elevenlabs.mark:eleven_turbo_v2_5`. The engine part is what keeps your agent's voice stable.
+**Always declare the engine explicitly.** Voice specs take the form `<engine>.<voice>[:model]` — for example `elevenlabs.mark:eleven_turbo_v2_5`. The engine part is what keeps your agent's voice stable. A voice that cannot be resolved is substituted and reported once per call as a `relay_script_voice_unresolved` warning (`calling.script.warning`); the document keeps running.
 
 **The default changed twice in two months:**
 
@@ -131,9 +137,7 @@ One parameter that changes the cost and latency profile of several background fe
 
 `params.utility_model` names the model used for lightweight background work. **Defaults to whatever `ai_model` is set to** — so an agent on a large frontier model is running its background chores on that model too, while the caller waits.
 
-Documented uses: redaction (`redact_prompt`) and transcription cleanup (`auto_correct`).
-
-It also covers double-turn planning, tool-result distillation, and summarization. *(Those three are not on the docs site.)*
+Documented uses: redaction (`redact_prompt`), transcription cleanup (`auto_correct`), and `double_turns` planning (when `utility_model` is set; otherwise planning uses `ai_model`).
 
 ```yaml
 - ai:
@@ -152,11 +156,11 @@ The docs recommend a small fast model — `gpt-4o-mini`, `gpt-4.1-mini`, or `gpt
 
 When the agent decides you have stopped speaking is controlled by `params.turn_detection` and `params.end_of_speech_timeout`. Turn detection is **on by default** (`both`), fusing sentence punctuation with an acoustic model.
 
-If the agent interrupts callers or leaves dead air, that is the knob — see [Turn Taking](ai-agent-turn-taking.md). The published docs describe an older behavior, so start there rather than at `/docs/swml/reference/calling/ai/params`.
+If the agent interrupts callers or leaves dead air, that is the knob — see [Turn Taking](ai-agent-turn-taking.md).
 
 ### Multi-Language Support
 
-Add multiple languages for automatic detection:
+`languages` is a fixed set: each entry has one voice. `code: multi` transcribes whichever language Deepgram supports, and only on Deepgram (a Google engine treats `multi` as an ordinary code). The agent still answers in that entry's single voice. Answering in the caller's language requires `ai.multilingual`.
 
 ```yaml
 - ai:
@@ -165,12 +169,8 @@ Add multiple languages for automatic detection:
       - name: "English"
         code: "en-US"
         voice: "rime.spore"
-      - name: "Spanish"
-        code: "es-MX"
-        voice: "rime.spore"
+        double_turn_fillers: ["One moment."]
 ```
-
-The AI automatically detects and responds in the caller's language.
 
 ### Multilingual — switching language mid-call
 

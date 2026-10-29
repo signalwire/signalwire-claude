@@ -18,7 +18,7 @@ FunctionResult(
 ```
 
 **Parameters:**
-- `response` - Text the AI will speak to the user
+- `response` - A prompt injected into the model's context. Write it as an instruction ("Tell the caller..."). The model decides what to say; it is not spoken verbatim. Use the `say` action for exact words.
 - `post_process` - If `True`, AI responds before actions execute; if `False`, actions execute immediately
 
 ## Basic Usage
@@ -26,7 +26,7 @@ FunctionResult(
 ### Simple Response
 
 ```python
-return FunctionResult("The weather in Seattle is 65°F and cloudy.")
+return FunctionResult("Tell the caller the weather in Seattle is 65°F and cloudy.")
 ```
 
 ### Response with Action
@@ -42,7 +42,10 @@ return FunctionResult("I'll transfer you now.").add_action(
 ```python
 return (FunctionResult("Let me set that up for you.")
     .add_action("set_global_data", {"customer_verified": True})
-    .add_action("toggle_functions", {"active": ["view_balance", "transfer"]}))
+    .add_action("toggle_functions", [
+        {"function": "view_balance", "active": True},
+        {"function": "transfer", "active": True},
+    ]))
 ```
 
 ### Post-Process Mode
@@ -102,7 +105,7 @@ def add_actions(self, actions: list) -> 'FunctionResult'
 ```python
 return FunctionResult("Setting up your account.").add_actions([
     {"set_global_data": {"account_id": "12345", "verified": True}},
-    {"toggle_functions": {"active": ["view_balance"]}}
+    {"toggle_functions": [{"function": "view_balance", "active": True}]}
 ])
 ```
 
@@ -194,23 +197,17 @@ The AI can reference this data in subsequent turns.
 
 Enable or disable functions dynamically.
 
+`toggle_functions` is an array of `{function, active}` objects. `active` defaults to `true`.
+
 ```python
-# Activate specific functions
-.add_action("toggle_functions", {
-    "active": ["transfer_funds", "view_transactions"]
-})
-
-# Deactivate specific functions
-.add_action("toggle_functions", {
-    "inactive": ["delete_account"]
-})
-
-# Both at once
-.add_action("toggle_functions", {
-    "active": ["view_balance"],
-    "inactive": ["transfer_funds"]
-})
+.add_action("toggle_functions", [
+    {"function": "transfer_funds", "active": True},
+    {"function": "view_transactions", "active": True},
+    {"function": "delete_account", "active": False},
+])
 ```
+
+`settings` replaces the whole model-settings map and needs `params.swaig_allow_settings` (default `true`). `unset_global_data` and `unset_meta_data` take a string or an array of keys. `user_event` sends an object to the connected client. `transfer` accepts an object, or a string shorthand for `transfer.dest`.
 
 ### playback_bg
 
@@ -386,9 +383,11 @@ def verify_pin(self, args, raw_data):
             "How can I help you today?"
         )
         .add_action("set_global_data", {"verified": True})
-        .add_action("toggle_functions", {
-            "active": ["view_balance", "transfer_funds", "view_transactions"]
-        }))
+        .add_action("toggle_functions", [
+            {"function": "view_balance", "active": True},
+            {"function": "transfer_funds", "active": True},
+            {"function": "view_transactions", "active": True},
+        ]))
     else:
         attempts = raw_data.get("vars", {}).get("pin_attempts", 0) + 1
 

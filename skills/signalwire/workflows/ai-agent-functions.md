@@ -175,10 +175,10 @@ SWAIG:
   mcp_servers:
     - url: https://mcp.example.com/tools
       headers:
-        Authorization: "Bearer ${global_data.token}"
+        Authorization: "Bearer <token>"   # sent as written; ${...} is not expanded
       resources: true
       resource_vars:
-        catalog: "resource://catalog"
+        customer_id: "cust_123"           # fills {customer_id} in resource URIs; not ${} expansion
   functions:
     - function: getWeather
       purpose: look up weather
@@ -188,9 +188,9 @@ SWAIG:
 | Field | Type | Notes |
 |-------|------|-------|
 | `mcp_servers[].url` | string, required | |
-| `mcp_servers[].headers` | object | **Auth tokens go here — there is no separate auth field.** Values support variable expansion. |
+| `mcp_servers[].headers` | object | **Auth tokens go here — there is no separate auth field.** Values are sent as written; `${...}` is not expanded |
 | `mcp_servers[].resources` | boolean, default `false` | Fetch MCP resources in addition to tools |
-| `mcp_servers[].resource_vars` | object | Bind resources to variables |
+| `mcp_servers[].resource_vars` | object | Values for `{name}` placeholders in resource URIs. Used as written; a placeholder with no key is left as-is. Used only when `resources` is enabled |
 
 ### The trap: `SWAIG` must be an object
 
@@ -261,13 +261,15 @@ Return SWML actions from functions to control the call:
 ### Basic Response
 
 ```python
-return FunctionResult("The weather in Seattle is sunny and 72°F")
+return FunctionResult("Tell the caller the weather in Seattle is sunny and 72°F.")
 ```
+
+`response` is a prompt injected into the model's context, not text spoken verbatim. For exact words, use the `say` action.
 
 ### Response with Play Action
 
 ```python
-result = FunctionResult("Please hold while I transfer you")
+result = FunctionResult("Tell the caller to hold while you transfer them.")
 result.add_action("play", {"url": "https://example.com/hold-music.mp3"})
 return result
 ```
@@ -317,20 +319,21 @@ result.add_action("set_meta_data", {
 })
 ```
 
-**toggle_functions** - Enable/disable functions:
+**toggle_functions** - Array of `{function, active}`:
 ```python
-# Disable after use
-result.add_action("toggle_functions", {
-    "active": False,
-    "functions": ["send_verification_code"]
-})
-
-# Enable functions
-result.add_action("toggle_functions", {
-    "active": True,
-    "functions": ["process_payment"]
-})
+result.add_action("toggle_functions", [
+    {"function": "send_verification_code", "active": False},
+    {"function": "process_payment", "active": True},
+])
 ```
+
+**settings** - Replaces the model's settings map for the rest of the conversation. Needs `params.swaig_allow_settings` (default `true`). Omitted keys return to the model default.
+
+**unset_global_data / unset_meta_data** - A key string, or an array of keys.
+
+**user_event** - Object sent to the client connected to the call.
+
+**transfer** - An object with `dest`, or a string that is shorthand for `transfer.dest`. A boolean is only the sibling of a `SWML` action.
 
 For complete action reference, see: [reference/sdk/function-result.md](../reference/sdk/function-result.md)
 
@@ -553,10 +556,10 @@ def book_appointment(self, args, raw_data):
     # Return response and enable confirmation function
     return (FunctionResult(f"I've reserved {date} at {time} for you.")
         .add_action("set_meta_data", {"appointment_id": appointment_id})
-        .add_action("toggle_functions", {
-            "active": True,
-            "functions": ["confirm_appointment", "cancel_appointment"]
-        }))
+        .add_action("toggle_functions", [
+            {"function": "confirm_appointment", "active": True},
+            {"function": "cancel_appointment", "active": True},
+        ]))
 
 @AgentBase.tool(
     name="confirm_appointment",
@@ -571,10 +574,10 @@ def confirm_appointment(self, args, raw_data):
 
     # Disable both functions after confirmation
     return (FunctionResult("Your appointment is confirmed. You'll receive a reminder 24 hours before.")
-        .add_action("toggle_functions", {
-            "active": False,
-            "functions": ["confirm_appointment", "cancel_appointment"]
-        }))
+        .add_action("toggle_functions", [
+            {"function": "confirm_appointment", "active": False},
+            {"function": "cancel_appointment", "active": False},
+        ]))
 ```
 
 ## Common Function Patterns
@@ -601,14 +604,10 @@ def send_verification_code(self, args, raw_data):
 
     # Disable this function, enable verify function
     return (FunctionResult("I've sent a verification code to your phone.")
-        .add_action("toggle_functions", {
-            "active": False,
-            "functions": ["send_verification_code"]
-        })
-        .add_action("toggle_functions", {
-            "active": True,
-            "functions": ["verify_code"]
-        }))
+        .add_action("toggle_functions", [
+            {"function": "send_verification_code", "active": False},
+            {"function": "verify_code", "active": True},
+        ]))
 
 @AgentBase.tool(
     name="verify_code",
@@ -630,10 +629,9 @@ def verify_code(self, args, raw_data):
     if provided_code == stored_code:
         return (FunctionResult("Verification successful.")
             .add_action("set_meta_data", {"verified": True})
-            .add_action("toggle_functions", {
-                "active": False,
-                "functions": ["verify_code"]
-            }))
+            .add_action("toggle_functions", [
+                {"function": "verify_code", "active": False},
+            ]))
     else:
         return FunctionResult("That code is incorrect. Please try again.")
 ```
