@@ -333,21 +333,7 @@ SignalWire's barge handling:
 - Provides more pertinent answers
 - Two logs available: raw and processed
 
-### Barge Acknowledgment
-
-Configure AI to acknowledge excessive interruptions:
-
-```python
-self.prompt_add_section(
-    "Interruption Handling",
-    "If the caller interrupts you repeatedly, politely ask them to let you finish speaking."
-)
-```
-
-**Example:**
-```
-I understand you're eager to get help. Please let me finish so I can assist you properly.
-```
+See [Interruptions (barge-in)](ai-agent-turn-taking.md#interruptions-barge-in).
 
 ## Configuration Patterns
 

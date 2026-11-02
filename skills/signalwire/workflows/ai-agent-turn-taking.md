@@ -116,6 +116,16 @@ The neural components of the veto panel depend on model bundles being present on
 
 So describe veto behavior as what the platform does, not as a guarantee. Do not write an example whose correctness depends on a hold firing — an agent that only collects a phone number correctly because the digit hold caught the pause between groups is an agent that will sometimes fail. Validate the collected value and re-prompt.
 
+## Interruptions (barge-in)
+
+Barge-in is decided in the media layer, while playback is still going out. A prompt line like "if the user interrupts, stop talking" cannot stop that audio. Tune it with `ai` params, not the prompt.
+
+Use `barge_min_words` and `barge_match_string` so backchannels like "mm-hm" do not count as interruptions. `barge_min_words` is the number of words that must be input before barge triggers. `barge_match_string` is a string or regular expression for what triggers barge. `interrupt_on_noise` is off by default; when on, any sound longer than one second barges the agent. After the cut-in, `end_of_speech_timeout` is the silence that ends the caller's utterance.
+
+A greeting the prompt tells the model to say is generated speech, and greeting protection does not cover it. A line that must play in full goes in `static_greeting` with `static_greeting_no_barge` set.
+
+Cut in with one word, then three, then a full sentence. Talk over the greeting. Say "mm-hm" while the agent reads a list. Change one setting at a time and listen to the recordings.
+
 ## Related
 
 - [Voice AI](voice-ai.md) — agent overview and voice selection
