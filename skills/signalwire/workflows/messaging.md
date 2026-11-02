@@ -516,6 +516,15 @@ send_bulk_sms(recipients, message)
 4. **A2P 10DLC**: Register campaigns for business messaging
 5. **Time restrictions**: Respect quiet hours (varies by region)
 
+### Prohibited content
+
+US and Canadian carrier rules apply to 10DLC, toll-free, and short code, including when every recipient opted in. They're enforced when a campaign or toll-free number is reviewed and again on live traffic. Approval doesn't exempt that traffic: a registered 10DLC campaign or a verified toll-free number can still be filtered or suspended if it includes prohibited content. [Prohibited message content](https://signalwire.com/docs/platform/messaging/prohibited-content). Not legal advice.
+
+- **Business-level bans**: Cannabis, CBD, kratom, and drug paraphernalia businesses can't send any SMS or MMS in the US or Canada, including 2FA and other messages unrelated to those products, whether or not the business is legal under state or federal law. Businesses focused exclusively on stocks, investing, or cryptocurrency can send only 2FA.
+- **Prohibited categories**: High-interest lending, debt relief (even with first-party consent), third-party debt collection without the recipient's direct consent, get-rich-quick schemes and multi-level marketing, third-party job boards, third-party lead generation and cold outreach, phishing and fraud, and gambling, including raffles. SHAFT (sex, hate, alcohol, firearms, tobacco) is banned or allowed only under strict conditions.
+- **Age-restricted content**: In the US, alcohol needs carrier approval and an age gate on 10DLC, short code, and toll-free. Tobacco and vaping are allowed only on short code, with carrier approval and an age gate. Firearms and gambling aren't allowed on any number type, even with an age gate. Messages about firearm parts are allowed on 10DLC. Non-promotional community or local bingo can be allowed on an approved short code or 10DLC campaign; carrier approval may still be required. An age gate must ask the recipient to enter their date of birth. A yes-or-no prompt such as "Are you over 21?" doesn't qualify. 10DLC registration (Dashboard and the create-campaign field `age_gated_content`) asks whether the campaign includes age-gated content. Answer yes for an alcohol or tobacco campaign. Canadian carriers block age-restricted content on every number type, even with an age gate. Sending it requires a carrier exemption. A short list is allowed without an exemption, including pocketknives, lighters, and non-alcoholic beverages.
+- **SignalWire rules**: The [Messaging Requirements and Code of Conduct](https://signalwire.com/legal/messaging-code-of-conduct) applies in addition to the carrier rules and is stricter in places. For age-restricted content it adds its own requirements, such as keeping consent records and verifying each recipient's age.
+
 ### STOP Handling
 
 ```python
