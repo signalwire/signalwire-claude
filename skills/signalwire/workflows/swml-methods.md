@@ -365,7 +365,7 @@ Docs: https://signalwire.com/docs/swml/reference/calling/stream and `/stop-strea
 | `control_id` | string, auto-generated | Identifier for this stream (used by `stop_stream`); must be unique among active streams |
 | `name` | string | Friendly name, included in status events |
 | `track` | string, `inbound_track` | `inbound_track` (what the caller says), `outbound_track` (what the caller hears), `both_tracks` |
-| `codec` | string | Freeform, endpoint-specific; common: `PCMU`, `PCMA`, `OPUS` |
+| `codec` | string, `PCMU` | `PCMU` (8 kHz G.711 μ-law), `L16@16000h` (16-bit linear PCM at 16 kHz), `L16@24000h` (16-bit linear PCM at 24 kHz). Use `L16@16000h` or `L16@24000h` when the speech model expects linear PCM; always include the rate — a bare `L16` is 8 kHz. If SignalWire doesn't accept the codec, the stream doesn't start |
 | `status_url` | string | URL for `calling.call.stream` status events (`params.state`: `streaming`, `finished`) |
 | `status_url_method` | string, `POST` | `GET` or `POST` |
 | `authorization_bearer_token` | string | Bearer token sent in the `Authorization` header on WebSocket connect |
