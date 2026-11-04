@@ -193,37 +193,86 @@ def end_call(self, args, raw_data):
     ).add_action("hangup", {})
 ```
 
-## Hold Music Pattern
+## Slow Reasoning Behind a Tool
 
-Play music during long operations:
+Keep the slow reasoning model off the conversation. The fast model stays on the call and calls a SWAIG tool; the tool calls the large model and waits. The large model never holds the microphone.
+
+Before the tool runs, the agent says what it is about to do ("Let me look at your billing history. Give me a second."). While it runs, the function's `fillers` (same list as the Data Lookup Pattern) are spoken, and `wait_file` plays while the function is running, so the line stays alive between those phrases.
+
+Put a timeout on the slow call. If it does not finish in time, apologize and offer a fallback: email the explanation, call back, or transfer to a person.
+
+Ask the large model for two or three sentences someone can follow on the phone, plus the data behind them. Save the full analysis in `global_data`. A follow-up tool reads that saved analysis, so later questions do not take another trip to the slow model.
 
 ```python
 @AgentBase.tool(
-    name="process_request",
-    description="Process a complex request",
+    name="explain_bill_increase",
+    description="Explain why the caller's bill changed",
     parameters={
-        "request_type": {"type": "string", "description": "Type of request"}
+        "question": {
+            "type": "string",
+            "description": "What the caller wants explained"
+        }
+    },
+    fillers=[
+        "Just a moment more",
+        "Thanks for your patience",
+        "Almost there"
+    ],
+    wait_file="https://example.com/keyboard.mp3"
+)
+def explain_bill_increase(self, args, raw_data):
+    invoices = self.billing.recent_invoices(
+        raw_data.get("call", {}).get("from")
+    )
+
+    question = args.get("question", "why the bill changed")
+    try:
+        result = self.ask_reasoning_model(
+            "Answer in two or three sentences someone can follow on the phone, "
+            f"and return the analysis behind them. Question: {question}",
+            invoices,
+            timeout=45,
+        )
+    except TimeoutError:
+        return FunctionResult(
+            "This is taking longer than it should. I can email you the "
+            "explanation, call you back, or transfer you to a person now. "
+            "Which would you like?"
+        ).add_action("set_global_data", {"analysis_status": "timed_out"})
+
+    return (FunctionResult(
+        f"{result['spoken_summary']} "
+        "Want me to go into any part of that?"
+    )
+    .add_action("set_global_data", {
+        "bill_analysis": result["analysis"],
+        "bill_summary": result["spoken_summary"],
+        "analysis_status": "done"
+    }))
+
+@AgentBase.tool(
+    name="get_bill_detail",
+    description="Answer a follow-up from the bill analysis already saved on this call",
+    parameters={
+        "question": {
+            "type": "string",
+            "description": "The follow-up question"
+        }
     }
 )
-def process_request(self, args, raw_data):
-    request_type = args.get("request_type")
+def get_bill_detail(self, args, raw_data):
+    analysis = (raw_data.get("global_data") or {}).get("bill_analysis")
+    if not analysis:
+        return FunctionResult(
+            "I don't have that breakdown saved yet. "
+            "Let me pull the billing history."
+        )
 
-    # Start hold music
-    result = FunctionResult(
-        "This will take a moment. Please hold while I process that."
+    question = args.get("question", "that")
+    return FunctionResult(
+        f"From the saved analysis, answer this in a sentence or two: {question}. "
+        f"Analysis: {analysis}"
     )
-    result.add_action("playback_bg", {
-        "file": "https://example.com/hold-music.mp3"
-    })
-
-    # Do the work
-    outcome = self.do_complex_processing(request_type)
-
-    # Stop music and respond
-    result.add_action("stop_playback_bg", {})
-    result.set_response(f"All done! {outcome}")
-
-    return result
 ```
 
 ## SMS Follow-up Pattern
