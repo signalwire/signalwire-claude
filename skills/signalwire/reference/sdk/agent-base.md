@@ -330,6 +330,8 @@ agent.add_language(
 
 Add speech recognition hints.
 
+In multilingual mode (`set_multilingual()` / `setMultilingual()`), `add_hints()`/`addHints()` and string or `hint` values from `FunctionResult.add_dynamic_hints()`/`addDynamicHints()` are not passed to speech recognition, and no error is returned; `add_pattern_hint()`/`addPatternHint()` and other `pattern`/`replace` rules still rewrite what the agent hears.
+
 ```python
 def add_hints(self, hints: List[str]) -> 'AgentBase'
 ```

@@ -179,6 +179,8 @@ The AI automatically detects and responds in the caller's language.
 
 **They are mutually exclusive.** Per the docs: *"`multilingual` and `languages` are mutually exclusive. If both are set, SignalWire uses `multilingual` and ignores `languages` entirely."* Setting both does not merge them and does not error — `languages` is simply dropped. This is the first thing people get wrong.
 
+**Recognition hints are not used in code-switching mode.** One `ai.hints` list covers every language the agent uses; there are no per-language hints. When `multilingual` is set, or a `languages` entry's `code` is `multi` on Deepgram speech recognition, string entries and `hint` values are not used, and no error is returned. Rewrite rules (`pattern`/`replace`) still apply to the transcript in every mode. A Google speech engine treats `multi` as an ordinary language code.
+
 Docs: `/docs/swml/reference/calling/ai/multilingual`
 
 ```yaml
