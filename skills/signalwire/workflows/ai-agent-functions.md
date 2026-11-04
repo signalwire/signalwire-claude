@@ -910,9 +910,9 @@ The agent can morph from one role to another without ending the session, reducin
 
 ## Semantic gates
 
-A semantic gate is a yes/no question checked before a SWAIG function runs. A function has 1–8 gates; all are checked at once. If any fails, the function does not run and the agent gets that gate's `on_fail` (the first failing gate in the list). A check that times out, or whose arguments are missing or not valid JSON, also blocks the function.
+A semantic gate is a yes/no question checked before a SWAIG function runs. A function has 1–8 gates; all are checked at once. If any fails, the function does not run and the agent gets that gate's `on_fail` (the first failing gate in the list). A check that times out, or whose arguments aren't exactly one JSON object (missing, invalid JSON, trailing text, a repeated key, or a `\u0000` escape), also blocks the function. Each check the decision model answers is billed whether or not the function then runs; a check with video frames is billed as an image check.
 
-A gated function needs a `description` and a `web_hook_url` (its own or from `SWAIG.defaults`) or a `data_map`. If any gate is invalid, the platform drops the whole function without an error, so the agent never sees it. The Python SDK checks gates when the tool is defined and raises `ValueError` instead.
+A gated function needs a `description` and a `web_hook_url` (its own or from `SWAIG.defaults`; a function from `includes` takes it from the `defaults` that include returns) or a `data_map`. If any gate is invalid, the function is left out of the agent even with `semantic_gates_enabled` set to `false`. A `calling.error` event with `error_reason` `invalid_semantic_gate` names the function and the reason. The Server SDKs check gates when the tool is defined and raise (Python raises `ValueError`) rather than send a function the platform would leave out. If the first definition of a name has no gates, a later gated definition is dropped and the function runs unchecked, with no `calling.error`. The first definition wins, and includes load before `SWAIG.functions`, so define each gated function once and put the gates in the include that returns it.
 
 Docs: https://signalwire.com/docs/platform/ai/semantic-gates and https://signalwire.com/docs/swml/reference/calling/ai/swaig/functions/gates
 
@@ -921,15 +921,15 @@ Docs: https://signalwire.com/docs/platform/ai/semantic-gates and https://signalw
 | `question` | yes | Yes/no, at most 8 KB. Name the input in backticks: `` `conversation` ``, `` `semantic_state` ``, `` `proposed_function` ``, `` `visual_input` ``. Ask one thing per question |
 | `threshold` | yes | Above 0 and at most 1. Use `0.9` or higher for an action that is hard to undo |
 | `on_fail` | yes | What the agent gets instead of the function result |
-| `id` | no | 1–64 letters, digits, or underscores, unique on the function |
+| `id` | no | 1–64 letters, digits, or underscores, unique on the function. Default ids count, so `gate_2` clashes with a second unnamed gate |
 | `criteria` | no | `true` and/or `false` strings for near misses |
-| `visual_input` | no | Frames to show the gate: `true` is 1, or 0–5. No frame means the gate fails |
+| `visual_input` | no | Frames to show the gate: `true` is 1, `false` or `0` is none, a whole number up to 5. No frame means the gate fails |
 
-`gate_fillers` are phrases played during the check. When a function has no `gate_fillers`, `fillers_at_gates` (default `true`) decides whether its regular `fillers` play during the check or only after the gates pass; set it `false` when those fillers announce the action itself.
+`gate_fillers` are phrases played during the check. When a function has no `gate_fillers`, `fillers_at_gates` (default `true`) decides whether its regular `fillers` play during the check or only after the gates pass; set it `false` when those fillers announce the action itself. For a function from `includes`, `fillers_at_gates` in the include's `defaults` wins over `SWAIG.defaults`.
 
-Call-wide `ai.params`: `semantic_gates_enabled` (default `true`; `false` skips checks), `semantic_gate_timeout_ms` (default `2500`, range 500–10000), `semantic_gate_history` (default `20`, range 0–100).
+Call-wide `ai.params`: `semantic_gates_enabled` (default `true`; `false` skips checks), `semantic_gate_timeout_ms` (default `2500`, range 500–10000, clamped), `semantic_gate_history` (default `20`, range 0–100, clamped).
 
-In the Python SDK, pass `SemanticGate` objects as `gates=` on `define_tool()` or `@tool`; `criteria` is spelled `true_means` / `false_means`. Set the call-wide params with `set_semantic_gates()`. Record a fact the gate should trust with `FunctionResult.set_semantic_state()`, read as `global_data.semantic_state`. It replaces the whole state: send every field each time, and `{}` to reset. The TypeScript SDK has no `visual_input` on a gate and throws if a gate object has one, so define video gates in SWML.
+In the Python SDK, pass `SemanticGate` objects as `gates=` on `define_tool()` or `@tool`; `criteria` is spelled `true_means` / `false_means`. In TypeScript, `new SemanticGate(question, threshold, onFail, { id, visualInput })`. Set the call-wide params with `set_semantic_gates()`. Record a fact the gate should trust with `FunctionResult.set_semantic_state()`, read as `global_data.semantic_state`. The key is matched exactly, so `Semantic_State` isn't read. It replaces the whole state: send every field each time, and `{}` to reset. Other `global_data` reaches the decision model only when a question names it, as `${global_data.key}` or `${key}`, so name only values your application set.
 
 ```python
 from signalwire import FunctionResult, SemanticGate
