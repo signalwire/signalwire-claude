@@ -197,13 +197,21 @@ def end_call(self, args, raw_data):
 
 Keep the slow reasoning model off the conversation. The fast model stays on the call and calls a SWAIG tool; the tool calls the large model and waits. The large model never holds the microphone.
 
-Before the tool runs, the agent says what it is about to do ("Let me look at your billing history. Give me a second."). While it runs, the function's `fillers` (same list as the Data Lookup Pattern) are spoken, and `wait_file` plays while the function is running, so the line stays alive between those phrases.
+The acknowledgment is a prompt requirement. On the agent, add a section that tells the model to say, in one sentence, what it is about to look up before it calls the tool.
 
-Put a timeout on the slow call. If it does not finish in time, apologize and offer a fallback: email the explanation, call back, or transfer to a person.
+Per-language `fillers` cover the start of the call. A filler covers the moment a tool call is issued. It does not cover the wait. For the wait, loop `wait_file` with `wait_file_loops=-1`, which plays until the function returns. Omitting `wait_file_loops` plays the file once. A wait script, a nested list inside the per-language filler array, speaks phrases one at a time across the wait. A wait script will not talk over an open `wait_file`, and realtime agents do not support wait scripts.
 
-Ask the large model for two or three sentences someone can follow on the phone, plus the data behind them. Save the full analysis in `global_data`. A follow-up tool reads that saved analysis, so later questions do not take another trip to the slow model.
+Put a timeout on the slow call, and keep it well under the platform's 120 s SWAIG webhook limit. A function that outlasts that limit returns an error and its `set_global_data` is lost. The block below is a fragment. `self.billing` and `ask_reasoning_model` are your helpers. `ask_reasoning_model` raises `TimeoutError` when the call exceeds the timeout you pass, and the `except` branch relies on that. If it times out, apologize and offer a fallback: email the explanation, call back, or transfer to a person.
+
+Ask the large model for two or three sentences someone can follow on the phone, plus the data behind them. `global_data` is posted with every later function call, so save a short summary and an id there and keep the full analysis in your own store under that id. The follow-up tool loads the analysis by that id, so later questions do not take another trip to the slow model.
 
 ```python
+self.prompt_add_section(
+    "Slow questions",
+    "Before calling explain_bill_increase, say in one sentence "
+    "what you are about to look up."
+)
+
 @AgentBase.tool(
     name="explain_bill_increase",
     description="Explain why the caller's bill changed",
@@ -213,14 +221,19 @@ Ask the large model for two or three sentences someone can follow on the phone, 
             "description": "What the caller wants explained"
         }
     },
-    fillers=[
-        "Just a moment more",
-        "Thanks for your patience",
-        "Almost there"
-    ],
-    wait_file="https://example.com/keyboard.mp3"
+    fillers={
+        "en-US": [
+            "Just a moment more",
+            "Thanks for your patience",
+            "Almost there"
+        ]
+    },
+    wait_file="https://example.com/keyboard.mp3",
+    wait_file_loops=-1
 )
 def explain_bill_increase(self, args, raw_data):
+    # self.billing and ask_reasoning_model are your helpers.
+    # ask_reasoning_model raises TimeoutError when it exceeds timeout.
     invoices = self.billing.recent_invoices(
         raw_data.get("call", {}).get("from")
     )
@@ -240,12 +253,13 @@ def explain_bill_increase(self, args, raw_data):
             "Which would you like?"
         ).add_action("set_global_data", {"analysis_status": "timed_out"})
 
+    analysis_id = self.billing.save_analysis(result["analysis"])
     return (FunctionResult(
         f"{result['spoken_summary']} "
         "Want me to go into any part of that?"
     )
     .add_action("set_global_data", {
-        "bill_analysis": result["analysis"],
+        "bill_analysis_id": analysis_id,
         "bill_summary": result["spoken_summary"],
         "analysis_status": "done"
     }))
@@ -261,13 +275,14 @@ def explain_bill_increase(self, args, raw_data):
     }
 )
 def get_bill_detail(self, args, raw_data):
-    analysis = (raw_data.get("global_data") or {}).get("bill_analysis")
-    if not analysis:
+    analysis_id = (raw_data.get("global_data") or {}).get("bill_analysis_id")
+    if not analysis_id:
         return FunctionResult(
-            "I don't have that breakdown saved yet. "
-            "Let me pull the billing history."
+            "I don't have that saved; I'll run the full analysis. "
+            "Call explain_bill_increase."
         )
 
+    analysis = self.billing.load_analysis(analysis_id)
     question = args.get("question", "that")
     return FunctionResult(
         f"From the saved analysis, answer this in a sentence or two: {question}. "
