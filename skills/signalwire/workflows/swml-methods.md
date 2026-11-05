@@ -175,7 +175,7 @@ Docs: https://signalwire.com/docs/swml/reference/calling/join-conference
 | `recording_status_callback_event_type` | string | `cxml`, `laml`, `relay` |
 | `stream` | object | Attach a WebSocket stream to the conference (below) |
 
-`stream` sub-object: `url` (required, `wss://` only), `name`, `codec` (`PCMU`, `PCMA`, `G722`, `L16`, with optional rate/ptime modifiers like `L16@24000h@40i`), `status_url`, `status_url_method` (`POST` default), `realtime` (boolean, accepted, default `false`; **has no effect** on conference streams), `authorization_bearer_token`, `custom_parameters` (key-value pairs delivered on connect).
+`stream` sub-object: `url` (required, `wss://` only), `name`, `codec` (`PCMU`; other values must be allowed for your project), `status_url`, `status_url_method` (`POST` default), `realtime` (boolean, accepted, default `false`; **has no effect** on conference streams), `authorization_bearer_token`, `custom_parameters` (key-value pairs delivered on connect).
 
 **Variables set:** `join_conference_result` (`joined` \| `failed`). There is no `return_value`. The value is set when `join_conference` finishes, not at the moment the participant joins.
 
@@ -387,9 +387,9 @@ Docs: https://signalwire.com/docs/swml/reference/calling/stream and `/stop-strea
 | `control_id` | string, auto-generated | Identifier for this stream (used by `stop_stream`); must be unique among active streams |
 | `name` | string | Friendly name, included in status events |
 | `track` | string, `inbound_track` | `inbound_track` (what the caller says), `outbound_track` (what the caller hears), `both_tracks` |
-| `codec` | string | Freeform, endpoint-specific; common: `PCMU`, `PCMA`, `OPUS` |
+| `codec` | string, `PCMU` | `PCMU` (8 kHz G.711 µ-law), `L16@16000h` (16-bit linear PCM at 16 kHz), `L16@24000h` (16-bit linear PCM at 24 kHz). Use `L16@16000h` or `L16@24000h` when the speech model expects linear PCM; always include the rate, otherwise it may be rejected. A bare `L16` is 8 kHz. A stream can't carry more detail than the call, so streaming an 8 kHz call at 16 kHz only resamples. If SignalWire doesn't accept the codec, the stream doesn't start |
 | `status_url` | string | URL for `calling.call.stream` status events (`params.state`: `streaming`, `finished`) |
-| `status_url_method` | string, `POST` | `GET` or `POST` |
+| `status_url_method` | string, `POST` | `GET` or `POST`. Has no effect: status events are always POST |
 | `authorization_bearer_token` | string | Bearer token sent in the `Authorization` header on WebSocket connect |
 | `custom_parameters` | object | Key-value pairs included in the first WebSocket message |
 
@@ -416,7 +416,7 @@ sections:
 ```yaml
 - connect:
     to: "stream:wss://example.com/audio"
-    codec: PCMU          # PCMU (default), PCMA, G722, L16
+    codec: PCMU          # PCMU (default); other values must be allowed for your project
     realtime: true       # defaults to false — this is what makes it bidirectional
     authorization_bearer_token: my-token
     custom_parameters:

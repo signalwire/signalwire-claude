@@ -516,6 +516,15 @@ send_bulk_sms(recipients, message)
 4. **A2P 10DLC**: Register campaigns for business messaging
 5. **Time restrictions**: Respect quiet hours (varies by region)
 
+### Prohibited content
+
+US and Canadian carrier rules apply to 10DLC, toll-free, and short code, including when every recipient opted in. They're enforced when a campaign or toll-free number is reviewed and again on live traffic. Approval doesn't exempt that traffic: a registered 10DLC campaign or a verified toll-free number can still be filtered or suspended if it includes prohibited content. See [Prohibited message content](https://signalwire.com/docs/platform/messaging/prohibited-content). This is a summary, not legal advice.
+
+- **Business-level bans**: Cannabis, CBD, kratom, and drug paraphernalia businesses can't send any SMS or MMS in the US or Canada, including 2FA and other messages unrelated to those products, whether or not the business is legal under state or federal law. Businesses focused exclusively on stocks, investing, or cryptocurrency can send only 2FA.
+- **Prohibited categories**: This is a partial list; carriers can still reject or filter content not listed. See the linked page for the full tables. High-interest lending, loan advertising (direct lenders of secured loans may be approved case by case), debt relief (even with first-party consent), third-party debt collection without the recipient's direct consent, controlled and prescription drugs (prescription-related messages may be approved case by case), get-rich-quick schemes and multi-level marketing, third-party job boards, third-party lead generation and cold outreach, phishing and fraud, and gambling, including raffles. SHAFT (sex, hate, alcohol, firearms, tobacco) is banned or allowed only under strict conditions.
+- **Age-restricted content**: In the US, alcohol needs carrier approval and an age gate on 10DLC, short code, and toll-free. Tobacco and vaping are allowed only on short code, with carrier approval and an age gate. Firearms and gambling aren't allowed on any number type in the US or Canada, even with an age gate. Messages about firearm parts are allowed on 10DLC. Non-promotional community or local bingo can be allowed on an approved short code or 10DLC campaign; carrier approval may still be required. An age gate must ask the recipient to enter their date of birth. A yes-or-no prompt such as "Are you over 21?" doesn't qualify. 10DLC registration (Dashboard, and the required `age_gated_content` boolean on create-campaign) asks whether the campaign includes age-gated content. Answer yes for an alcohol campaign. Tobacco and vaping aren't allowed on 10DLC. Canadian carriers block age-restricted content on every number type, even with an age gate. Sending it requires a carrier exemption. A short list is allowed without an exemption, including pocketknives, lighters, and non-alcoholic beverages.
+- **SignalWire rules**: The [Messaging Requirements and Code of Conduct](https://signalwire.com/legal/messaging-code-of-conduct) applies in addition to the carrier rules and is stricter in places. It may add its own requirements; read it.
+
 ### STOP Handling
 
 ```python
@@ -624,14 +633,11 @@ ngrok http 5000
 
 ## Campaign Registry Requirements
 
-**CRITICAL:** All A2P (Application-to-Person) messaging to US numbers requires registration.
+**CRITICAL:** Campaign Registry registration is required for A2P (Application-to-Person) messaging from 10DLC numbers to US numbers. Toll-free and short code traffic is not part of the Campaign Registry.
 
 ### Required For
 
-- Long codes (10-digit local numbers)
-- Toll-free numbers
-- Short codes
-- Any outbound SMS/MMS
+- Long codes (10-digit local numbers) sending to US numbers
 
 ### Registration Process
 
@@ -682,21 +688,29 @@ Campaign details:
 - Opt-in/opt-out processes
 
 ```python
-# Creating a campaign via API
+# Creating a campaign via API.
+# POST /api/relay/rest/registry/beta/brands/{id}/campaigns
+# Managed campaigns require these booleans; age_gated_content is true only for an alcohol campaign.
 response = requests.post(
-    f"{space_url}/api/messaging/campaigns",
+    f"{space_url}/api/relay/rest/registry/beta/brands/{brand_id}/campaigns",
     auth=HTTPBasicAuth(project_id, api_token),
     json={
+        "name": "Appointment reminders",
         "brand_id": brand_id,
-        "use_case": "appointment_reminders",
-        "description": "Automated appointment confirmation and reminder messages",
-        "sample_messages": [
-            "Hi {name}, your appointment is confirmed for {date} at {time}. Reply STOP to opt out.",
-            "Reminder: You have an appointment tomorrow at {time}. Reply C to confirm or R to reschedule."
-        ],
-        "message_volume": "1000",
-        "opt_in_workflow": "Customers opt-in during account creation",
-        "opt_out_keywords": ["STOP", "UNSUBSCRIBE", "CANCEL"]
+        "sms_use_case": "CUSTOMER_CARE",
+        "description": "Automated appointment confirmation and reminder messages for patients who opted in.",
+        "sample1": "Hi {name}, your appointment is confirmed for {date} at {time}. Reply STOP to opt out.",
+        "sample2": "Reminder: You have an appointment tomorrow at {time}. Reply C to confirm or R to reschedule.",
+        "message_flow": "Patients opt in during account creation. The office then sends appointment confirmations and reminders.",
+        "opt_out_message": "You have successfully been opted out. Reply START to opt back in at any time.",
+        "help_message": "For help, contact the office that signed you up. Reply STOP to unsubscribe.",
+        "number_pooling_required": False,
+        "direct_lending": False,
+        "embedded_link": False,
+        "embedded_phone": False,
+        "age_gated_content": False,
+        "lead_generation": False,
+        "terms_and_conditions": True
     }
 )
 

@@ -19,6 +19,7 @@ Build conversational AI agents for phone calls using SignalWire's AI platform. T
 
 **Looking for specific topics:**
 - [SWAIG Functions](#swaig-signalwire-ai-gateway) - Add server-side functions to SWML AI
+- [AI Billing & Metering](#ai-billing--metering) - How AI runtime is charged, cost guardrails
 - [When to Pull Additional Documentation](#when-to-pull-additional-documentation) - Reference guide
 
 ## AI Architecture Options
@@ -40,7 +41,7 @@ Add server-side functions your AI can call during conversations. Best for:
 - Business logic integration
 - State management
 
-**→ See [SWAIG Functions](#swaig-signalwire-ai-gateway) below or [AI Agent Functions](ai-agent-functions.md)**
+**→ See [SWAIG Functions](#swaig-signalwire-ai-gateway) below or [AI Agent Functions](ai-agent-functions.md).** Hold an irreversible function until a yes/no check passes: [Semantic gates](ai-agent-functions.md#semantic-gates).
 
 ### 3. AI Agents SDK (Most Powerful)
 
@@ -462,6 +463,28 @@ if __name__ == "__main__":
 ```
 
 **To learn more about building SDK-based agents, see: [AI Agent SDK Basics](ai-agent-sdk-basics.md)**
+
+## AI Billing & Metering
+
+Rates change, so don't quote prices from memory. Get current AI agent pricing from https://signalwire.com/pricing#ai-agents when a cost estimate is needed.
+
+How AI runtime is metered:
+
+- **AI runtime bills the entire time the AI is active on the call** — including while on `ai_hold`. Pausing speech processing does NOT pause the meter.
+- **Transfers stop the meter**: with an `execute_swml` function using `"transfer": true`, the AI leaves the call and AI billing stops as soon as the transfer completes.
+- **Post-prompt processing is never billed as AI runtime** — it always runs after the AI call ends and never extends AI billing.
+- **Each AI leg is metered independently** — two simultaneous AI legs run two meters.
+- **Usage rounds UP to the nearest minute** — a 2m20s AI session bills as 3 minutes. Voice legs (inbound and outbound) are billed individually the same way.
+- **The TTS voice affects cost** — different TTS voices can carry different charges, and some bill a separate Text to Speech line on top of AI runtime. Set the voice explicitly in `ai.languages` instead of relying on the platform default, which can change. Use the engine-prefixed form `voice: <engine>.<voice>` (optionally `<engine>.<voice>:<model>`). If the voice can't be resolved — a missing engine prefix or a mistyped name — the platform falls back to the default voice and the call continues, so a bad voice ID silently changes both the sound and the cost.
+
+### Cost Guardrails
+
+There are **no Space-level spend or duration alerts or caps** — set your own limits on every AI call:
+
+- **answer.max_duration**: Hard ceiling on the call (default 14400 seconds = 4 hours, which is also the **platform maximum** — 14400 is the largest accepted value); disconnects instantly when reached
+- **params.hard_stop_time**: Caps the AI session. Use `HH:MM:SS`, `MM:SS`, or a whole number of seconds (`"30:00"` and `"1800"` are both 30 minutes). Unit suffixes are not parsed: `30m` is read as 30 seconds. When the time passes, the AI gives one last reply using `hard_stop_prompt`, then the AI ends and the next SWML instruction runs, so it is not an instant cutoff and does not hang up by itself. Values beyond 4 hours are inert — the platform maximum ends the call first.
+
+Without these, a stuck AI call meters until the 4-hour platform limit ends it.
 
 ## Best Practices Quick Reference
 

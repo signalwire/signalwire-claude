@@ -22,9 +22,6 @@ Docs: https://signalwire.com/docs/swml/reference/calling/ai-sidecar (subpages: `
 
 The only thing rejected is a **second sidecar** on the same call, which fails with `there is already a sidecar attached to this call`.
 
-> **Not currently documented publicly — and the docs state the opposite.**
-> `/docs/swml/reference/calling/ai-sidecar` says "One transcriber per call. `ai_sidecar` and plain `live_transcribe` cannot run on the same call at the same time — starting one while the other is active is rejected." That is incorrect; the behavior above was verified against the running platform. Do not revert this section to match the docs page.
-
 ## How It Works
 
 Each time the customer finishes speaking, the sidecar evaluates the conversation. This evaluation is a **tick**; every callback carries a `tick_id`. On each tick:
@@ -69,6 +66,8 @@ So expect an early `turn` and `request` callback — and possibly an `insight` o
 **The field is `customer_role`, not `customer_leg`.** There is no `customer_leg` field — it is silently ignored if you set it, and the sidecar falls back to the `remote-caller` default. This is the single most likely configuration mistake.
 
 **Both legs are the constraint people actually hit.** `direction: ["remote-caller"]` is rejected at start with `sidecar requires both legs (remote-caller and local-caller)`. The requirement is documented; the error string is not.
+
+To attach a sidecar, `lang` is the only required setting. An `action.summarize` request needs none of the start settings.
 
 ### Permissions
 
@@ -279,9 +278,11 @@ Within one evaluation (`request`/`thought`/`tool_call`/`tool_result`/`insight`),
 | `webhook_http_failure` | Tool webhook failed; carries `function`, `http_code`, `curl_code` |
 | `event_log_truncated` | Event log hit size limit; older entries dropped |
 
-## Runtime Control (Relay Only)
+## Runtime Control
 
-The SWML `ai_sidecar` method only *attaches* the sidecar. Asking it questions, nudging it, checking its state, and stopping it all go through the calling commands endpoint — there is no SWML equivalent.
+A SWML document attaches the sidecar when that instruction runs; to attach from outside the document's flow, use REST. That request is `POST https://{space}.signalwire.com/api/calling/calls` with `"command": "calling.ai_sidecar"`, the call's `id`, and `params` set to the same settings as the SWML method. A call runs one sidecar at a time. If one is already attached, the HTTP request still returns the call object, but the attach is rejected and no `start` callback follows. Stop the first sidecar before attaching another.
+
+Ask, poke, status, and stop use that same endpoint — there is no SWML equivalent. Every command names the call in a top-level `id`. Auth is basic auth: Project ID as the username, API token (Voice permission) as the password.
 
 ```
 POST https://{space}.signalwire.com/api/calling/calls
@@ -289,13 +290,18 @@ Content-Type: application/json
 ```
 
 ```json
-{ "command": "calling.ai_sidecar.ask",  "params": { "text": "What objections has the customer raised so far?" } }
-{ "command": "calling.ai_sidecar.poke", "params": { "text": "The customer just mentioned a competitor — suggest a comparison." } }
-{ "command": "calling.ai_sidecar.status" }
-{ "command": "calling.ai_sidecar.stop" }
+{ "command": "calling.ai_sidecar", "id": "{call_id}", "params": { "lang": "en-US", "url": "https://your-app.example.com/sidecar/events" } }
+{ "command": "calling.ai_sidecar.ask",  "id": "{call_id}", "params": { "text": "What objections has the customer raised so far?" } }
+{ "command": "calling.ai_sidecar.poke", "id": "{call_id}", "params": { "text": "The customer just mentioned a competitor — suggest a comparison." } }
+{ "command": "calling.ai_sidecar.status", "id": "{call_id}" }
+{ "command": "calling.ai_sidecar.stop", "id": "{call_id}" }
 ```
 
-**`ask` and `poke` are not the same thing.** `ask` requests an answer out of band — it does not disturb the normal advice cadence, and the reply comes back as `ask_answer` callbacks tagged with the `ask_id`. `poke` drives a normal advice tick *early*, as though the customer had just finished a turn. Reach for `poke` when your UI knows something the transcript does not; reach for `ask` when a human wants to query the sidecar. Both return a correlation id.
+`status` requests a snapshot of the sidecar's activity counters. The HTTP response is only the call object and does not include that snapshot.
+
+**`ask` and `poke` are not the same thing.** An `ask` question does not become part of the sidecar's conversation, so later tips aren't affected. Answers arrive as `ask_answer` callbacks on the relay topic `calling.ai.sidecar` and, if the sidecar was started with a `url`, at that URL, tagged with the `ask_id`. `poke` drives a normal advice tick early, as though the customer had just finished a turn, and the message stays in the sidecar's conversation, so later tips take it into account. Reach for `poke` when your UI knows something the transcript does not; reach for `ask` when a human wants to query the sidecar. The HTTP response is the call object for both. For `ask`, the `ask_id` first appears in the `ask_request` callback and is repeated on later callbacks for that ask. `poke` has no correlation id.
+
+`stop` works on any sidecar, including one attached with SWML. The call stays connected (`stop_reason` `api_stop`).
 
 ## Billing
 
@@ -306,6 +312,8 @@ Raw-call summaries (`action.summarize`) are the exception: each run adds a one-s
 > Not currently documented publicly. Verified against the running platform.
 
 ## Complete Example
+
+Place `ai_sidecar` before `connect` so the sidecar hears the whole conversation. SWML `connect` blocks until the bridge ends, so a later `ai_sidecar` would only run after the call.
 
 ```yaml
 version: 1.0.0
@@ -342,6 +350,7 @@ sections:
 ## Limitations
 
 - One sidecar per call — a second attach is rejected (`live_transcribe` is *not* a conflict; see above)
+- SWML ignores the result of `ai_sidecar`, so a rejected attach (for example a missing `lang`) is silent and the call connects. If your webhook gets no `start`, either the attach was rejected or your server cannot be reached: check the document first, then that `url` (host, tunnel, basic-auth password) is reachable. If `start` arrives but no `tool_call`, the model may not have called the tool yet, or SignalWire cannot reach `/swaig`.
 - Both legs required — single-leg `direction` rejected at start
 - Turn detection calibrated for Deepgram (the default engine)
 - No voice on the call — `say` reports as a callback instead of speaking

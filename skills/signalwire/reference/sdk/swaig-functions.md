@@ -249,11 +249,13 @@ Phrases the AI says while the function executes:
     name="lookup_account",
     description="Look up account information",
     parameters={"account_id": {"type": "string", "description": "Account ID"}},
-    fillers=[
-        "Let me look that up for you",
-        "One moment please",
-        "Checking our records"
-    ]
+    fillers={
+        "en-US": [
+            "Let me look that up for you",
+            "One moment please",
+            "Checking our records"
+        ]
+    }
 )
 def lookup_account(self, args, raw_data):
     # Long-running operation
