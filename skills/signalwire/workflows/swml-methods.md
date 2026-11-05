@@ -153,7 +153,7 @@ Docs: https://signalwire.com/docs/swml/reference/calling/join-conference
 | `result` | object | Custom action on conference result — a `switch` object or `cond` array |
 | `stream` | object | Attach a bidirectional WebSocket stream to the conference (below) |
 
-`stream` sub-object: `url` (required, `wss://` only), `name`, `codec` (`PCMU`, `PCMA`, `G722`, `L16`, with optional rate/ptime modifiers like `L16@24000h@40i`), `status_url`, `status_url_method` (`POST` default), `realtime` (boolean, `false` — enables audio back into the conference), `authorization_bearer_token`, `custom_parameters` (key-value pairs delivered on connect).
+`stream` sub-object: `url` (required, `wss://` only), `name`, `codec` (`PCMU`; other values must be allowed for your project), `status_url`, `status_url_method` (`POST` default), `realtime` (boolean, `false` — enables audio back into the conference), `authorization_bearer_token`, `custom_parameters` (key-value pairs delivered on connect).
 
 **Variables set:** `join_conference_result` (`completed` \| `answered` \| `no-answer` \| `failed` \| `canceled`), `return_value` (same value).
 
@@ -394,7 +394,7 @@ sections:
 ```yaml
 - connect:
     to: "stream:wss://example.com/audio"
-    codec: PCMU          # PCMU (default), PCMA, G722, L16
+    codec: PCMU          # PCMU (default); other values must be allowed for your project
     realtime: true       # defaults to false — this is what makes it bidirectional
     authorization_bearer_token: my-token
     custom_parameters:
