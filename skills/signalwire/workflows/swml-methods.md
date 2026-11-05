@@ -389,7 +389,7 @@ sections:
     - stop_stream: {}
 ```
 
-**`stream` is one-way.** Audio leaves the call and nothing comes back. For a bidirectional media stream, use `connect` with a `stream:` destination instead:
+**`stream` is one-way.** Audio leaves the call and nothing comes back. For a bidirectional media stream — the equivalent of Twilio's bidirectional Media Streams — use `connect` with a `stream:` destination instead:
 
 ```yaml
 - connect:

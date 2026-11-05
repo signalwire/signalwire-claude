@@ -36,7 +36,8 @@ FAQS = {
     },
     "payment": {
         "question": "What payment methods do you accept?",
-        "answer": "We accept major credit cards and common digital wallets."
+        "answer": "We accept all major credit cards including Visa, Mastercard, "
+                  "American Express, and Discover. We also accept PayPal and Apple Pay."
     },
     "warranty": {
         "question": "Do your products have a warranty?",
