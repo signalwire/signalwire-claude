@@ -427,7 +427,7 @@ SWML methods do not take `on_success`/`on_failure` handlers. Instead, each metho
 
 ### IVR Menu System
 
-Use `label` + `goto` with `max` to cap menu retries.
+Use `label` + `goto` with `max` to cap menu retries. Every `goto` to `menu` shares one jump count, so the `max` values below are not separate per-branch caps.
 
 ```yaml
 version: 1.0.0
@@ -725,7 +725,7 @@ sections:
 
 **Problem:** Input-collection loops can repeat infinitely if the caller never responds.
 
-**Solution:** Use `label` + `goto` with `max` — `goto` stops jumping after `max` attempts (1-100), so the script falls through to your exit path.
+**Solution:** Use `label` + `goto` with `max` — `goto` stops jumping after `max` attempts (1-100), so the script falls through to your exit path. `max` is also bounded by a per-call limit of 32 combined `transfer` and `goto` jumps (8 in a row without caller interaction). Past that the call is hung up, not fallen through.
 
 ```yaml
 sections:
@@ -1042,11 +1042,14 @@ sections:
     - enter_queue:
         queue_name: "support"
         wait_time: 1800
-        # Required: SWML to run after the agent bridge ends (URL or inline JSON string)
-        transfer_after_bridge: "https://yourserver.com/after-bridge.swml"
-    # queue_result: entering|connecting|connected|leaving|timeout|hangup|failed
+        # Optional: SWML after a successful bridge (URL or inline JSON string).
+        # Omitted, the call hangs up when the bridge ends.
+        # An unbridged leave (timeout, hangup) skips this and continues below.
+        execute_after_queue: "https://yourserver.com/after-bridge.swml"
+    # queue_result: connected|timeout|hangup|failed|empty
+    # `hangup` means the caller is already gone, so don't transfer on it
     - cond:
-        - when: "queue_result == 'timeout'"
+        - when: "queue_result == 'timeout' || queue_result == 'failed'"
           then:
             - transfer: { dest: schedule_callback }
     - hangup: {}

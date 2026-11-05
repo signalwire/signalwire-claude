@@ -8,6 +8,8 @@ Control active calls with transfer, recording, conferencing, and real-time manip
 
 ## Transfer Methods
 
+**Connect limits.** Phone numbers need a leading `+`. `parallel`, `serial`, and `serial_parallel` dial at most 20 destinations in total (a deployment default); extras never ring and `connect` reports no error. Relay `dial` / `call.connect` skip devices past the same cap and report each as `Too many devices` in `message_data`. A `queue:` or `call:` destination can't be mixed with others, and once a queued call is bridged the script does not continue past `connect` (`connect_result` is `failed` when nothing was bridged). `ringback: false` passes the destination's early media. See [swml-methods.md](swml-methods.md#connect).
+
 ### Blind Transfer (SWML)
 
 Transfer call without announcement:
@@ -208,16 +210,19 @@ sections:
 ### Moderator vs Participant
 
 ```yaml
-# Moderator - conference starts when they join, ends when they leave
+# Moderator - with min_participants 1, the conference starts when they join and ends when they leave.
+# min_participants is fixed when the conference is created, so the participant join sets it too.
 - join_conference:
     name: "meeting-123"
     start_on_enter: true
     end_on_exit: true
+    min_participants: 1
 
 # Participant - hears hold music until a start_on_enter participant joins
 - join_conference:
     name: "meeting-123"
     start_on_enter: false
+    min_participants: 1
 ```
 
 ## Real-Time Call Control with Relay SDK
@@ -898,6 +903,7 @@ sections:
         start_on_enter: true
         end_on_exit: true
         muted: false
+        min_participants: 1
 
   participant_conference:
     - play: { url: "say:Welcome to the conference. Please wait for the moderator." }
@@ -905,6 +911,7 @@ sections:
         name: "meeting-%{call.to}"
         start_on_enter: false
         muted: false
+        min_participants: 1
 ```
 
 ### Dynamic Conference Naming
