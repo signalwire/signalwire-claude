@@ -536,3 +536,4 @@ def transfer(self, args, raw_data):
 - [ ] **Secure Functions**: Destructive operations marked secure
 - [ ] **Data Protection**: Minimal data in global_data. Two tools in one turn can overwrite each other's writes
 - [ ] **Cards**: Collected with `pay` on the keypad. The model receives `${pay_result}` only
+- [ ] **Semantic gates**: Irreversible SWAIG actions (cancel, refund, share account data, move money) sit behind a gate — one question, threshold `0.9` or higher. See [Semantic gates](ai-agent-functions.md#semantic-gates)
