@@ -45,9 +45,9 @@ Every response carries `jsonrpc: "2.0"` and echoes the request `id`.
 
 **`create_conversation` is idempotent by identifier.** Calling it with an `id` that already exists returns `status: "exists"` rather than erroring or clobbering. Pass `reinit` to force a fresh start under the same id.
 
-**`chat` with `config_url` creates the conversation if it does not exist, and never returns `initial_message`.** Only `create_conversation` returns the greeting.
+**`chat` with `config_url` creates the conversation if it does not exist, and never returns `initial_message`.** `create_conversation` returns `initial_message` only when the agent speaks first, and none when `status` is `"exists"`.
 
-**`end_conversation` and `delete` are different.** Ending closes the conversation but leaves it readable via `chat_log`, and posts the summary to `post_prompt_url`. Deleting removes it: nothing is post-processed and no webhook fires.
+**`end_conversation` and `delete` are different.** Ending closes the conversation and posts the summary to `post_prompt_url` if configured; later calls on that ID return -32001. Deleting removes it: nothing is post-processed and no webhook fires.
 
 A conversation ID keeps only letters, digits, `_`, `-`, `.`, and `:`. Any other character is dropped with no error, so `rider~2` is stored as `rider2`. An ended conversation cannot be reopened. A later `chat` that passes `config_url` under that same ID starts a new conversation with no memory of the old one.
 
@@ -82,15 +82,20 @@ The agent is defined by the SWML at `config_url` — the same document that woul
 
 Check the HTTP status before the body.
 
-- **401** — credentials are wrong, or the token does not have the **Chat** permission.
+- **401** — credentials are wrong, or the token does not have the **Chat** permission. An unverified account also returns 401, with JSON `{"message": "Please validate a phone number to access your account."}`.
 - **400** — the body was not valid JSON.
+- **502** — the AI chat service timed out or could not be reached. The body is JSON with an `error` string, for example `AI chat service is unavailable`. This is not a JSON-RPC error and carries no code.
 
 Errors from AI chat itself come back as **HTTP 200** with an `error` object instead of `result`:
 
 - `-32001`, Conversation not found — the ID is not a live conversation (misspelled, ended, or idle past `conversation_timeout`).
-- `-32002`, Configuration error — SignalWire could not fetch the agent from `config_url`.
+- `-32002`, Configuration error — the `config_url` fetch failed: a status other than 200, or the request failed. Redirects are not followed.
+- `-32005` — too many `summarize` calls on this conversation, which allows one per minute.
+- `-32006` — the chat rate limit was exceeded.
+- `-32007` — another chat operation is already in progress for this conversation.
+- `-32008` — `config_url` was blocked or returned an invalid config: a private or unresolvable host, an empty body, or a response that is not a SWML document with an `ai` section.
 
-Other codes are listed at `/docs/apis/rest/ai-chat/chat-methods`.
+Code descriptions are at `/docs/apis/error-codes`.
 
 ## Python SDK
 
@@ -103,7 +108,7 @@ Two wrappers, so you do not have to hand-roll JSON-RPC:
 
 Use `ChatGateway` for anything a browser touches. Shipping project credentials to the client is the failure mode it exists to prevent.
 
-Localhost is always allowed, so the gateway runs locally with no origin list. Set `allowed_origins` to your production site origin. A copied publishable key still works from a script that omits the `Origin` header.
+Localhost is always allowed, so the gateway runs locally with no origin list. Set the origin allowlist to your production site origin (Python `allowed_origins`, TypeScript `allowedOrigins`). A copied publishable key still works from a script that omits the `Origin` header. Cap spend with `max_new_conversations` (TypeScript `maxNewConversations`, default 60 per minute) and `max_turns` (TypeScript `maxTurns`, default 200).
 
 ## Reading chat logs
 
@@ -123,9 +128,9 @@ Tool calls (`web_hook_url`) and the post-prompt summary (`post_prompt_url`) are 
 
 ## SMS and voice handoff
 
-An inbound message webhook can bridge SMS into AI chat: build a stable conversation ID from the sender (the guide uses `sms.` plus the number without `+`) and return messaging SWML whose `reply` is the agent's text. Guide: https://signalwire.com/docs/platform/ai/guides/chat
+An inbound message webhook can bridge SMS into AI chat: build a stable conversation ID from the sender (the guide uses `sms.` plus the number without `+`) and return messaging SWML whose `reply` is the agent's text. Guide: https://signalwire.com/docs/platform/ai/chat
 
-A page can move that chat onto a call with `HandoffRouter` mounted beside `ChatGateway`. The browser dials with the chat handle and a nonce in `userVariables`. That path ends the text leg when the call starts. Returning to text continues under a new ID, `<id>.1`.
+A page can move that chat onto a call with `HandoffRouter` mounted beside `ChatGateway`. The browser dials with the chat handle and a nonce in `userVariables`. That path ends the text leg when the call starts. Returning to text continues under a new ID. The default is `<id>.1`, then `<id>.2`, and so on. Pass `next_conversation_id` (TypeScript `nextConversationId`) to choose the next ID.
 
 ## Billing
 
