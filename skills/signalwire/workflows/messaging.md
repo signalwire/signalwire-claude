@@ -633,14 +633,11 @@ ngrok http 5000
 
 ## Campaign Registry Requirements
 
-**CRITICAL:** All A2P (Application-to-Person) messaging to US numbers requires registration.
+**CRITICAL:** Campaign Registry registration is required for A2P (Application-to-Person) messaging from 10DLC numbers to US numbers. Toll-free and short code traffic is not part of the Campaign Registry.
 
 ### Required For
 
-- Long codes (10-digit local numbers)
-- Toll-free numbers
-- Short codes
-- Any outbound SMS/MMS
+- Long codes (10-digit local numbers) sending to US numbers
 
 ### Registration Process
 
@@ -691,21 +688,29 @@ Campaign details:
 - Opt-in/opt-out processes
 
 ```python
-# Creating a campaign via API
+# Creating a campaign via API.
+# POST /api/relay/rest/registry/beta/brands/{id}/campaigns
+# Managed campaigns require these booleans; age_gated_content is true only for an alcohol campaign.
 response = requests.post(
-    f"{space_url}/api/messaging/campaigns",
+    f"{space_url}/api/relay/rest/registry/beta/brands/{brand_id}/campaigns",
     auth=HTTPBasicAuth(project_id, api_token),
     json={
+        "name": "Appointment reminders",
         "brand_id": brand_id,
-        "use_case": "appointment_reminders",
-        "description": "Automated appointment confirmation and reminder messages",
-        "sample_messages": [
-            "Hi {name}, your appointment is confirmed for {date} at {time}. Reply STOP to opt out.",
-            "Reminder: You have an appointment tomorrow at {time}. Reply C to confirm or R to reschedule."
-        ],
-        "message_volume": "1000",
-        "opt_in_workflow": "Customers opt-in during account creation",
-        "opt_out_keywords": ["STOP", "UNSUBSCRIBE", "CANCEL"]
+        "sms_use_case": "CUSTOMER_CARE",
+        "description": "Automated appointment confirmation and reminder messages for patients who opted in.",
+        "sample1": "Hi {name}, your appointment is confirmed for {date} at {time}. Reply STOP to opt out.",
+        "sample2": "Reminder: You have an appointment tomorrow at {time}. Reply C to confirm or R to reschedule.",
+        "message_flow": "Patients opt in during account creation. The office then sends appointment confirmations and reminders.",
+        "opt_out_message": "You have successfully been opted out. Reply START to opt back in at any time.",
+        "help_message": "For help, contact the office that signed you up. Reply STOP to unsubscribe.",
+        "number_pooling_required": False,
+        "direct_lending": False,
+        "embedded_link": False,
+        "embedded_phone": False,
+        "age_gated_content": False,
+        "lead_generation": False,
+        "terms_and_conditions": True
     }
 )
 
