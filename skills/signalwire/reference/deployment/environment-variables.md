@@ -10,14 +10,14 @@ Required for SignalWire platform features (Fabric API, calling, SMS).
 |----------|-------------|
 | `SIGNALWIRE_SPACE_NAME` | Your SignalWire space (e.g., `myspace.signalwire.com` or just `myspace`) |
 | `SIGNALWIRE_PROJECT_ID` | Project ID from SignalWire dashboard |
-| `SIGNALWIRE_TOKEN` | API token from the SignalWire dashboard. Opaque: new project tokens begin with `swapi_`; older `PT` tokens still work. Don't parse the value or assume a length. |
+| `SIGNALWIRE_API_TOKEN` | API token from the SignalWire dashboard. Opaque: new project tokens begin with `swapi_`; older `PT` tokens still work. Don't parse the value or assume a length. |
 
 **Example:**
 
 ```bash
 export SIGNALWIRE_SPACE_NAME="myspace"
 export SIGNALWIRE_PROJECT_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-export SIGNALWIRE_TOKEN="swapi_0123456789ab0123456789ab0123456789ab"
+export SIGNALWIRE_API_TOKEN="swapi_0123456789ab0123456789ab0123456789ab"
 ```
 
 ## Server Configuration
@@ -161,7 +161,7 @@ Example `.env` file for local development:
 # SignalWire credentials
 SIGNALWIRE_SPACE_NAME=myspace
 SIGNALWIRE_PROJECT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-SIGNALWIRE_TOKEN=swapi_0123456789ab0123456789ab0123456789ab
+SIGNALWIRE_API_TOKEN=swapi_0123456789ab0123456789ab0123456789ab
 
 # Proxy URL (use ngrok for local dev)
 SWML_PROXY_URL_BASE=https://abc123.ngrok.io
@@ -201,7 +201,7 @@ Recommended production settings:
 # Core credentials
 SIGNALWIRE_SPACE_NAME=production-space
 SIGNALWIRE_PROJECT_ID=prod-project-id
-SIGNALWIRE_TOKEN=prod-token
+SIGNALWIRE_API_TOKEN=prod-token
 
 # Production URL
 SWML_PROXY_URL_BASE=https://agent.mycompany.com
@@ -231,7 +231,7 @@ services:
     environment:
       - SIGNALWIRE_SPACE_NAME=${SIGNALWIRE_SPACE_NAME}
       - SIGNALWIRE_PROJECT_ID=${SIGNALWIRE_PROJECT_ID}
-      - SIGNALWIRE_TOKEN=${SIGNALWIRE_TOKEN}
+      - SIGNALWIRE_API_TOKEN=${SIGNALWIRE_API_TOKEN}
       - SWML_PROXY_URL_BASE=${SWML_PROXY_URL_BASE}
       - SWML_BASIC_AUTH_USER=${SWML_BASIC_AUTH_USER}
       - SWML_BASIC_AUTH_PASSWORD=${SWML_BASIC_AUTH_PASSWORD}
@@ -262,7 +262,7 @@ import os
 required_vars = [
     "SIGNALWIRE_SPACE_NAME",
     "SIGNALWIRE_PROJECT_ID",
-    "SIGNALWIRE_TOKEN",
+    "SIGNALWIRE_API_TOKEN",
     "SWML_PROXY_URL_BASE"
 ]
 

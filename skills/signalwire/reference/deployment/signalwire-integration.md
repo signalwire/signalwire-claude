@@ -231,13 +231,20 @@ curl -X POST "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/relay/rest/pho
   -d '{"number": "+12065551234"}'
 ```
 
-The Server SDK imports `RestClient` from `signalwire.rest` and passes the same parameter name:
+Python and TypeScript Server SDKs pass the same parameter name. `RestClient()` reads `SIGNALWIRE_PROJECT_ID`, `SIGNALWIRE_API_TOKEN`, and `SIGNALWIRE_SPACE` (the full hostname, such as `myspace.signalwire.com`).
 
 ```python
 from signalwire.rest import RestClient
 
 client = RestClient()  # SIGNALWIRE_PROJECT_ID, SIGNALWIRE_API_TOKEN, SIGNALWIRE_SPACE
 available = client.phone_numbers.search(areacode="512")
+```
+
+```typescript
+import { RestClient } from '@signalwire/sdk';
+
+const client = new RestClient(); // SIGNALWIRE_PROJECT_ID, SIGNALWIRE_API_TOKEN, SIGNALWIRE_SPACE
+const available = await client.phoneNumbers.search({ areacode: '512' });
 ```
 
 ### Routing to Your Agent
