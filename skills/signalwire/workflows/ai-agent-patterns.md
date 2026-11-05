@@ -10,25 +10,24 @@ Four layers of control. Only the first one depends on the model cooperating:
 |-------|-----------|
 | Guidance | Prompts and tool descriptions. Probabilistic. |
 | Tool scope | Each step lists its own tools. A tool that is not offered cannot be called. |
-| Transition scope | `set_valid_steps([])` and `set_valid_contexts([])`. The model has nowhere to go on its own. |
+| Transition scope | `set_valid_steps([])` removes `next_step`. Leave `set_valid_contexts` unset so `change_context` is not offered; an empty list still offers it. |
 | Execution authority | The handler checks real state, then commits. The model can ask. Code decides. |
 
 ```python
 def scoped(step, text, tools):
-    """Task, tools, and no way for the model to leave on its own."""
+    """Task and tools. The model cannot change step on its own."""
     return (step.set_text(text)
-            .set_functions(tools)          # [] means no tools
-            .set_valid_steps([])
-            .set_valid_contexts([]))
+            .set_functions(tools)          # [] means no user tools
+            .set_valid_steps([]))
 ```
 
 The only way out of a step is a handler that has checked state and then returns `swml_change_step()` or `swml_change_context()`.
 
-Keep truth in a system of record keyed by `call_id`. A confirm takes the revision number of the proposal the caller just heard: a repeat with that revision returns the same record, and a stale revision is refused. Tool handlers receive `(self, args, raw_data)`, and `self` is shared across calls, so writing per-call facts to it leaks one caller into the next call. Read per-call facts from `raw_data` or your store. Per-request agent configuration goes in an `add_per_call_config()` callback, which gets its own copy of the agent.
+Keep truth in a system of record keyed by `call_id`. A confirm takes the revision number of the proposal the caller just heard: a repeat with that revision returns the same record, and a stale revision is refused. Tool handlers receive `(self, args, raw_data)`, and `self` is shared across calls, so writing per-call facts to it leaks one caller into the next call. Read per-call facts from `raw_data` or your store. Per-request agent configuration goes in an `add_per_call_config()` callback. That callback gets its own copy of the SDK-managed configuration. Subclass attributes are shared, so assign new values rather than mutating them.
 
-`params.static_greeting` speaks a fixed disclosure, word for word, before the model says anything. Set `params.static_greeting_no_barge` when the caller must not talk over it. Do not leave a required disclosure to the prompt.
+`params.static_greeting` speaks a fixed disclosure, word for word, before the model says anything. It repeats on every turn until the caller first speaks, including attention timeouts, so a required disclosure can play more than once. Set `params.static_greeting_no_barge` when the caller must not talk over it. Do not leave a required disclosure to the prompt.
 
-`say()` is an action, so it finishes before the next action. Put it before `connect()` or `hangup()`. A transfer notice or goodbye left to the model's reply races the action and gets cut off.
+`say()` is an action, so it finishes before the next action. Without `post_process`, actions run immediately, so a notice left to the model can be cut off: `say()` first. With `post_process=True`, let the model speak. Use one, not both. `connect(final=True)` runs inline when the call is not from RELAY.
 
 ```python
 return (
@@ -41,7 +40,7 @@ return (
 )
 ```
 
-The same order ends a call: `say()` the goodbye, then `hangup()`.
+The same `say()` order ends a call when you are not using `post_process`. The goodbye pattern below lets the model speak, then hangs up.
 
 ## Seams
 
