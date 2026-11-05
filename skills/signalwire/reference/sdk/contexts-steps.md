@@ -71,7 +71,7 @@ class SurveyAgent(AgentBase):
         # Step 4: Completion
         complete = ctx.add_step("complete")
         complete.set_text("Thank the user and summarize the information collected.")
-        complete.set_functions("none")  # No functions at this step
+        complete.set_functions([])  # No user tools at this step
 ```
 
 ### Multiple Contexts (Complex Workflows)
@@ -157,7 +157,7 @@ step.add_bullets("Requirements", [
 
 ### set_step_criteria()
 
-Define when this step is considered complete.
+Define when this step is considered complete. This guides the model. It is not a hard gate. Check anything that must be true in your code.
 
 ```python
 step.set_step_criteria("User provides and confirms their email address")
@@ -167,12 +167,14 @@ step.set_step_criteria("User provides and confirms their email address")
 
 Restrict which functions are available in this step.
 
+Set `functions` on every step. Pass `[]` (or `"none"`) when the step should have no user tools. Internal tools such as `next_step` and `gather_submit` remain. A step that omits the list keeps the previous step's tools.
+
 ```python
 # Specific functions only
 step.set_functions(["save_name", "validate_email"])
 
-# No functions
-step.set_functions("none")
+# No user tools. Omitting this call keeps the previous step's tools.
+step.set_functions([])
 ```
 
 ### set_valid_steps()
@@ -180,14 +182,14 @@ step.set_functions("none")
 Define which steps can be navigated to from this step.
 
 ```python
-# Only sequential navigation
+# Only sequential navigation. Leaving set_valid_steps() unset is this same enum, ["next"], not every step.
 step.set_valid_steps(["next"])
 
 # Specific steps
 step.set_valid_steps(["confirm", "retry", "cancel"])
 
-# Any step (no restriction)
-# Don't call set_valid_steps()
+# No step change. An empty list removes next_step.
+step.set_valid_steps([])
 ```
 
 ### set_valid_contexts()
@@ -359,7 +361,7 @@ class AppointmentScheduler(AgentBase):
         greeting.add_section("Task", "Welcome the caller and offer to help schedule an appointment.")
         greeting.set_step_criteria("Caller confirms they want to schedule an appointment")
         greeting.set_valid_steps(["next"])
-        greeting.set_functions("none")
+        greeting.set_functions([])
 
         # Step 2: Get service type
         service = ctx.add_step("get_service")
@@ -406,7 +408,7 @@ class AppointmentScheduler(AgentBase):
             "Thank the caller and provide any final instructions. "
             "Remind them of the appointment time."
         )
-        complete.set_functions("none")
+        complete.set_functions([])
 
     @AgentBase.tool(
         name="set_appointment_type",

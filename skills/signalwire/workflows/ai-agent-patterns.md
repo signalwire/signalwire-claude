@@ -2,6 +2,54 @@
 
 Frequently used patterns for SignalWire AI Agents.
 
+## Code Runs the Agent
+
+Four layers of control. Only the first one depends on the model cooperating:
+
+| Layer | Mechanism |
+|-------|-----------|
+| Guidance | Prompts and tool descriptions. Probabilistic. |
+| Tool scope | Each step lists its own tools. A tool that is not offered cannot be called. |
+| Transition scope | `set_valid_steps([])` removes `next_step`. Leave `set_valid_contexts` unset so `change_context` is not offered; an empty list still offers it. |
+| Execution authority | The handler checks real state, then commits. The model can ask. Code decides. |
+
+```python
+def scoped(step, text, tools):
+    """Task and tools. The model cannot change step on its own."""
+    return (step.set_text(text)
+            .set_functions(tools)          # [] means no user tools
+            .set_valid_steps([]))
+```
+
+The only way out of a step is a handler that has checked state and then returns `swml_change_step()` or `swml_change_context()`.
+
+Keep truth in a system of record keyed by `call_id`. A confirm takes the revision number of the proposal the caller just heard: a repeat with that revision returns the same record, and a stale revision is refused. Tool handlers receive `(self, args, raw_data)`, and `self` is shared across calls, so writing per-call facts to it leaks one caller into the next call. Read per-call facts from `raw_data` or your store. Per-request agent configuration goes in an `add_per_call_config()` callback. That callback gets its own copy of the SDK-managed configuration. Subclass attributes are shared, so assign new values rather than mutating them.
+
+`params.static_greeting` speaks a fixed disclosure, word for word, before the model says anything. It repeats on every turn until the caller first speaks, including attention timeouts, so a required disclosure can play more than once. Set `params.static_greeting_no_barge` when the caller must not talk over it. Do not leave a required disclosure to the prompt.
+
+`say()` is an action, so it finishes before the next action. Without `post_process`, actions run immediately, so a notice left to the model can be cut off: `say()` first. With `post_process=True`, let the model speak. Use one, not both. `connect(final=True)` runs inline when the call is not from RELAY.
+
+```python
+return (
+    FunctionResult(
+        tool_result="The call is being transferred.",
+        tool_prompt="Say nothing more; the notice is playing.",
+    )
+    .say("I'll connect you now.")
+    .connect(host_number, final=True)
+)
+```
+
+The same `say()` order ends a call when you are not using `post_process`. The goodbye pattern below lets the model speak, then hangs up.
+
+## Seams
+
+Every boundary in the call (recognition, the model, synthesis, a lookup, a handoff) adds latency and a place to fail. Three habits:
+
+- Prefetch lookups when the call arrives, before anyone is waiting on the answer.
+- Carry what the caller already said across a handoff, so they don't repeat it.
+- Write the failure behavior on purpose: say what happened and what the caller can do next. Otherwise a broken step is silence or a confident wrong answer.
+
 ## Data Lookup Pattern
 
 Look up information and respond conversationally:
