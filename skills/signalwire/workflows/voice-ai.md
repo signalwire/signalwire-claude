@@ -157,7 +157,7 @@ If the agent interrupts callers or leaves dead air, that is the knob — see [Tu
 
 ### Multi-Language Support
 
-Add multiple languages for automatic detection:
+Add multiple languages for the model to choose from:
 
 ```yaml
 - ai:
@@ -171,7 +171,7 @@ Add multiple languages for automatic detection:
         voice: "rime.spore"
 ```
 
-The AI automatically detects and responds in the caller's language.
+The model chooses which of these languages to answer in.
 
 ### Multilingual — switching language mid-call
 
@@ -179,7 +179,7 @@ The AI automatically detects and responds in the caller's language.
 
 **They are mutually exclusive.** Per the docs: *"`multilingual` and `languages` are mutually exclusive. If both are set, SignalWire uses `multilingual` and ignores `languages` entirely."* Setting both does not merge them and does not error — `languages` is simply dropped. This is the first thing people get wrong.
 
-**Recognition hints are not used in code-switching mode.** One `ai.hints` list covers every language the agent uses; there are no per-language hints. When `multilingual` is set, or a `languages` entry's `code` is `multi` on Deepgram speech recognition, string entries and `hint` values are not used, and no error is returned. Rewrite rules (`pattern`/`replace`) still apply to the transcript in every mode. A Google speech engine treats `multi` as an ordinary language code.
+**Recognition hints are not passed when Deepgram runs in code-switching mode.** One `ai.hints` list covers every language the agent uses; there are no per-language hints. When speech recognition runs Deepgram in code-switching mode (`multilingual` with its default Deepgram recognizer, or a `languages` entry whose `code` is `multi`), string hints and `hint` values are not passed to speech recognition, and no error is returned. For a `languages` entry, hints are dropped only while that entry is active, and only when `multi` is the first code. `code: ["en-US", "multi"]` keeps hints. Pattern/replace rules still apply to the transcript in every mode. A Google speech engine treats `multi` as an ordinary language code.
 
 Docs: `/docs/swml/reference/calling/ai/multilingual`
 
