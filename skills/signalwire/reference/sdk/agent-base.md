@@ -156,7 +156,7 @@ def define_tool(
     handler: Callable,
     parameters: dict = None,
     secure: bool = False,
-    fillers: List[str] = None,
+    fillers: dict[str, list[str]] = None,
     wait_file: str = None,
     wait_file_loops: int = None
 ) -> 'AgentBase'
@@ -168,7 +168,7 @@ def define_tool(
 - `handler` - Callable with signature `(args, raw_data) -> FunctionResult`
 - `parameters` - JSON Schema for function parameters
 - `secure` - Require token validation
-- `fillers` - Phrases to say while processing
+- `fillers` - Per-language phrases to say while processing, `{"en-US": ["..."]}`
 - `wait_file` - Audio file URL to play while processing
 - `wait_file_loops` - Number of times to loop wait_file
 
@@ -185,7 +185,7 @@ self.define_tool(
         }
     },
     handler=self.handle_get_balance,
-    fillers=["Let me check that for you", "One moment please"]
+    fillers={"en-US": ["Let me check that for you", "One moment please"]}
 )
 ```
 
@@ -199,7 +199,7 @@ Declarative function definition.
     description: str = None,    # Required
     parameters: dict = None,    # JSON Schema
     secure: bool = False,
-    fillers: List[str] = None,
+    fillers: dict[str, list[str]] = None,
     wait_file: str = None,
     wait_file_loops: int = None
 )
@@ -678,7 +678,7 @@ class CustomerServiceAgent(AgentBase):
                 "description": "The order number to look up"
             }
         },
-        fillers=["Let me look that up", "One moment please"]
+        fillers={"en-US": ["Let me look that up", "One moment please"]}
     )
     def lookup_order(self, args, raw_data):
         order_num = args.get("order_number")
