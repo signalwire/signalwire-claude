@@ -367,7 +367,7 @@ Docs: https://signalwire.com/docs/swml/reference/calling/stream and `/stop-strea
 | `track` | string, `inbound_track` | `inbound_track` (what the caller says), `outbound_track` (what the caller hears), `both_tracks` |
 | `codec` | string, `PCMU` | `PCMU` (8 kHz G.711 µ-law), `L16@16000h` (16-bit linear PCM at 16 kHz), `L16@24000h` (16-bit linear PCM at 24 kHz). Use `L16@16000h` or `L16@24000h` when the speech model expects linear PCM; always include the rate, otherwise it may be rejected. A bare `L16` is 8 kHz. A stream can't carry more detail than the call, so streaming an 8 kHz call at 16 kHz only resamples. If SignalWire doesn't accept the codec, the stream doesn't start |
 | `status_url` | string | URL for `calling.call.stream` status events (`params.state`: `streaming`, `finished`) |
-| `status_url_method` | string, `POST` | `GET` or `POST` |
+| `status_url_method` | string, `POST` | `GET` or `POST`. Has no effect: status events are always POST |
 | `authorization_bearer_token` | string | Bearer token sent in the `Authorization` header on WebSocket connect |
 | `custom_parameters` | object | Key-value pairs included in the first WebSocket message |
 
