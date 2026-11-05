@@ -431,7 +431,7 @@ call.on('ended', (call) => {
 
 ### Listing Active Calls (REST)
 
-To enumerate live calls — for example, a cleanup job that ends stale calls — use the **Voice Logs API**. The logs include calls handled by cXML, SWML, and the Calling API. The Compatibility API's `GET /Calls` does NOT return SWML/AI call data.
+To enumerate live calls — for example, a cleanup job that ends stale calls — use the **Voice Logs API**. The logs are historical voice activity — calls handled by cXML, SWML, and the Calling API — for usage reporting, billing review, and troubleshooting, not live call control. Finding calls still in progress there is observed behavior. The Compatibility API's `GET /Calls` does NOT return SWML/AI call data.
 
 ```
 GET https://{space}.signalwire.com/api/voice/logs
@@ -476,9 +476,9 @@ for log in stale:
     )
 ```
 
-Compatibility entries (`type: laml_call`) carry audio quality stats as top-level fields, each `null` when the call has no measurement for it. `audio_in_mos` is a decimal string from about 1 to 4.5; 4.5 means no lost or late packets. `audio_rtt_avg`, `audio_rtt_min`, and `audio_rtt_max` are milliseconds, in steps of 10. Inbound jitter (`audio_in_jitter_min`, `audio_in_jitter_max`) is milliseconds squared; outbound jitter (`audio_out_jitter_min`, `audio_out_jitter_max`, `audio_out_jitter_avg`) is milliseconds. Entries also include packet counts and `audio_out_lost` (outbound packets lost). `audio_out_packet_count` is not populated (always `null`); use `audio_out_media_packet_count`. `audio_in_largest_jb_size` is not populated (always `0` when the call has quality statistics).
+Compatibility entries (`type: laml_call`) carry audio quality stats as top-level fields, each `null` when the call has no measurement for it. `audio_in_mos` is a decimal string from about 1 to 4.5. 4.5 is the best score. A call that received no audio also scores 4.5, so check `audio_in_media_packet_count` too. `audio_rtt_avg`, `audio_rtt_min`, and `audio_rtt_max` are milliseconds, in steps of 10. Inbound jitter (`audio_in_jitter_min`, `audio_in_jitter_max`) is milliseconds squared; outbound jitter (`audio_out_jitter_min`, `audio_out_jitter_max`, `audio_out_jitter_avg`) is milliseconds. Entries also include packet counts and `audio_out_lost` (outbound packets lost). `audio_out_packet_count` is not populated (always `null`); use `audio_out_media_packet_count`. `audio_in_largest_jb_size` is not populated (always `0` when the call has quality statistics).
 
-Relay entries (`relay_pstn_call`, `relay_sip_call`, `relay_webrtc_call`) carry a `qos_metrics` object with only the measured stats, or `null` when the call has no quality measurement. Use these when troubleshooting audio quality.
+Relay entries (`relay_pstn_call`, `relay_sip_call`, `relay_webrtc_call`) carry a `qos_metrics` object with only the measured stats, or `null` when the call has no quality measurement. It never includes `audio_in_mos` (kept in its own column), and its keys differ from the Compatibility field names. Use these on completed calls when troubleshooting audio quality; stats for calls still in progress may be `null`.
 
 ## Common Call States
 
