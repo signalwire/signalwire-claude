@@ -197,7 +197,7 @@ The AI can reference this data in subsequent turns.
 
 Enable or disable functions dynamically.
 
-`toggle_functions` is an array of `{function, active}` objects. `active` defaults to `true`.
+`toggle_functions` is an array of `{function, active}` objects. `active` defaults to `true`. It only changes functions that share the caller's `meta_data_token`.
 
 ```python
 .add_action("toggle_functions", [

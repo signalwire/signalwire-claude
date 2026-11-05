@@ -193,9 +193,10 @@ class BankingAgent(AgentBase):
                 "Identity verified. How can I help you today?"
             )
             .add_action("set_global_data", {"verified": True})
-            .add_action("toggle_functions", {
-                "active": ["get_balance", "transfer_funds"]
-            }))
+            .add_action("toggle_functions", [
+                {"function": "get_balance", "active": True},
+                {"function": "transfer_funds", "active": True},
+            ]))
         else:
             return (FunctionResult(
                 f"That PIN doesn't match. You have {2 - attempts} attempts left."

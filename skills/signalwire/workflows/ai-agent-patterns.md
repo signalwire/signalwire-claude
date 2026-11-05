@@ -153,9 +153,11 @@ class SecureAgent(AgentBase):
                 "Identity verified. How can I help you today?"
             )
             .add_action("set_global_data", {"verified": True})
-            .add_action("toggle_functions", {
-                "active": ["get_balance", "transfer_funds", "recent_transactions"]
-            }))
+            .add_action("toggle_functions", [
+                {"function": "get_balance", "active": True},
+                {"function": "transfer_funds", "active": True},
+                {"function": "recent_transactions", "active": True},
+            ]))
         else:
             return FunctionResult(
                 "That PIN doesn't match our records. Please try again."
