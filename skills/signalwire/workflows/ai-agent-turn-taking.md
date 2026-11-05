@@ -11,7 +11,7 @@ Two independent layers:
 **FIRE** — "the turn looks done, commit it." Two signals are fused:
 
 - the recognizer's sentence-terminal punctuation, and
-- a local Smart Turn v3 acoustic model that reads prosody.
+- a local acoustic model that reads prosody.
 
 Plain silence detection (voice activity detection, or VAD) is the fallback when fusion does not fire.
 
@@ -83,18 +83,9 @@ Diagnosing from symptoms:
 
 ## Choosing a Recognizer
 
-`params.provider` selects the ASR backend:
+`params.provider` selects the ASR backend. Leave it unset to keep the default backend.
 
-| Value | Notes |
-|-------|-------|
-| `deepgram` | Default |
-| `grok` | |
-| `gladia` | |
-| `pulse` | |
-
-`params.openai_asr_engine` selects the Deepgram model. Documented default `deepgram:nova-3`.
-
-Per-agent credential overrides exist for bring-your-own-key setups: `deepgram_key_override` and `deepgram_url_override`. *(Not on the docs site.)*
+`params.openai_asr_engine` selects the ASR engine and model. Documented default `deepgram:nova-3`. Common documented values include `deepgram:nova-2` and `deepgram:nova-3`.
 
 ## What Not to Promise
 
