@@ -70,7 +70,7 @@ class CustomerServiceAgent(AgentBase):
                 },
                 "required": ["order_number"]
             },
-            fillers=["Let me check that order for you", "One moment please"]
+            fillers={"en-US": ["Let me check that order for you", "One moment please"]}
         )
         def lookup_order(args, raw_data):
             order_num = args.get("order_number", "")

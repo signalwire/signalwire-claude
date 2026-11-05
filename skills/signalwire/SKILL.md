@@ -145,6 +145,8 @@ See [Voice AI workflow](workflows/voice-ai.md) "When to Pull Additional Document
 
 **Building AI voice agent?** → [Voice AI](workflows/voice-ai.md)
 
+**Answer needs a slow reasoning model?** → [Slow reasoning behind a tool](workflows/ai-agent-patterns.md#slow-reasoning-behind-a-tool)
+
 **Agent interrupts callers, or leaves dead air?** → [Turn Taking](workflows/ai-agent-turn-taking.md)
 
 **Coaching a live human agent with AI?** → [AI Sidecar](workflows/ai-sidecar.md)

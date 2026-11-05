@@ -290,7 +290,7 @@ curl -u user:password https://your-agent.com/agent
     name="slow_operation",
     description="Perform slow operation",
     parameters={},
-    fillers=["Let me check that for you", "One moment please"]
+    fillers={"en-US": ["Let me check that for you", "One moment please"]}
 )
 def slow_operation(self, args, raw_data):
     # Long operation

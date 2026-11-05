@@ -298,7 +298,7 @@ from concurrent.futures import TimeoutError
     parameters={
         "query": {"type": "string", "description": "Search query"}
     },
-    fillers=["Let me search our systems", "This might take a moment"]
+    fillers={"en-US": ["Let me search our systems", "This might take a moment"]}
 )
 def complex_search(self, args, raw_data):
     query = args.get("query")
