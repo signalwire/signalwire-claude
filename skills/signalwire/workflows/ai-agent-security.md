@@ -336,13 +336,26 @@ def send_confirmation(self, args, raw_data):
 
 ### Collect Cards Outside the Model
 
-The model decides it is time to pay. It never hears the card. Tell the prompt not to ask for card details, and to stop a caller who starts reading a number out loud and send them to the keypad. Your pricing handler computes the amount and stores it with `FunctionResult.set_metadata()`. The payment function reads that amount from `raw_data["meta_data"]`. It does not take `card_number` or `amount` from the model.
+The model decides it is time to pay. `pay` keeps the digits out of the model's context. A number spoken before the handoff is still heard, so move to the pay step at the start of the payment turn rather than relying on the prompt. Your pricing handler computes the amount and stores it with `FunctionResult.set_metadata()`. The payment function reads that amount from `raw_data["meta_data"]`. It does not take `card_number` or `amount` from the model.
 
-Metadata is scoped to a function's `meta_data_token`, so give the pricing and payment functions the same token; otherwise the payment function sees an empty `meta_data`.
+Metadata is scoped to a function's `meta_data_token`. The SDK mints a distinct URL token per function, so give the pricing and payment functions the same token; otherwise the payment function sees an empty `meta_data`.
 
-`post_process=True` speaks the handoff line first. `.pay()` then runs SWML `pay`. When it finishes, the agent reads `ai_response`, fills in `${pay_result}`, and replies. Running SWML from a function is allowed by default; if `swaig_allow_swml` is off, the `pay` step is skipped.
+`post_process=True` lets the model speak the handoff before the SWML runs. Run `pay`, then `set` `ai_response`. `set` expands `${...}` when it runs, so `${pay_result}` is already filled when the model reads the stored text. Do not pass that template through `.pay(ai_response=)`: the helper writes `set` before `pay`, and the model then sees an empty status, or a stale one from an earlier `pay` on the same call. Running SWML from a function is allowed by default; if `swaig_allow_swml` is off, the `pay` step is skipped.
 
 ```python
+@AgentBase.tool(
+    name="price_order",
+    description="Price the order from your catalog. Do not take an amount from the caller.",
+    parameters={},
+    meta_data_token="order",
+)
+def price_order(self, args, raw_data):
+    total = "25.00"  # computed here, never taken from the model
+    return FunctionResult("The total is ready.").set_metadata({
+        "order_total": total,
+        "order_id": "ord_123",
+    })
+
 @AgentBase.tool(
     name="collect_payment",
     description="Hand the call to keypad card entry. Do not collect card numbers.",
@@ -356,26 +369,39 @@ def collect_payment(self, args, raw_data):
         return FunctionResult("Let's finish the order before we take payment.")
 
     return FunctionResult(
-        "You'll enter your card details using your phone's keypad.",
+        "Tell the caller to enter the card on the keypad. Do not ask for the number.",
         post_process=True,
-    ).pay(
-        payment_connector_url="https://payments.example.com/connector",
-        charge_amount=f"{float(total):.2f}",
-        description=f"Order {meta.get('order_id')}",
-        max_attempts=2,
-        security_code=True,
-        postal_code=True,
-        token_type="one-time",
-        ai_response=(
-            "The payment status is ${pay_result}. "
-            "If it is success, confirm the order and give a delivery estimate. "
-            "If not, apologize and offer to try again or pay another way. "
-            "Do not discuss card details."
-        ),
-    )
+    ).execute_swml({
+        "version": "1.0.0",
+        "sections": {
+            "main": [
+                {
+                    "pay": {
+                        "payment_connector_url": "https://payments.example.com/connector",
+                        "charge_amount": f"{float(total):.2f}",
+                        "description": f"Order {meta.get('order_id')}",
+                        "max_attempts": "2",
+                        "security_code": "true",
+                        "postal_code": "true",
+                        "token_type": "one-time",
+                    }
+                },
+                {
+                    "set": {
+                        "ai_response": (
+                            "The payment status is ${pay_result}. "
+                            "If it is success, confirm the order and give a delivery estimate. "
+                            "If not, apologize and offer to try again or pay another way. "
+                            "Do not discuss card details."
+                        )
+                    }
+                },
+            ]
+        },
+    })
 ```
 
-If you write the SWML `pay` by hand instead, `security_code` and `postal_code` must be strings (`"true"`); JSON booleans are rejected.
+In that `pay` object, `security_code` and `postal_code` must be strings (`"true"`); JSON booleans are rejected.
 
 Never put `${pay_payment_results}` in `ai_response`, a post-call summary, or a later function. The card number and CVV are masked there. The expiry and postal code are not, and the object stays on the call until it ends. `${pay_result}` is the status, which is all the model needs.
 
@@ -385,7 +411,7 @@ The same goes for your own logs: never log card numbers, CVVs, or other sensitiv
 
 Don't store sensitive info in global_data (it's visible in logs).
 
-Two tools in one turn start from the same `global_data` snapshot, taken at the start of the turn. The second write can overwrite the first. Keep anything both tools might update in your own store, keyed by `call_id`.
+Each tool receives a copy of `global_data` when it is called. `set_global_data` replaces a whole top-level key, so two tools that read and rewrite the same key lose one update. An increment such as `pin_attempts + 1` is that read-modify-write. Keep anything both tools might update in your own store, keyed by `call_id`.
 
 ```python
 # WRONG - sensitive data in global_data
@@ -534,6 +560,6 @@ def transfer(self, args, raw_data):
 - [ ] **Transfers**: Only allowed destinations
 - [ ] **HTTPS**: Production uses SSL/TLS
 - [ ] **Secure Functions**: Destructive operations marked secure
-- [ ] **Data Protection**: Minimal data in global_data. Two tools in one turn can overwrite each other's writes
-- [ ] **Cards**: Collected with `pay` on the keypad. The model receives `${pay_result}` only
+- [ ] **Data Protection**: Minimal data in global_data. `set_global_data` replaces a whole top-level key, so two tools that read and rewrite the same key lose one update
+- [ ] **Cards**: Digits never enter the conversation (DTMF); the model receives `${pay_result}`
 - [ ] **Semantic gates**: Irreversible SWAIG actions (cancel, refund, share account data, move money) sit behind a gate — one question, threshold `0.9` or higher. See [Semantic gates](ai-agent-functions.md#semantic-gates)
