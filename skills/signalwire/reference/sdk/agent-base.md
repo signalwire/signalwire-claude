@@ -354,7 +354,7 @@ def set_params(self, params: dict) -> 'AgentBase'
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `end_of_speech_timeout` | int | 700 | ms of audio silence to end turn — see [turn taking](../../workflows/ai-agent-turn-taking.md) |
-| `turn_detection` | str | `both` | `both`, `punct_only`, `acoustic_only`, `off`. Alias: `enable_turn_detection` |
+| `enable_turn_detection` | str \| bool | `both` | `both`, `punct_only`, `acoustic_only`, `off`. `true` is `both`; `false` is `off`. Also accepted as `turn_detection` |
 | `attention_timeout` | int | 5000 | ms before attention prompt. `0` disables; otherwise `1000`–`600000` |
 | `inactivity_timeout` | int | 600000 | ms before disconnect |
 | `barge_match_string` | str | None | Regex for interruption triggers |

@@ -82,8 +82,9 @@ sections:
   main:
     - answer: {}
     - ai:
-        prompt: "You are a banking assistant. Help customers check balances and transfer funds."
-        post_prompt_url: "https://example.com/swaig"
+        prompt:
+          text: "You are a banking assistant. Help customers check balances and transfer funds."
+        post_prompt_url: "https://example.com/summary"
         functions:
           - name: "check_balance"
             purpose: "Check the balance of a customer's account"
@@ -181,7 +182,7 @@ SWAIG:
         customer_id: "cust_123"           # fills {customer_id} in resource URIs; not ${} expansion
   functions:
     - function: getWeather
-      purpose: look up weather
+      description: look up weather
       web_hook_url: https://myapp.com/swaig
 ```
 
@@ -319,7 +320,7 @@ result.add_action("set_meta_data", {
 })
 ```
 
-**toggle_functions** - Array of `{function, active}`:
+**toggle_functions** - Array of `{function, active}`. It only changes functions that share the caller's `meta_data_token`:
 ```python
 result.add_action("toggle_functions", [
     {"function": "send_verification_code", "active": False},
@@ -531,7 +532,7 @@ playback_control = (DataMap("control_playback")
 )
 ```
 
-For advanced DataMap features (array processing, webhooks with fallbacks), see: [reference/sdk/datamap-advanced.md](../reference/sdk/datamap-advanced.md)
+For advanced DataMap features (array processing, webhooks with `.fallback_output()` in Python or `.fallbackOutput()` in TypeScript), see: [reference/sdk/datamap-advanced.md](../reference/sdk/datamap-advanced.md)
 
 ## Function Chaining
 
@@ -893,18 +894,16 @@ functions:
 - FAQ retrieval
 - Policy information
 
-### Context Switching Without Ending Session
+### End-of-call summary
 
-**Dynamic Context Switching** - SignalWire's unique capability:
+`post_prompt_url` is where the end-of-call summary report is POSTed. It is not a SWAIG function endpoint.
 
 ```yaml
 - ai:
-    prompt: "You are now a sales agent"
-    params:
-      post_prompt_url: "https://yourserver.com/context-switch"
+    prompt:
+      text: "You are now a sales agent"
+    post_prompt_url: "https://yourserver.com/summary"
 ```
-
-The agent can morph from one role to another without ending the session, reducing call legs and costs.
 
 ## Next Steps
 

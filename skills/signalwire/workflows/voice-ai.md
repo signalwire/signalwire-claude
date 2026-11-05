@@ -89,7 +89,8 @@ sections:
   main:
     - answer: {}
     - ai:
-        prompt: "You are a helpful customer service agent for Acme Corp. Answer questions about our products and services politely."
+        prompt:
+          text: "You are a helpful customer service agent for Acme Corp. Answer questions about our products and services politely."
         post_prompt_url: "https://example.com/summary"
         voice: "elevenlabs.mark"
 ```
@@ -105,8 +106,8 @@ sections:
 - **params.visual_input**: How many of the caller's newest video frames `get_visual_input` sends (`true` = 1, or 1–5). Default `1`
 - **params.video_blank_image**: HTTPS or HTTP URL of a PNG shown on a video call that has no avatar clips
 - **params.barge_functions**: `false` by default. When `false`, functions are not executed while the user is speaking
-- **params.tts_number_format**: `e164` (default), `international`, or `national`
-- **params.attention_timeout**: ms before the attention prompt. `0` disables; otherwise `1000`–`600000`. Default `5000`
+- **params.tts_number_format**: `e164` (default), `international`, `national`, or `generic`
+- **params.attention_timeout**: ms before the attention prompt. `0` disables; otherwise `1000`–`600000`. Default `5000`. A value below `end_of_speech_timeout` is raised to that timeout plus 1000 ms
 - **params.digit_timeout**: ms at the end of digit input. `1`–`29999`; any other value keeps the default `3000`
 - **params.hard_stop_time**: Max time the agent stays active, as `HH:MM:SS`, `MM:SS`, or a whole number of seconds. Unit suffixes such as `30m` are not converted (`30m` is 30 seconds)
 
@@ -114,7 +115,7 @@ These parameters are accepted and have no effect: `max_emotion`, `speech_timeout
 
 ### Voice Selection
 
-**Always declare the engine explicitly.** Voice specs take the form `<engine>.<voice>[:model]` — for example `elevenlabs.mark:eleven_turbo_v2_5`. The engine part is what keeps your agent's voice stable. A voice that cannot be resolved is substituted and reported once per call as a `relay_script_voice_unresolved` warning (`calling.script.warning`); the document keeps running.
+**Always declare the engine explicitly.** Voice specs take the form `<engine>.<voice>[:model]` — for example `elevenlabs.mark:eleven_turbo_v2_5`. The engine part is what keeps your agent's voice stable. A voice that cannot be resolved is substituted and reported once per call as a `relay_script_voice_unresolved` warning (`calling.script.warning`); the document keeps running. If the substitute voice also fails, the AI session ends.
 
 **The default changed twice in two months:**
 
