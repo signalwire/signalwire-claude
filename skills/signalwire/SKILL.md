@@ -1,6 +1,6 @@
 ---
 name: signalwire
-description: Use when building telephony, messaging, or video applications; implementing voice AI agents; adding real-time AI coaching or call observation (ai_sidecar) to live calls; working with SWML call flows; debugging webhook callbacks or call state issues; setting up real-time WebSocket communication; encountering authentication 401/403 errors; or troubleshooting SWAIG function errors - provides REST API patterns, SDK examples, and production-tested workflows for modern SignalWire communication systems
+description: Use when building telephony, messaging, or video applications; implementing voice AI agents; adding real-time AI coaching or call observation (ai_sidecar) to live calls; working with SWML call flows; debugging webhook callbacks or call state issues; setting up real-time WebSocket communication; encountering authentication 401/403 errors; gating a SWAIG function with a semantic gate; or troubleshooting SWAIG function errors - provides REST API patterns, SDK examples, and production-tested workflows for modern SignalWire communication systems
 ---
 
 # SignalWire
@@ -74,7 +74,7 @@ These insights come from analysis of 89 SignalWire training videos, LiveWire ses
 - [Outbound Calling](workflows/outbound-calling.md) | [Inbound Handling](workflows/inbound-call-handling.md) | [Call Control](workflows/call-control.md)
 
 **AI Voice Agents:** Start with [Voice AI](workflows/voice-ai.md) overview
-- **SDK:** [Basics](workflows/ai-agent-sdk-basics.md) | [Prompting](workflows/ai-agent-prompting.md) | [Functions](workflows/ai-agent-functions.md) | [Deployment](workflows/ai-agent-deployment.md)
+- **SDK:** [Basics](workflows/ai-agent-sdk-basics.md) | [Prompting](workflows/ai-agent-prompting.md) | [Functions](workflows/ai-agent-functions.md) (including [semantic gates](workflows/ai-agent-functions.md#semantic-gates)) | [Deployment](workflows/ai-agent-deployment.md)
 - **Conversation Feel:** [Turn Taking](workflows/ai-agent-turn-taking.md) - when the agent decides you stopped talking; fixes interrupting and dead air
 - **Text Chat:** [AI Agent Chat](workflows/ai-agent-chat.md) - reach the same agents by text over JSON-RPC
 - **AI Sidecar:** [Real-time agent coaching](workflows/ai-sidecar.md) - AI observer that coaches a human agent (never speaks on the call)
