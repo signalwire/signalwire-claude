@@ -1,6 +1,6 @@
 # AI Agent Turn Taking
 
-How an AI agent decides the caller has finished speaking. This governs whether the agent interrupts people or leaves dead air, and it is the first thing to reach for when an agent "feels wrong" on a call.
+How an AI agent decides the caller has finished speaking. This governs whether the agent interrupts people or leaves dead air, and it is the first thing to reach for when an agent "feels wrong" on a call. Callers cut the agent off, or backchannels stop it? [Interruptions (barge-in)](#interruptions-barge-in).
 
 `params.enable_turn_detection` (alias `turn_detection`) is a string or boolean. Values: `both` (default), `punct_only`, `acoustic_only`, `off`. `true` is `both`; `false` is `off`. Docs: https://signalwire.com/docs/swml/reference/calling/ai/params
 
@@ -92,6 +92,20 @@ Diagnosing from symptoms:
 The neural components of the veto panel depend on model bundles being present on the node handling the call. **When a bundle is absent, the corresponding veto silently never holds** rather than erroring.
 
 So describe veto behavior as what the platform does, not as a guarantee. Do not write an example whose correctness depends on a hold firing — an agent that only collects a phone number correctly because the digit hold caught the pause between groups is an agent that will sometimes fail. Validate the collected value and re-prompt.
+
+## Interruptions (barge-in)
+
+Barge-in is decided by the platform from the speech events, before the model sees anything, while playback is still going out. A prompt line like "if the user interrupts, stop talking" cannot stop that audio. Tune it with `ai` params, not the prompt. Set them on SWML `params`, with Python `set_params` or `set_param`, or with TypeScript `setParams`. The public params page omits or overstates several of these interactions.
+
+`barge_min_words` is the number of words that must be input before barge triggers. `barge_match_string` is a regex the transcript must match to barge. Setting it turns `transparent_barge` off, so the rollup and removal behavior in [Transparent Barge](ai-agent-prompting.md#transparent-barge) no longer applies. `acknowledge_interruptions` and `interrupt_prompt` only take effect in that mode. With both set, an utterance barges if it has at least `barge_min_words` words or matches the regex. To ignore short backchannels, set only `barge_min_words` (2 or more).
+
+`enable_barge` defaults to complete and partial. `false` disables barging. `barge_functions` defaults to false. While a function runs, barge is vetoed unless it is true, and enabling it declares that those functions are re-runnable.
+
+`interrupt_on_noise` (default off) stops playback after about one second of detected speech and skips `barge_min_words`, `barge_match_string` and `static_greeting_no_barge`. Leave it off if you rely on those. `end_of_speech_timeout` is the silence that ends the caller's utterance.
+
+`static_greeting_no_barge: true` stops speech from interrupting the static greeting; DTMF still does. Without it, any speech over a static greeting interrupts it, ignoring `barge_min_words` and `barge_match_string`. A greeting the model generates follows the normal barge filters.
+
+Cut in with one word, then three, then a full sentence. Talk over the greeting. Say "mm-hm" while the agent reads a list. Change one setting at a time and listen to the recordings.
 
 ## Latency Is a Sum
 
