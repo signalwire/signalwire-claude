@@ -108,7 +108,7 @@ All optional.
 | `verbose_utterances` | Include full ASR detail (word timings, alternatives) per utterance. Increases callback size. |
 | `speech_engine` | `deepgram` (default) or `google`. Turn-end detection is calibrated for Deepgram. |
 | `speech_timeout` | ms the recognizer waits before finalizing speech. Omitted or `0` uses `60000`. Range 0–600000. |
-| `vad_silence_ms` | Silence (ms) used to detect end of speech. Omitted or `0` uses `700` on Deepgram and `500` on Google. |
+| `vad_silence_ms` | Silence (ms) used to detect end of speech. Omitted or `0` uses the speech engine's default, `700` or `500`. |
 | `vad_thresh` | Speech-detection sensitivity. Omitted or `0` uses `400`. |
 | `transcribe_prompt` | Default prompt for `action.summarize` when that sets no `prompt`. Not sent to the recognizer; use `hints` for recognition terms. |
 

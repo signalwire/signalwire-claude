@@ -162,7 +162,7 @@ If the agent interrupts callers or leaves dead air, that is the knob — see [Tu
 
 ### Multi-Language Support
 
-`languages` is a fixed set: each entry has one voice. `code: multi` transcribes whichever language Deepgram supports, and only on Deepgram (a Google engine treats `multi` as an ordinary code). The agent still answers in that entry's single voice. Answering in the caller's language requires `ai.multilingual`.
+`languages` is a fixed set: each entry has one voice. `code: multi` turns on code-switching mode. Outside that mode, `multi` is an ordinary language code. The agent still answers in that entry's single voice. Answering in the caller's language requires `ai.multilingual`.
 
 ```yaml
 - ai:

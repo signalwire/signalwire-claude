@@ -191,7 +191,7 @@ class ReceptionistAgent(AgentBase):
 agent.add_language("English", "en-US", "rime.spore")
 
 # A second language is another fixed voice, not an answer in the caller's language.
-# Answering in the caller's language needs set_multilingual() in Python or setMultilingual() in TypeScript (ai.multilingual). code "multi" is Deepgram-only and still uses this entry's one voice.
+# Answering in the caller's language needs set_multilingual() in Python or setMultilingual() in TypeScript (ai.multilingual). code "multi" turns on code-switching mode and still uses this entry's one voice.
 agent.add_language("English", "en-US", "rime.spore")
 agent.add_language("Spanish", "es-MX", "rime.spore")
 
@@ -215,7 +215,7 @@ For complete voice configuration (fillers, pronunciation, hints), see: [referenc
 
 ### Multi-Language Support
 
-`add_language` builds `languages`: each entry is one voice. `code` `"multi"` works only with Deepgram and the agent still answers in that entry's voice. To answer in the caller's language, call `set_multilingual()` in Python or `setMultilingual()` in TypeScript (`ai.multilingual`, mutually exclusive with `languages`).
+`add_language` builds `languages`: each entry is one voice. `code` `"multi"` turns on code-switching mode, and the agent still answers in that entry's voice. Outside that mode, `multi` is an ordinary language code. To answer in the caller's language, call `set_multilingual()` in Python or `setMultilingual()` in TypeScript (`ai.multilingual`, mutually exclusive with `languages`).
 
 **Example:**
 
