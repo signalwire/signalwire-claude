@@ -26,7 +26,8 @@ All methods require registering your agent with SignalWire's Fabric platform.
 ```bash
 export SIGNALWIRE_SPACE_NAME="myspace"
 export SIGNALWIRE_PROJECT_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-export SIGNALWIRE_TOKEN="PTxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+export SIGNALWIRE_TOKEN="swapi_0123456789ab0123456789ab0123456789ab"
+# New project tokens begin with swapi_. Older PT tokens still work. Treat the value as opaque.
 ```
 
 ## Fabric API Integration
@@ -219,8 +220,8 @@ if __name__ == "__main__":
 ### Purchasing a Number
 
 ```bash
-# Search available numbers
-curl "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/relay/rest/phone_numbers/search?area_code=206" \
+# Search available numbers. The query parameter is areacode.
+curl "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/relay/rest/phone_numbers/search?areacode=206" \
   -u "${SIGNALWIRE_PROJECT_ID}:${SIGNALWIRE_TOKEN}"
 
 # Purchase a number
@@ -228,6 +229,22 @@ curl -X POST "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/relay/rest/pho
   -u "${SIGNALWIRE_PROJECT_ID}:${SIGNALWIRE_TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{"number": "+12065551234"}'
+```
+
+Python and TypeScript Server SDKs pass the same parameter name. `RestClient()` reads `SIGNALWIRE_PROJECT_ID`, `SIGNALWIRE_API_TOKEN`, and `SIGNALWIRE_SPACE` (the full hostname, such as `myspace.signalwire.com`).
+
+```python
+from signalwire.rest import RestClient
+
+client = RestClient()  # SIGNALWIRE_PROJECT_ID, SIGNALWIRE_API_TOKEN, SIGNALWIRE_SPACE
+available = client.phone_numbers.search(areacode="512")
+```
+
+```typescript
+import { RestClient } from '@signalwire/sdk';
+
+const client = new RestClient(); // SIGNALWIRE_PROJECT_ID, SIGNALWIRE_API_TOKEN, SIGNALWIRE_SPACE
+const available = await client.phoneNumbers.search({ areacode: '512' });
 ```
 
 ### Routing to Your Agent
