@@ -157,7 +157,7 @@ If the agent interrupts callers or leaves dead air, that is the knob — see [Tu
 
 ### Multi-Language Support
 
-Add multiple languages for automatic detection:
+Add multiple languages for the model to choose from:
 
 ```yaml
 - ai:
@@ -171,13 +171,15 @@ Add multiple languages for automatic detection:
         voice: "rime.spore"
 ```
 
-The AI automatically detects and responds in the caller's language.
+The model chooses which of these languages to answer in.
 
 ### Multilingual — switching language mid-call
 
 `languages` configures a **fixed set**. `multilingual` (shipped 2026-08-19) continuously detects the other party's language and switches TTS voice and language when it changes.
 
 **They are mutually exclusive.** Per the docs: *"`multilingual` and `languages` are mutually exclusive. If both are set, SignalWire uses `multilingual` and ignores `languages` entirely."* Setting both does not merge them and does not error — `languages` is simply dropped. This is the first thing people get wrong.
+
+**Recognition hints are not passed in code-switching mode.** One `ai.hints` list covers every language the agent uses; there are no per-language hints. When speech recognition runs in code-switching mode (`multilingual` with its default recognizer, or a `languages` entry whose `code` is `multi`), string hints and `hint` values are not passed to speech recognition, and no error is returned. For a `languages` entry, hints are dropped only while that entry is active, and only when `multi` is the first code. `code: ["en-US", "multi"]` keeps hints. Pattern/replace rules still apply to the transcript in every mode. Outside code-switching mode, `multi` is an ordinary language code.
 
 Docs: `/docs/swml/reference/calling/ai/multilingual`
 
