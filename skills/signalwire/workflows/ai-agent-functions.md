@@ -82,8 +82,9 @@ sections:
   main:
     - answer: {}
     - ai:
-        prompt: "You are a banking assistant. Help customers check balances and transfer funds."
-        post_prompt_url: "https://example.com/swaig"
+        prompt:
+          text: "You are a banking assistant. Help customers check balances and transfer funds."
+        post_prompt_url: "https://example.com/summary"
         functions:
           - name: "check_balance"
             purpose: "Check the balance of a customer's account"
@@ -175,22 +176,22 @@ SWAIG:
   mcp_servers:
     - url: https://mcp.example.com/tools
       headers:
-        Authorization: "Bearer ${global_data.token}"
+        Authorization: "Bearer <token>"   # sent as written; ${...} is not expanded
       resources: true
       resource_vars:
-        catalog: "resource://catalog"
+        customer_id: "cust_123"           # fills {customer_id} in resource URIs; not ${} expansion
   functions:
     - function: getWeather
-      purpose: look up weather
+      description: look up weather
       web_hook_url: https://myapp.com/swaig
 ```
 
 | Field | Type | Notes |
 |-------|------|-------|
 | `mcp_servers[].url` | string, required | |
-| `mcp_servers[].headers` | object | **Auth tokens go here — there is no separate auth field.** Values support variable expansion. |
+| `mcp_servers[].headers` | object | **Auth tokens go here — there is no separate auth field.** Values are sent as written; `${...}` is not expanded |
 | `mcp_servers[].resources` | boolean, default `false` | Fetch MCP resources in addition to tools |
-| `mcp_servers[].resource_vars` | object | Bind resources to variables |
+| `mcp_servers[].resource_vars` | object | Values for `{name}` placeholders in resource URIs. Used as written; a placeholder with no key is left as-is. Used only when `resources` is enabled |
 
 ### The trap: `SWAIG` must be an object
 
@@ -261,13 +262,15 @@ Return SWML actions from functions to control the call:
 ### Basic Response
 
 ```python
-return FunctionResult("The weather in Seattle is sunny and 72°F")
+return FunctionResult("Tell the caller the weather in Seattle is sunny and 72°F.")
 ```
+
+`response` is a prompt injected into the model's context, not text spoken verbatim. For exact words, use the `say` action.
 
 ### Response with Play Action
 
 ```python
-result = FunctionResult("Please hold while I transfer you")
+result = FunctionResult("Tell the caller to hold while you transfer them.")
 result.add_action("play", {"url": "https://example.com/hold-music.mp3"})
 return result
 ```
@@ -317,20 +320,21 @@ result.add_action("set_meta_data", {
 })
 ```
 
-**toggle_functions** - Enable/disable functions:
+**toggle_functions** - Array of `{function, active}`. It only changes functions that share the caller's `meta_data_token`:
 ```python
-# Disable after use
-result.add_action("toggle_functions", {
-    "active": False,
-    "functions": ["send_verification_code"]
-})
-
-# Enable functions
-result.add_action("toggle_functions", {
-    "active": True,
-    "functions": ["process_payment"]
-})
+result.add_action("toggle_functions", [
+    {"function": "send_verification_code", "active": False},
+    {"function": "process_payment", "active": True},
+])
 ```
+
+**settings** - Replaces the model's settings map for the rest of the conversation. Needs `params.swaig_allow_settings` (default `true`). Omitted keys return to the model default.
+
+**unset_global_data / unset_meta_data** - A key string, or an array of keys.
+
+**user_event** - Object sent to the client connected to the call.
+
+**transfer** - An object with `dest`, or a string that is shorthand for `transfer.dest`. A boolean is only the sibling of a `SWML` action.
 
 For complete action reference, see: [reference/sdk/function-result.md](../reference/sdk/function-result.md)
 
@@ -528,7 +532,7 @@ playback_control = (DataMap("control_playback")
 )
 ```
 
-For advanced DataMap features (array processing, webhooks with fallbacks), see: [reference/sdk/datamap-advanced.md](../reference/sdk/datamap-advanced.md)
+For advanced DataMap features (array processing, webhooks with `.fallback_output()` in Python or `.fallbackOutput()` in TypeScript), see: [reference/sdk/datamap-advanced.md](../reference/sdk/datamap-advanced.md)
 
 ## Function Chaining
 
@@ -553,10 +557,10 @@ def book_appointment(self, args, raw_data):
     # Return response and enable confirmation function
     return (FunctionResult(f"I've reserved {date} at {time} for you.")
         .add_action("set_meta_data", {"appointment_id": appointment_id})
-        .add_action("toggle_functions", {
-            "active": True,
-            "functions": ["confirm_appointment", "cancel_appointment"]
-        }))
+        .add_action("toggle_functions", [
+            {"function": "confirm_appointment", "active": True},
+            {"function": "cancel_appointment", "active": True},
+        ]))
 
 @AgentBase.tool(
     name="confirm_appointment",
@@ -571,10 +575,10 @@ def confirm_appointment(self, args, raw_data):
 
     # Disable both functions after confirmation
     return (FunctionResult("Your appointment is confirmed. You'll receive a reminder 24 hours before.")
-        .add_action("toggle_functions", {
-            "active": False,
-            "functions": ["confirm_appointment", "cancel_appointment"]
-        }))
+        .add_action("toggle_functions", [
+            {"function": "confirm_appointment", "active": False},
+            {"function": "cancel_appointment", "active": False},
+        ]))
 ```
 
 ## Common Function Patterns
@@ -601,14 +605,10 @@ def send_verification_code(self, args, raw_data):
 
     # Disable this function, enable verify function
     return (FunctionResult("I've sent a verification code to your phone.")
-        .add_action("toggle_functions", {
-            "active": False,
-            "functions": ["send_verification_code"]
-        })
-        .add_action("toggle_functions", {
-            "active": True,
-            "functions": ["verify_code"]
-        }))
+        .add_action("toggle_functions", [
+            {"function": "send_verification_code", "active": False},
+            {"function": "verify_code", "active": True},
+        ]))
 
 @AgentBase.tool(
     name="verify_code",
@@ -630,10 +630,9 @@ def verify_code(self, args, raw_data):
     if provided_code == stored_code:
         return (FunctionResult("Verification successful.")
             .add_action("set_meta_data", {"verified": True})
-            .add_action("toggle_functions", {
-                "active": False,
-                "functions": ["verify_code"]
-            }))
+            .add_action("toggle_functions", [
+                {"function": "verify_code", "active": False},
+            ]))
     else:
         return FunctionResult("That code is incorrect. Please try again.")
 ```
@@ -895,18 +894,81 @@ functions:
 - FAQ retrieval
 - Policy information
 
-### Context Switching Without Ending Session
+### End-of-call summary
 
-**Dynamic Context Switching** - SignalWire's unique capability:
+`post_prompt_url` is where the end-of-call summary report is POSTed. It is not a SWAIG function endpoint.
 
 ```yaml
 - ai:
-    prompt: "You are now a sales agent"
-    params:
-      post_prompt_url: "https://yourserver.com/context-switch"
+    prompt:
+      text: "You are now a sales agent"
+    post_prompt_url: "https://yourserver.com/summary"
 ```
 
-The agent can morph from one role to another without ending the session, reducing call legs and costs.
+## Semantic gates
+
+A semantic gate is a yes/no question checked before a SWAIG function runs. A function has 1–8 gates; all are checked at once. If any fails, the function does not run and the agent gets that gate's `on_fail` (the first failing gate in the list). A check that times out, or whose arguments aren't exactly one JSON object (missing, invalid JSON, trailing text, a repeated key, or a `\u0000` escape), also blocks the function. Each check the decision model answers is billed whether or not the function then runs; a check with video frames is billed as an image check.
+
+A gated function needs a `description` and a `web_hook_url` (its own or from `SWAIG.defaults`; a function from `includes` takes it from the `defaults` that include returns) or a `data_map`. If any gate is invalid, the function is left out of the agent even with `semantic_gates_enabled` set to `false`. A `calling.error` event with `error_reason` `invalid_semantic_gate` names the function and the reason. The Server SDKs check gates when the tool is defined and raise (Python raises `ValueError`) rather than send a function the platform would leave out. If the first definition of a name has no gates, a later gated definition is dropped and the function runs unchecked, with no `calling.error`. The first definition wins, and includes load before `SWAIG.functions`, so define each gated function once and put the gates in the include that returns it.
+
+Docs: https://signalwire.com/docs/platform/ai/semantic-gates and https://signalwire.com/docs/swml/reference/calling/ai/swaig/functions/gates
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `question` | yes | Yes/no, at most 8 KB. Name the input in backticks: `` `conversation` ``, `` `semantic_state` ``, `` `proposed_function` ``, `` `visual_input` ``. Ask one thing per question |
+| `threshold` | yes | Above 0 and at most 1. Use `0.9` or higher for an action that is hard to undo |
+| `on_fail` | yes | What the agent gets instead of the function result |
+| `id` | no | 1–64 letters, digits, or underscores, unique on the function. Default ids count, so `gate_2` clashes with a second unnamed gate |
+| `criteria` | no | `true` and/or `false` strings for near misses |
+| `visual_input` | no | Frames to show the gate: `true` is 1, `false` or `0` is none, a whole number up to 5. No frame means the gate fails |
+
+`gate_fillers` are phrases played during the check. When a function has no `gate_fillers`, `fillers_at_gates` (default `true`) decides whether its regular `fillers` play during the check or only after the gates pass; set it `false` when those fillers announce the action itself. For a function from `includes`, `fillers_at_gates` in the include's `defaults` wins over `SWAIG.defaults`.
+
+Call-wide `ai.params`: `semantic_gates_enabled` (default `true`; `false` skips checks), `semantic_gate_timeout_ms` (default `2500`, range 500–10000, clamped), `semantic_gate_history` (default `20`, range 0–100, clamped).
+
+In the Python SDK, pass `SemanticGate` objects as `gates=` on `define_tool()` or `@tool`; `criteria` is spelled `true_means` / `false_means`. In TypeScript, `new SemanticGate(question, threshold, onFail, { id, visualInput })`. Set the call-wide params with `set_semantic_gates()`. Record a fact the gate should trust with `FunctionResult.set_semantic_state()`, read as `global_data.semantic_state`. The key is matched exactly, so `Semantic_State` isn't read. It replaces the whole state: send every field each time, and `{}` to reset. Other `global_data` reaches the decision model only when a question names it, as `${global_data.key}` or `${key}`, so name only values your application set.
+
+```python
+from signalwire import FunctionResult, SemanticGate
+
+agent.set_semantic_gates(timeout_ms=3000)
+
+agent.define_tool(
+    name="cancel_ride",
+    description="Cancel the caller's ride",
+    parameters={},
+    handler=cancel_ride,
+    gates=[
+        SemanticGate(
+            "Has the caller explicitly asked to cancel their ride in `conversation`?",
+            threshold=0.95,
+            on_fail=FunctionResult(
+                tool_result="cancel_ride was not run.",
+                tool_prompt="Ask the caller whether they want to cancel the ride.",
+            ),
+            true_means="The caller says they want to cancel the ride.",
+            false_means="The caller asked about cancelling, or said something else.",
+            id="explicit_request",
+        )
+    ],
+)
+```
+
+The same gate in SWML:
+
+```yaml
+gates:
+  - id: explicit_request
+    question: Has the caller explicitly asked to cancel their ride in `conversation`?
+    criteria:
+      "true": The caller says they want to cancel the ride.
+      "false": The caller asked about cancelling, or said something else.
+    threshold: 0.95
+    on_fail:
+      response:
+        tool_result: cancel_ride was not run.
+        tool_prompt: Ask the caller whether they want to cancel the ride.
+```
 
 ## Next Steps
 

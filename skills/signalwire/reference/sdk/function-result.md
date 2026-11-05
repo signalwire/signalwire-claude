@@ -18,7 +18,7 @@ FunctionResult(
 ```
 
 **Parameters:**
-- `response` - Text the AI will speak to the user
+- `response` - A prompt injected into the model's context. Write it as an instruction ("Tell the caller..."). The model decides what to say; it is not spoken verbatim. Use the `say` action for exact words.
 - `post_process` - If `True`, AI responds before actions execute; if `False`, actions execute immediately
 
 ## Basic Usage
@@ -26,7 +26,7 @@ FunctionResult(
 ### Simple Response
 
 ```python
-return FunctionResult("The weather in Seattle is 65°F and cloudy.")
+return FunctionResult("Tell the caller the weather in Seattle is 65°F and cloudy.")
 ```
 
 ### Response with Action
@@ -42,7 +42,10 @@ return FunctionResult("I'll transfer you now.").add_action(
 ```python
 return (FunctionResult("Let me set that up for you.")
     .add_action("set_global_data", {"customer_verified": True})
-    .add_action("toggle_functions", {"active": ["view_balance", "transfer"]}))
+    .add_action("toggle_functions", [
+        {"function": "view_balance", "active": True},
+        {"function": "transfer", "active": True},
+    ]))
 ```
 
 ### Post-Process Mode
@@ -102,22 +105,81 @@ def add_actions(self, actions: list) -> 'FunctionResult'
 ```python
 return FunctionResult("Setting up your account.").add_actions([
     {"set_global_data": {"account_id": "12345", "verified": True}},
-    {"toggle_functions": {"active": ["view_balance"]}}
+    {"toggle_functions": [{"function": "view_balance", "active": True}]}
 ])
 ```
 
 ### connect() (Convenience Method)
 
-Shorthand for transfer action.
+Transfer the call to another destination. This is the SDK's purpose-built in-session transfer: in a live session, a document containing `connect` only works when the `transfer` flag rides beside the document — exactly the shape this helper emits (see `execute_swml()` below for the emitted structure).
 
 ```python
-def connect(self, dest: str, final: bool = True) -> 'FunctionResult'
+def connect(self, destination: str, final: bool = True, from_addr: str = None) -> 'FunctionResult'
 ```
+
+**Parameters:**
+- `destination` - Where to transfer: `tel:`/`sip:` URI or a phone number
+- `final` - `True`: permanent transfer — the call exits the agent completely and continues at the destination. `False`: temporary transfer — if the far end hangs up, the call returns to the agent to continue the conversation
+- `from_addr` - Optional caller ID override
 
 ```python
 return FunctionResult("Connecting you to sales.").connect(
     "sip:sales@company.com",
     final=True
+)
+```
+
+The emitted action carries a SWML `connect` document with a `transfer` key beside it (`"true"`/`"false"` from `final`).
+
+### execute_swml()
+
+Execute a SWML document from a function result, optionally exiting the agent.
+
+```python
+def execute_swml(self, swml_content, transfer: bool = False) -> 'FunctionResult'
+```
+
+**Parameters:**
+- `swml_content` - The SWML document as a JSON string, dict, or SDK object
+- `transfer` - `True`: the call exits the agent after the document executes
+
+```python
+return FunctionResult("One moment.").execute_swml(
+    {"version": "1.0.0", "sections": {"main": [
+        {"play": {"url": "https://example.com/wait.mp3"}}
+    ]}}
+)
+```
+
+The emitted action carries the document under `SWML` with `transfer` as a **sibling** key — the same shape `connect()` emits:
+
+```python
+{"SWML": { ...document... }, "transfer": "true"}
+```
+
+`transfer` is not a SWML key, so it must sit beside the document, not inside it.
+
+### tap()
+
+Start streaming call audio to an external destination.
+
+```python
+def tap(self, uri: str, control_id: str = None, direction: str = "both",
+        codec: str = "PCMU", rtp_ptime: int = 20, status_url: str = None) -> 'FunctionResult'
+```
+
+**Parameters:**
+- `uri` - Where to send the audio: `rtp://host:port`, `ws://`, or `wss://`
+- `control_id` - Identifier for stopping this tap later (auto-generated if omitted)
+- `direction` - `"speak"` (what the party says), `"listen"` (what the party hears), or `"both"` (default). These are the only valid values, and `direction` is always emitted: the underlying SWML verb defaults to `"speak"` when the key is omitted, which would tap less than the helper's documented `"both"`
+- `codec` - `"PCMU"` (default) or `"PCMA"`
+- `rtp_ptime` - RTP packetization time in milliseconds (default 20)
+- `status_url` - Optional status webhook URL
+
+```python
+return FunctionResult("Starting quality monitoring.").tap(
+    "wss://monitor.example.com/tap",
+    direction="both"
 )
 ```
 
@@ -194,23 +256,17 @@ The AI can reference this data in subsequent turns.
 
 Enable or disable functions dynamically.
 
+`toggle_functions` is an array of `{function, active}` objects. `active` defaults to `true`. It only changes functions that share the caller's `meta_data_token`.
+
 ```python
-# Activate specific functions
-.add_action("toggle_functions", {
-    "active": ["transfer_funds", "view_transactions"]
-})
-
-# Deactivate specific functions
-.add_action("toggle_functions", {
-    "inactive": ["delete_account"]
-})
-
-# Both at once
-.add_action("toggle_functions", {
-    "active": ["view_balance"],
-    "inactive": ["transfer_funds"]
-})
+.add_action("toggle_functions", [
+    {"function": "transfer_funds", "active": True},
+    {"function": "view_transactions", "active": True},
+    {"function": "delete_account", "active": False},
+])
 ```
+
+`settings` replaces the whole model-settings map and needs `params.swaig_allow_settings` (default `true`). `unset_global_data` and `unset_meta_data` take a string or an array of keys. `user_event` sends an object to the connected client. `transfer` accepts an object, or a string shorthand for `transfer.dest`.
 
 ### playback_bg
 
@@ -386,9 +442,11 @@ def verify_pin(self, args, raw_data):
             "How can I help you today?"
         )
         .add_action("set_global_data", {"verified": True})
-        .add_action("toggle_functions", {
-            "active": ["view_balance", "transfer_funds", "view_transactions"]
-        }))
+        .add_action("toggle_functions", [
+            {"function": "view_balance", "active": True},
+            {"function": "transfer_funds", "active": True},
+            {"function": "view_transactions", "active": True},
+        ]))
     else:
         attempts = raw_data.get("vars", {}).get("pin_attempts", 0) + 1
 
@@ -472,11 +530,13 @@ result = FunctionResult("Goodbye!", post_process=True).add_action("hangup", {})
 {
     "response": "Goodbye!",
     "action": [
-        {"SWML": {"sections": {"main": [{"ai": {"post_prompt": ...}}]}}},
         {"hangup": {}}
-    ]
+    ],
+    "post_process": true
 }
 ```
+
+`post_process` is serialized as a top-level key, and only when there are actions to defer — with no actions it is omitted.
 
 ## Best Practices
 

@@ -1,6 +1,6 @@
 # DataMap Advanced Reference
 
-Complete reference for advanced DataMap features including expressions, webhooks with fallbacks, array processing, and error handling.
+Complete reference for advanced DataMap features including expressions, webhooks, array processing, and error handling.
 
 ## Import
 
@@ -18,7 +18,7 @@ data_map = (DataMap("function_name")
     .purpose("Description of the function")
     .parameter("param", "string", "Description", required=True)
     .webhook("GET", "https://api.example.com/data?q=${args.param}")
-    .output(FunctionResult("Result: ${response.data}")))
+    .output(FunctionResult("Result: ${data}")))
 
 agent.register_swaig_function(data_map.to_swaig_function())
 ```
@@ -43,7 +43,7 @@ def expression(
 
 **Parameters:**
 - `test_value` - Template string to test (e.g., `"${args.command}"`)
-- `pattern` - Regex pattern to match against
+- `pattern` - Regex pattern to match against. Case-insensitive unless written as `/pattern/flags`. `nomatch-output` (`nomatch_output`) returns when the expression doesn't match; when omitted, the next expression is tried
 - `output` - FunctionResult to return when pattern matches
 - `nomatch_output` - Optional result when pattern doesn't match
 
@@ -108,25 +108,16 @@ transfer_router = (DataMap("route_call")
 )
 ```
 
-## Multiple Webhooks with Fallback
+## Webhooks
 
-You can chain multiple webhooks that act as fallbacks if earlier ones fail.
+Only the first webhook that is called is used. Later webhooks are not called, even when the request fails or `error_keys` marks the response failed. The function then falls back to the top-level output: `.fallback_output(...)` in Python, `.fallbackOutput(...)` in TypeScript.
 
 ```python
-search_with_fallback = (DataMap("search")
-    .purpose("Search for information with fallback APIs")
+search = (DataMap("search")
+    .purpose("Search for information")
     .parameter("query", "string", "Search query", required=True)
-
-    # Primary API
     .webhook("GET", "https://api.primary.com/search?q=${args.query}")
-    .output(FunctionResult("Found: ${response.results[0].title}"))
-
-    # Fallback API (used if primary fails)
-    .webhook("GET", "https://api.backup.com/search?q=${args.query}")
-    .output(FunctionResult("Found: ${response.data.title}"))
-
-    # Final fallback output (used if all webhooks fail)
-    .fallback_output(FunctionResult("Sorry, search is temporarily unavailable"))
+    .output(FunctionResult("Found: ${results[0].title}"))
 )
 ```
 
@@ -149,16 +140,16 @@ def webhook(
 ```
 
 **Parameters:**
-- `method` - HTTP method (GET, POST, PUT, DELETE)
+- `method` - `GET` or `POST` only. A body (including `params`, or `input_args_as_params`) forces `POST`
 - `url` - API endpoint URL (supports `${args.param}` substitution)
-- `headers` - Optional HTTP headers
+- `headers` - Optional HTTP headers. Sent as written; values are not expanded
 - `form_param` - Send JSON body as single form parameter
 - `input_args_as_params` - Merge function arguments into params
-- `require_args` - Only execute if these arguments are present
+- `require_args` - With a list, the webhook runs if any one listed argument is present. An empty list means the webhook is never used
 
 ### body()
 
-Set the request body for POST/PUT webhooks.
+Set the request body. A body forces the request to `POST`, whatever `method` is.
 
 ```python
 def body(self, data: Dict[str, Any]) -> 'DataMap'
@@ -174,14 +165,14 @@ create_ticket = (DataMap("create_support_ticket")
     .parameter("priority", "string", "Priority level", enum=["low", "medium", "high"])
 
     .webhook("POST", "https://api.helpdesk.com/tickets",
-             headers={"Authorization": "Bearer ${env.API_KEY}"})
+             headers={"Authorization": "Bearer example-token"})
     .body({
         "subject": "${args.subject}",
         "description": "${args.description}",
         "priority": "${args.priority}",
         "source": "voice_agent"
     })
-    .output(FunctionResult("Ticket created with ID: ${response.ticket_id}"))
+    .output(FunctionResult("Ticket created with ID: ${ticket_id}"))
 )
 ```
 
@@ -254,7 +245,7 @@ api_call = (DataMap("get_user")
 
     .webhook("GET", "https://api.example.com/users/${args.user_id}")
     .error_keys(["error", "error_message", "errors"])
-    .output(FunctionResult("User: ${response.name}, Email: ${response.email}"))
+    .output(FunctionResult("User: ${name}, Email: ${email}"))
 
     .fallback_output(FunctionResult("Unable to find user information"))
 )
@@ -290,17 +281,17 @@ check_inventory = (DataMap("check_stock")
     .webhook("GET", "https://api.store.com/inventory/${args.product_id}")
     .webhook_expressions([
         {
-            "string": "${response.quantity}",
+            "string": "${quantity}",
             "pattern": "^0$",
             "output": {"response": "Sorry, this product is out of stock"}
         },
         {
-            "string": "${response.quantity}",
+            "string": "${quantity}",
             "pattern": "^[1-9]$",
-            "output": {"response": "Limited stock available: ${response.quantity} units"}
+            "output": {"response": "Limited stock available: ${quantity} units"}
         }
     ])
-    .output(FunctionResult("In stock: ${response.quantity} units available"))
+    .output(FunctionResult("In stock: ${quantity} units available"))
 )
 ```
 
@@ -316,7 +307,7 @@ from signalwire import create_simple_api_tool
 weather_tool = create_simple_api_tool(
     name="get_weather",
     url="https://api.weather.com/current?q=${args.city}&key=API_KEY",
-    response_template="Weather in ${args.city}: ${response.condition}, ${response.temp}°F",
+    response_template="Weather in ${input.args.city}: ${condition}, ${temp}°F",
     parameters={
         "city": {
             "type": "string",
@@ -361,13 +352,15 @@ DataMap supports variable substitution in URLs, bodies, and outputs:
 
 | Pattern | Description |
 |---------|-------------|
-| `${args.param}` | Function argument value |
-| `${response.field}` | API response field |
-| `${response.nested.field}` | Nested response field |
-| `${response.array[0].field}` | Array element field |
-| `${env.VAR_NAME}` | Environment variable |
+| `${args.param}` | Function argument in a URL, body, or expression |
+| `${field}` | Response field at the root of a webhook output |
+| `${nested.field}` | Nested response field in a webhook output |
+| `${array[0].field}` | Array element in a webhook output |
+| `${input.args.x}` | Argument inside a webhook output |
 | `${this.field}` | Current item in foreach loop |
 | `${formatted_results}` | Output from foreach processing |
+
+Headers are sent as written.
 
 ## Complete Complex Example
 
@@ -403,12 +396,12 @@ class DataMapDemoAgent(AgentBase):
             .purpose("Look up order status by order number")
             .parameter("order_number", "string", "The order number", required=True)
             .webhook("GET", "https://api.orders.com/v1/orders/${args.order_number}",
-                     headers={"Authorization": "Bearer ${env.ORDERS_API_KEY}"})
+                     headers={"Authorization": "Bearer example-token"})
             .error_keys(["error", "not_found"])
             .output(FunctionResult(
-                "Order ${args.order_number}: Status is ${response.status}. "
-                "Shipped on ${response.ship_date}. "
-                "Tracking: ${response.tracking_number}"
+                "Order ${input.args.order_number}: Status is ${status}. "
+                "Shipped on ${ship_date}. "
+                "Tracking: ${tracking_number}"
             ))
             .fallback_output(FunctionResult(
                 "I couldn't find order ${args.order_number}. Please verify the number."

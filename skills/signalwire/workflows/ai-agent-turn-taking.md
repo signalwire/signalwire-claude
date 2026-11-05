@@ -2,11 +2,7 @@
 
 How an AI agent decides the caller has finished speaking. This governs whether the agent interrupts people or leaves dead air, and it is the first thing to reach for when an agent "feels wrong" on a call. Callers cut the agent off, or backchannels stop it? [Interruptions (barge-in)](#interruptions-barge-in).
 
-> **This file documents behavior that the public docs do not fully reflect.**
->
-> `/docs/swml/reference/calling/ai/params` describes `enable_turn_detection` as a `boolean` that "monitors partial speech transcripts for sentence-ending punctuation." That is half of the older behavior, and it omits the acoustic model entirely. The parameter is a string with four values, and the punctuation check is one of two fused signals.
->
-> The end-of-turn behavior below, through What Not to Promise, was verified against the running platform. Do not "correct" it back toward that docs page. The docs are being fixed separately; when they are, this file can be re-checked against them.
+`params.enable_turn_detection` (alias `turn_detection`) is a string or boolean. Values: `both` (default), `punct_only`, `acoustic_only`, `off`. `true` is `both`; `false` is `off`. Docs: https://signalwire.com/docs/swml/reference/calling/ai/params
 
 ## How End-of-Turn Is Actually Decided
 
@@ -41,16 +37,14 @@ Release is confidence-scaled: an ambiguous hold is cut loose quickly, a clearly 
 
 ## `turn_detection` — the mode switch
 
-`params.turn_detection`, alias `params.enable_turn_detection`. Takes a string:
+`params.enable_turn_detection`, also accepted as `params.turn_detection`. String or boolean:
 
 | Value | Behavior |
 |-------|----------|
-| `both` | **Default.** Punctuation and acoustic fused. Punctuation declares end-of-speech; the acoustic signal can gate it (hold for another word) or override it (declare end-of-speech with no punctuation). |
-| `punct_only` | Punctuation only. Acoustic model ignored. |
-| `acoustic_only` | Acoustic model only. Punctuation ignored. |
-| `off` | No predictive fire. Falls back to the silence timer. Legacy behavior. |
-
-Booleans are accepted as an alias — `true`/`1` maps to `both`, `false`/`0` maps to `off`. That alias is why the current documentation calls the parameter a boolean. `punctuation_only` is accepted as a synonym for `punct_only`.
+| `both` | **Default.** Punctuation and the acoustic signal. `true` is an alias. |
+| `punct_only` | Punctuation alone ends the turn. |
+| `acoustic_only` | The acoustic signal alone ends the turn. `turn_detection_min_length` and `turn_detection_timeout` have no effect. |
+| `off` | Neither signal. The agent waits out `end_of_speech_timeout` silence. `false` is an alias. |
 
 **Turn detection is on by default.** An agent config that omits the parameter gets `both`.
 
@@ -80,20 +74,12 @@ Diagnosing from symptoms:
 
 ## Advanced Knobs
 
-Not on the docs site apart from `turn_detection_timeout`.
+`turn_detection_min_length` and `turn_detection_timeout` tune `both` and `punct_only`. They have no effect when turn detection is `off` or `acoustic_only`.
 
-These are forwarded to the recognizer only when `turn_detection` is not `off`, and only when set to a non-default value. An unset knob is deliberately not sent, so the recognizer applies its own tuned default.
-
-**Setting a knob to its apparent default is therefore not a no-op.** Writing `250` into `turn_detection_timeout` sends `250`; leaving it unset lets the recognizer choose, and the two can differ.
-
-| Param | Recognizer default when unsent | Meaning |
-|-------|-------------------------------|---------|
-| `turn_detection_timeout` | 250 ms | Hedge: after fusion decides to fire, wait this long for a new partial to cancel the fire. A ceiling, not the latency driver — a new partial cancels it early. |
-| `turn_detection_min_length` | 0 | Minimum transcript length before fusion will fire. Suppresses firing on a stray first word. |
-| `acoustic_eot_gate_prob` | 0.40 | Acoustic reading at or below which the model is treated as reporting mid-thought, and can hold the turn. |
-| `acoustic_eot_trust_prob` | 0.95 | Acoustic reading above which the model can declare end-of-turn with no punctuation. |
-| `speech_event_timeout` | derived: `max(2 × silence, 3500)` ms | Word-silence bound, as opposed to audio-silence. Normally leave unset. |
-| `asr_params` | — | Escape hatch, an object. Any key is forwarded to the recognizer verbatim. |
+| Param | Default | Meaning |
+|-------|---------|---------|
+| `turn_detection_min_length` | `0` (0–1000) | Minimum transcript characters before punctuation alone can end the turn. In `both`, the acoustic signal can still end a short complete reply such as "Yes." |
+| `turn_detection_timeout` | value of `end_of_speech_timeout` (0–10000; `0` uses that default) | Milliseconds to wait after deciding the turn ended before finalizing the transcript. A partial inside the window cancels the decision. Values below `500` degrade accuracy. Lowering it does not make the agent answer faster. |
 
 ## Choosing a Recognizer
 
@@ -129,6 +115,16 @@ Barge-in is decided by the platform from the speech events, before the model see
 `static_greeting_no_barge: true` stops speech from interrupting the static greeting; DTMF still does. Without it, any speech over a static greeting interrupts it, ignoring `barge_min_words` and `barge_match_string`. A greeting the model generates follows the normal barge filters.
 
 Cut in with one word, then three, then a full sentence. Talk over the greeting. Say "mm-hm" while the agent reads a list. Change one setting at a time and listen to the recordings.
+
+## Latency Is a Sum
+
+The pause the caller hears is the sum of what is still on the path: audio transport, the turn decision, speech recognition, the language model, speech synthesis, and each vendor hop. Streaming overlaps some of those stages. It does not remove a hop. Inside inference and synthesis, model choice dominates: picking a slow model costs more than moving synthesis from the slowest engine to the fastest.
+
+Tool turns are the ones that feel slow, because the agent goes quiet while the tool runs. Per-function `fillers` are a per-language dict. They play when the tool is called and cover only that moment. For a long call use a wait script or a looped `wait_file`. Neither makes the tool faster.
+
+Turn settings belong in code. `end_of_speech_timeout` is how much silence closes a turn. `barge_min_words` is how many words count as an interruption. Set them with `set_params`. Steps have no params of their own. `end_of_speech_timeout` can change mid-call with `FunctionResult.set_end_of_speech_timeout()`, so a step that collects an account number can allow more silence than a yes or no. A longer timeout does not replace checking the collected value and asking again. A prompt cannot hold the floor open: the turn boundary is decided before the model sees text.
+
+[latency_checker](https://github.com/signalwire/latency_checker) measures a recording from the end of the caller's speech to the agent's first audio, on any platform.
 
 ## Related
 

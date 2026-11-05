@@ -8,6 +8,8 @@ Control active calls with transfer, recording, conferencing, and real-time manip
 
 ## Transfer Methods
 
+**Connect limits.** Phone numbers need a leading `+`. `parallel`, `serial`, and `serial_parallel` dial at most 20 destinations in total (a deployment default); extras never ring and `connect` reports no error. Relay `dial` / `call.connect` skip devices past the same cap and report each as `Too many devices` in `message_data`. A `queue:` or `call:` destination can't be mixed with others, and once a queued call is bridged the script does not continue past `connect` (`connect_result` is `failed` when nothing was bridged). `ringback: false` passes the destination's early media. See [swml-methods.md](swml-methods.md#connect).
+
 ### Blind Transfer (SWML)
 
 Transfer call without announcement:
@@ -66,6 +68,19 @@ sections:
     - play: { url: "say:Welcome to sales" }
     - connect: { to: "+15551111111" }
 ```
+
+### In-Session Transfer from a SWAIG Function (Agents SDK)
+
+Inside a live AI session, execute transfers with the SDK's `connect()` helper rather than injecting a document that contains a `connect` verb:
+
+```python
+return FunctionResult(
+    "Connecting you now.",
+    post_process=True
+).connect("tel:+15551234567", final=True)
+```
+
+An injected document containing `connect` only succeeds when the action carries the `transfer` flag **beside** the SWML document — the shape both `connect()` and `execute_swml(doc, transfer=True)` emit. If the flag ends up *inside* the document (for example, in hand-built action JSON), the platform ignores it, so the nested `connect` fast-fails — `connect_result=failed` within seconds, no B-leg dialed — while the identical document works at the top level of a call.
 
 ## Recording
 
@@ -195,16 +210,19 @@ sections:
 ### Moderator vs Participant
 
 ```yaml
-# Moderator - conference starts when they join, ends when they leave
+# Moderator - with min_participants 1, the conference starts when they join and ends when they leave.
+# min_participants is fixed when the conference is created, so the participant join sets it too.
 - join_conference:
     name: "meeting-123"
     start_on_enter: true
     end_on_exit: true
+    min_participants: 1
 
 # Participant - hears hold music until a start_on_enter participant joins
 - join_conference:
     name: "meeting-123"
     start_on_enter: false
+    min_participants: 1
 ```
 
 ## Real-Time Call Control with Relay SDK
@@ -431,7 +449,7 @@ call.on('ended', (call) => {
 
 ### Listing Active Calls (REST)
 
-To enumerate live calls — for example, a cleanup job that ends stale calls — use the **Voice Logs API**. The Compatibility API's `GET /Calls` does NOT return SWML/AI call data.
+To enumerate live calls — for example, a cleanup job that ends stale calls — use the **Voice Logs API**. The logs are historical voice activity — calls handled by cXML, SWML, and the Calling API — for usage reporting, billing review, and troubleshooting, not live call control. Finding calls still in progress there is observed behavior. The Compatibility API's `GET /Calls` does NOT return SWML/AI call data.
 
 ```
 GET https://{space}.signalwire.com/api/voice/logs
@@ -476,6 +494,10 @@ for log in stale:
     )
 ```
 
+Compatibility entries (`type: laml_call`) carry audio quality stats as top-level fields, each `null` when the call has no measurement for it. `audio_in_mos` is a decimal string from about 1 to 4.5. 4.5 is the best score. A call that received no audio also scores 4.5, so check `audio_in_media_packet_count` too. `audio_rtt_avg`, `audio_rtt_min`, and `audio_rtt_max` are milliseconds, in steps of 10. Inbound jitter (`audio_in_jitter_min`, `audio_in_jitter_max`) is milliseconds squared; outbound jitter (`audio_out_jitter_min`, `audio_out_jitter_max`, `audio_out_jitter_avg`) is milliseconds. Entries also include packet counts and `audio_out_lost` (outbound packets lost). `audio_out_packet_count` is not populated (always `null`); use `audio_out_media_packet_count`. `audio_in_largest_jb_size` is not populated (always `0` when the call has quality statistics).
+
+Relay entries (`relay_pstn_call`, `relay_sip_call`, `relay_webrtc_call`) carry a `qos_metrics` object with only the measured stats, or `null` when the call has no quality measurement. It never includes `audio_in_mos` (kept in its own column), and its keys differ from the Compatibility field names. Use these on completed calls when troubleshooting audio quality; stats for calls still in progress may be `null`.
+
 ## Common Call States
 
 - **created**: Call has been created
@@ -485,6 +507,15 @@ for log in stale:
 - **busy**: Destination is busy
 - **failed**: Call failed to connect
 - **no-answer**: Destination didn't answer
+
+### Disconnect vs. End
+
+Two commands sound alike and behave very differently:
+
+- `calling.disconnect` — **unbridges** connected legs. Nothing hangs up: both legs stay active (and billing) until `max_duration`, a remote hangup, or an explicit end.
+- `calling.end` — actually hangs up, with a `reason`. RELAY (Python): `await call.hangup(reason="hangup")`. REST (Python): `client.calling.end(call_id, reason="hangup")`.
+
+Cleanup jobs and reapers must use `calling.end`, never `disconnect`. To enumerate the live SWML/AI calls to end, use the List Voice Logs API — its log `id` is the call ID `calling.end` accepts. (In the raw REST command payload, the call `id` rides at the root of the command object, not in `params` — distinct from the SDK method signatures shown here.)
 
 ## Advanced Patterns
 
@@ -872,6 +903,7 @@ sections:
         start_on_enter: true
         end_on_exit: true
         muted: false
+        min_participants: 1
 
   participant_conference:
     - play: { url: "say:Welcome to the conference. Please wait for the moderator." }
@@ -879,6 +911,7 @@ sections:
         name: "meeting-%{call.to}"
         start_on_enter: false
         muted: false
+        min_participants: 1
 ```
 
 ### Dynamic Conference Naming

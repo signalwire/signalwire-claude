@@ -249,11 +249,13 @@ Phrases the AI says while the function executes:
     name="lookup_account",
     description="Look up account information",
     parameters={"account_id": {"type": "string", "description": "Account ID"}},
-    fillers=[
-        "Let me look that up for you",
-        "One moment please",
-        "Checking our records"
-    ]
+    fillers={
+        "en-US": [
+            "Let me look that up for you",
+            "One moment please",
+            "Checking our records"
+        ]
+    }
 )
 def lookup_account(self, args, raw_data):
     # Long-running operation
@@ -418,9 +420,11 @@ def verify_identity(self, args, raw_data):
     if self.verify_pin(caller, pin):
         # Enable secure functions after verification
         return (FunctionResult("Identity verified. How can I help you?")
-            .add_action("toggle_functions", {
-                "active": ["view_balance", "transfer_funds", "update_address"]
-            }))
+            .add_action("toggle_functions", [
+                {"function": "view_balance", "active": True},
+                {"function": "transfer_funds", "active": True},
+                {"function": "update_address", "active": True},
+            ]))
     else:
         return FunctionResult(
             "That PIN doesn't match our records. Please try again."

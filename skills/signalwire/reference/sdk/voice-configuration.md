@@ -283,7 +283,7 @@ When defining tools, you can specify fillers:
     name="lookup_order",
     description="Look up an order status",
     parameters={"order_id": {"type": "string", "description": "Order ID"}},
-    fillers=["Let me look that up", "Checking on that order"]
+    fillers={"en-US": ["Let me look that up", "Checking on that order"]}
 )
 def lookup_order(self, args, raw_data):
     # ...
@@ -297,7 +297,7 @@ self.define_tool(
     description="Search the database",
     parameters={"query": {"type": "string"}},
     handler=self.handle_search,
-    fillers=["Searching...", "Let me find that"],
+    fillers={"en-US": ["Searching...", "Let me find that"]},
     wait_file="https://example.com/searching.mp3",
     wait_file_loops=3
 )
@@ -345,6 +345,16 @@ agent.set_pronunciations([
 ```
 
 ## Speech Recognition Hints
+
+When speech recognition runs in code-switching mode (`set_multilingual()` / `setMultilingual()` with its default recognizer, or a `languages` entry whose `code` is `multi`), string hints and `hint` values are not passed to speech recognition, and no error is returned. That covers `add_hint()`/`addHint()`, `add_hints()`/`addHints()`, and string or `hint` values from `FunctionResult.add_dynamic_hints()`/`addDynamicHints()`. For a `languages` entry, hints are dropped only while that entry is active, and only when `multi` is the first code. `code: ["en-US", "multi"]` keeps hints. `add_pattern_hint()`/`addPatternHint()` still emits a `hint` field; that field is dropped in this mode, and only its `pattern` and `replace` apply.
+
+### set_multilingual()
+
+```python
+def set_multilingual(self, config: dict[str, Any]) -> 'AgentBase'
+```
+
+TypeScript: `setMultilingual(config: Record<string, unknown>): this`
 
 ### add_hints()
 
@@ -474,7 +484,7 @@ class MultilingualAgent(AgentBase):
         name="lookup_info",
         description="Look up information",
         parameters={"query": {"type": "string", "description": "What to look up"}},
-        fillers=["Let me look that up for you", "Searching now"]
+        fillers={"en-US": ["Let me look that up for you", "Searching now"]}
     )
     def lookup_info(self, args, raw_data):
         return FunctionResult(f"Found information for: {args.get('query')}")
