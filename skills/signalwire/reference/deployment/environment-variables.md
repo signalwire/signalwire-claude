@@ -80,12 +80,6 @@ export DEBUG_WEBHOOK_LEVEL="1"
 
 ## Skill Configuration
 
-### OpenAI Skills
-
-| Variable | Description |
-|----------|-------------|
-| `OPENAI_API_KEY` | API key for OpenAI-powered skills |
-
 ### Google Search Skill
 
 | Variable | Description |
@@ -107,9 +101,6 @@ export DEBUG_WEBHOOK_LEVEL="1"
 # Web search skill
 export GOOGLE_API_KEY="AIza..."
 export GOOGLE_SEARCH_ENGINE_ID="017..."
-
-# OpenAI skills
-export OPENAI_API_KEY="sk-..."
 ```
 
 ## Logging
@@ -178,7 +169,6 @@ DEBUG_WEBHOOK_LEVEL=1
 SWML_LOG_LEVEL=DEBUG
 
 # Skills (as needed)
-OPENAI_API_KEY=sk-...
 GOOGLE_API_KEY=AIza...
 GOOGLE_SEARCH_ENGINE_ID=017...
 ```

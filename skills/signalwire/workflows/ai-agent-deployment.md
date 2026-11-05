@@ -438,8 +438,8 @@ ai:
 ```
 
 **Current Architecture:**
-- Primary: OpenAI API
-- Fallback: Azure OpenAI
+- Primary: the model in `ai_model`
+- Fallback: the model in `fallback_model`
 - Automatic failover in development
 
 ### 4. Health Checks

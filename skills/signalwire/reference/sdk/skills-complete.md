@@ -112,18 +112,17 @@ agent.add_skill("wikipedia_search")
 
 ### weather_api
 
-Get weather information.
+Get current weather conditions using WeatherAPI.com.
 
 ```python
 agent.add_skill("weather_api", {
-    "provider": "openweathermap",  # Provider name
-    "api_key": "your-api-key",     # Required
-    "units": "imperial"            # "imperial" or "metric"
+    "api_key": "your-api-key",  # Required. WeatherAPI.com key
+    "units": "fahrenheit"       # "fahrenheit" or "celsius"
 })
 ```
 
 **Environment variables:**
-- `OPENWEATHERMAP_API_KEY` - API key
+- `WEATHER_API_KEY` - API key
 
 **Functions provided:**
 - `get_weather` - Get current weather for a location
@@ -494,11 +493,10 @@ class SkillsShowcaseAgent(AgentBase):
             })
 
         # Add weather if API key available
-        if os.environ.get("OPENWEATHERMAP_API_KEY"):
+        if os.environ.get("WEATHER_API_KEY"):
             self.add_skill("weather_api", {
-                "provider": "openweathermap",
-                "api_key": os.environ["OPENWEATHERMAP_API_KEY"],
-                "units": "imperial"
+                "api_key": os.environ["WEATHER_API_KEY"],
+                "units": "fahrenheit"
             })
 
         # Add local search if index exists

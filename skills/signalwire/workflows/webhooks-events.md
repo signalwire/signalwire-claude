@@ -961,7 +961,7 @@ wss.on('connection', (ws) => {
       // Base64-encoded audio payload
       const audioChunk = Buffer.from(message.media.payload, 'base64');
 
-      // Send to DeepGram, AssemblyAI, etc.
+      // Hand the chunk to your transcription service
       transcriptionService.process(audioChunk);
 
       // Save to WAV file
@@ -979,7 +979,7 @@ wss.on('connection', (ws) => {
 
 ### Use Cases
 
-- Live transcription with DeepGram or AssemblyAI
+- Live transcription in your own service
 - Local audio storage in WAV format
 - Real-time speech analytics
 - Custom call recording implementations
