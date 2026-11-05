@@ -156,7 +156,7 @@ def define_tool(
     handler: Callable,
     parameters: dict = None,
     secure: bool = False,
-    fillers: List[str] = None,
+    fillers: dict[str, list[str]] = None,
     wait_file: str = None,
     wait_file_loops: int = None
 ) -> 'AgentBase'
@@ -168,7 +168,7 @@ def define_tool(
 - `handler` - Callable with signature `(args, raw_data) -> FunctionResult`
 - `parameters` - JSON Schema for function parameters
 - `secure` - Require token validation
-- `fillers` - Phrases to say while processing
+- `fillers` - Per-language phrases to say while processing, `{"en-US": ["..."]}`
 - `wait_file` - Audio file URL to play while processing
 - `wait_file_loops` - Number of times to loop wait_file
 
@@ -185,7 +185,7 @@ self.define_tool(
         }
     },
     handler=self.handle_get_balance,
-    fillers=["Let me check that for you", "One moment please"]
+    fillers={"en-US": ["Let me check that for you", "One moment please"]}
 )
 ```
 
@@ -199,7 +199,7 @@ Declarative function definition.
     description: str = None,    # Required
     parameters: dict = None,    # JSON Schema
     secure: bool = False,
-    fillers: List[str] = None,
+    fillers: dict[str, list[str]] = None,
     wait_file: str = None,
     wait_file_loops: int = None
 )
@@ -326,9 +326,19 @@ agent.add_language(
 )
 ```
 
+### set_multilingual()
+
+```python
+def set_multilingual(self, config: dict[str, Any]) -> 'AgentBase'
+```
+
+TypeScript: `setMultilingual(config: Record<string, unknown>): this`
+
 ### add_hints()
 
 Add speech recognition hints.
+
+When speech recognition runs in code-switching mode (`set_multilingual()` / `setMultilingual()` with its default recognizer, or a `languages` entry whose `code` is `multi`), string hints and `hint` values are not passed to speech recognition, and no error is returned. That covers `add_hint()`/`addHint()`, `add_hints()`/`addHints()`, and string or `hint` values from `FunctionResult.add_dynamic_hints()`/`addDynamicHints()`. For a `languages` entry, hints are dropped only while that entry is active, and only when `multi` is the first code. `code: ["en-US", "multi"]` keeps hints. `add_pattern_hint()`/`addPatternHint()` still emits a `hint` field; that field is dropped in this mode, and only its `pattern` and `replace` apply.
 
 ```python
 def add_hints(self, hints: List[str]) -> 'AgentBase'
@@ -668,7 +678,7 @@ class CustomerServiceAgent(AgentBase):
                 "description": "The order number to look up"
             }
         },
-        fillers=["Let me look that up", "One moment please"]
+        fillers={"en-US": ["Let me look that up", "One moment please"]}
     )
     def lookup_order(self, args, raw_data):
         order_num = args.get("order_number")

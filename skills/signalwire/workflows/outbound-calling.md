@@ -45,7 +45,7 @@ HTTP Basic Auth with Project ID and API Token (see [Authentication](authenticati
 - **params.status_url**: Webhook URL for status updates
 - **params.fallback_url**: Fallback SWML if primary URL fails
 - **params.timeout**: Ring timeout in seconds
-- **params.max_duration**: Maximum call duration in seconds
+- **params.max_duration**: Maximum call duration in seconds (default 14400 = 4 hours). There are no Space-level duration or spend caps — set this yourself on long-running or AI calls
 
 ### Response
 
@@ -259,8 +259,10 @@ sections:
     - play:
         url: "say:Thanks for calling. Connecting you now."
     - connect:
-        to: "+15551111111"
+        to: "+15551111111"   # E.164 requires the leading +
 ```
+
+`parallel`, `serial`, and `serial_parallel` dial at most 20 destinations in total (a deployment default); any further destination never rings, and `connect` reports no error for it. The same 20-device total applies to Relay `dial` and `call.connect` (extra devices are skipped, and Relay reports each as `Too many devices` in `message_data`). A `queue:` connect does not continue the script after the bridge. Details: [swml-methods.md](swml-methods.md#connect).
 
 Or in JSON:
 ```json
@@ -767,6 +769,8 @@ def handle_assessment():
 
 ### Bulk Outbound Campaign
 
+**Rate limit:** SignalWire dials outbound calls at **1 call per second, Space-wide** across all projects, for both PSTN and SIP. Excess calls are queued and dialed at 1 CPS; calls initiated while the queue is full receive a failed response. There is no per-number limit and no inbound rate limit. Higher throughput requires contacting SignalWire sales.
+
 ```python
 def run_outbound_campaign(campaign_id):
     """Execute bulk outbound calling campaign"""
@@ -774,9 +778,11 @@ def run_outbound_campaign(campaign_id):
     campaign = database.get_campaign(campaign_id)
     recipients = database.get_campaign_recipients(campaign_id)
 
-    # Rate limiting (e.g., 10 calls per second)
+    # SignalWire dials at 1 call per second Space-wide, shared across
+    # ALL projects — local pacing reduces queue pressure but cannot
+    # guarantee headroom; treat queue-full failures as retryable
     from time import sleep
-    delay = 0.1  # 100ms between calls
+    delay = 1.0  # 1 second between calls (1 CPS)
 
     for recipient in recipients:
         # Check opt-out status

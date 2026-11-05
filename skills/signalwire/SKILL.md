@@ -1,6 +1,6 @@
 ---
 name: signalwire
-description: Use when building telephony, messaging, or video applications; implementing voice AI agents; adding real-time AI coaching or call observation (ai_sidecar) to live calls; working with SWML call flows; debugging webhook callbacks or call state issues; setting up real-time WebSocket communication; encountering authentication 401/403 errors; or troubleshooting SWAIG function errors - provides REST API patterns, SDK examples, and production-tested workflows for modern SignalWire communication systems
+description: Use when building telephony, messaging, or video applications; implementing voice AI agents; adding real-time AI coaching or call observation (ai_sidecar) to live calls; working with SWML call flows; debugging webhook callbacks or call state issues; setting up real-time WebSocket communication; encountering authentication 401/403 errors; gating a SWAIG function with a semantic gate; or troubleshooting SWAIG function errors - provides REST API patterns, SDK examples, and production-tested workflows for modern SignalWire communication systems
 ---
 
 # SignalWire
@@ -12,6 +12,12 @@ SignalWire maintains compatibility APIs (LAML/CXML) that should NOT be used for 
 - **CXML** (XML markup) → Use SWML (YAML/JSON)
 
 This skill documents ONLY modern APIs: REST with JSON, SWML, Relay SDK, AI Agents SDK.
+
+## Code Governs, the Prompt Guides
+
+Code owns the conversation's steps, its data, and its rules. The model handles intent and phrasing: what the caller wants, and how to say the reply. A prompt guides. It cannot enforce. Treating the prompt as the safety mechanism is prompt and pray. Put anything that must happen on every call in code — identity checks, prices, and whether a charge, transfer, or hangup runs. Code decides what happens once the tool runs. The model still chooses when to call it. Leave the model the judgment calls you cannot write as a procedure.
+
+See [Patterns](workflows/ai-agent-patterns.md).
 
 ## Read the Live Docs
 
@@ -74,7 +80,7 @@ These insights come from analysis of 89 SignalWire training videos, LiveWire ses
 - [Outbound Calling](workflows/outbound-calling.md) | [Inbound Handling](workflows/inbound-call-handling.md) | [Call Control](workflows/call-control.md)
 
 **AI Voice Agents:** Start with [Voice AI](workflows/voice-ai.md) overview
-- **SDK:** [Basics](workflows/ai-agent-sdk-basics.md) | [Prompting](workflows/ai-agent-prompting.md) | [Functions](workflows/ai-agent-functions.md) | [Deployment](workflows/ai-agent-deployment.md)
+- **SDK:** [Basics](workflows/ai-agent-sdk-basics.md) | [Prompting](workflows/ai-agent-prompting.md) | [Functions](workflows/ai-agent-functions.md) (including [semantic gates](workflows/ai-agent-functions.md#semantic-gates)) | [Deployment](workflows/ai-agent-deployment.md)
 - **Conversation Feel:** [Turn Taking](workflows/ai-agent-turn-taking.md) - when the agent decides you stopped talking; fixes interrupting and dead air
 - **Text Chat:** [AI Agent Chat](workflows/ai-agent-chat.md) - reach the same agents by text over JSON-RPC
 - **AI Sidecar:** [Real-time agent coaching](workflows/ai-sidecar.md) - AI observer that coaches a human agent (never speaks on the call)
@@ -107,7 +113,7 @@ These insights come from analysis of 89 SignalWire training videos, LiveWire ses
 
 ## Critical Pattern: Loop Protection
 
-SWML menu loops (`prompt` + retry) can trap callers. Use `goto` with its built-in `max` jump limit:
+SWML menu loops (`prompt` + retry) can trap callers. Use `goto` with its built-in `max` jump limit. `max` is also bounded by a per-call limit of 32 combined `transfer` and `goto` jumps (8 in a row without caller interaction). Past that the call is hung up, not fallen through.
 
 ```yaml
 - label: menu
@@ -145,6 +151,8 @@ See [Voice AI workflow](workflows/voice-ai.md) "When to Pull Additional Document
 
 **Building AI voice agent?** → [Voice AI](workflows/voice-ai.md)
 
+**Answer needs a slow reasoning model?** → [Slow reasoning behind a tool](workflows/ai-agent-patterns.md#slow-reasoning-behind-a-tool)
+
 **Agent interrupts callers, or leaves dead air?** → [Turn Taking](workflows/ai-agent-turn-taking.md)
 
 **Coaching a live human agent with AI?** → [AI Sidecar](workflows/ai-sidecar.md)
@@ -152,6 +160,8 @@ See [Voice AI workflow](workflows/voice-ai.md) "When to Pull Additional Document
 **Making/receiving calls?** → [Outbound Calling](workflows/outbound-calling.md) or [Inbound Handling](workflows/inbound-call-handling.md)
 
 **Debugging webhooks/callbacks?** → [Webhooks & Events](workflows/webhooks-events.md)
+
+**Voice AI agent billing or metering question?** → [Voice AI](workflows/voice-ai.md) "AI Billing & Metering"
 
 **Need real-time control?** → [Fabric & Relay](workflows/fabric-relay.md)
 

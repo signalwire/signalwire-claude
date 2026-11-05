@@ -306,8 +306,9 @@ functions:
   - name: generate_image
     purpose: "Create custom bouquet image"
     fillers:
-      - "Let me arrange those flowers for you"
-      - "Creating your custom bouquet"
+      en-US:
+        - "Let me arrange those flowers for you"
+        - "Creating your custom bouquet"
     wait_file: "https://cdn.example.com/packaging-sounds.mp3"
 ```
 

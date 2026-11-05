@@ -209,7 +209,7 @@ signalwire-claude/
 │       │   ├── ai-sidecar.md                  #   359 lines: Live agent coaching
 │       │   ├── swsh-cli.md                    #   125 lines: Account operations
 │       │   ├── ai-agent-turn-taking.md        #   123 lines: End-of-turn detection
-│       │   └── ai-agent-chat.md               #   109 lines: Text chat, JSON-RPC
+│       │   └── ai-agent-chat.md               #   142 lines: Text chat, JSON-RPC
 │       └── reference/                 # SDK API docs (loaded only when needed)
 │           ├── sdk/                   # 12 files: AgentBase, SWAIG, etc.
 │           ├── deployment/            # 3 files: Serverless, env vars

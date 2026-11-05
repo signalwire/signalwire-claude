@@ -2,6 +2,54 @@
 
 Frequently used patterns for SignalWire AI Agents.
 
+## Code Runs the Agent
+
+Four layers of control. Only the first one depends on the model cooperating:
+
+| Layer | Mechanism |
+|-------|-----------|
+| Guidance | Prompts and tool descriptions. Probabilistic. |
+| Tool scope | Each step lists its own tools. A tool that is not offered cannot be called. |
+| Transition scope | `set_valid_steps([])` removes `next_step`. Leave `set_valid_contexts` unset so `change_context` is not offered; an empty list still offers it. |
+| Execution authority | The handler checks real state, then commits. The model can ask. Code decides. |
+
+```python
+def scoped(step, text, tools):
+    """Task and tools. The model cannot change step on its own."""
+    return (step.set_text(text)
+            .set_functions(tools)          # [] means no user tools
+            .set_valid_steps([]))
+```
+
+The only way out of a step is a handler that has checked state and then returns `swml_change_step()` or `swml_change_context()`.
+
+Keep truth in a system of record keyed by `call_id`. A confirm takes the revision number of the proposal the caller just heard: a repeat with that revision returns the same record, and a stale revision is refused. Tool handlers receive `(self, args, raw_data)`, and `self` is shared across calls, so writing per-call facts to it leaks one caller into the next call. Read per-call facts from `raw_data` or your store. Per-request agent configuration goes in an `add_per_call_config()` callback. That callback gets its own copy of the SDK-managed configuration. Subclass attributes are shared, so assign new values rather than mutating them.
+
+`params.static_greeting` speaks a fixed disclosure, word for word, before the model says anything. It repeats on every turn until the caller first speaks, including attention timeouts, so a required disclosure can play more than once. Set `params.static_greeting_no_barge` when the caller must not talk over it. Do not leave a required disclosure to the prompt.
+
+`say()` is an action, so it finishes before the next action. Without `post_process`, actions run immediately, so a notice left to the model can be cut off: `say()` first. With `post_process=True`, let the model speak. Use one, not both. `connect(final=True)` runs inline when the call is not from RELAY.
+
+```python
+return (
+    FunctionResult(
+        tool_result="The call is being transferred.",
+        tool_prompt="Say nothing more; the notice is playing.",
+    )
+    .say("I'll connect you now.")
+    .connect(host_number, final=True)
+)
+```
+
+The same `say()` order ends a call when you are not using `post_process`. The goodbye pattern below lets the model speak, then hangs up.
+
+## Seams
+
+Every boundary in the call (recognition, the model, synthesis, a lookup, a handoff) adds latency and a place to fail. Three habits:
+
+- Prefetch lookups when the call arrives, before anyone is waiting on the answer.
+- Carry what the caller already said across a handoff, so they don't repeat it.
+- Write the failure behavior on purpose: say what happened and what the caller can do next. Otherwise a broken step is silence or a confident wrong answer.
+
 ## Data Lookup Pattern
 
 Look up information and respond conversationally:
@@ -16,7 +64,7 @@ Look up information and respond conversationally:
             "description": "The order number (e.g., ORD-12345)"
         }
     },
-    fillers=["Let me look that up", "One moment please"]
+    fillers={"en-US": ["Let me look that up", "One moment please"]}
 )
 def lookup_order(self, args, raw_data):
     order_num = args.get("order_number")
@@ -195,37 +243,101 @@ def end_call(self, args, raw_data):
     ).add_action("hangup", {})
 ```
 
-## Hold Music Pattern
+## Slow Reasoning Behind a Tool
 
-Play music during long operations:
+Keep the slow reasoning model off the conversation. The fast model stays on the call and calls a SWAIG tool; the tool calls the large model and waits. The large model never holds the microphone.
+
+The acknowledgment is a prompt requirement. On the agent, add a section that tells the model to say, in one sentence, what it is about to look up before it calls the tool.
+
+Per-language `fillers` cover the start of the call. A filler covers the moment a tool call is issued. It does not cover the wait. For the wait, loop `wait_file` with `wait_file_loops=-1`, which plays until the function returns. Omitting `wait_file_loops` plays the file once. A wait script, a nested list inside the per-language filler array, speaks phrases one at a time across the wait. A wait script will not talk over an open `wait_file`, and realtime agents do not support wait scripts.
+
+Put a timeout on the slow call, and keep it well under the platform's 120 s SWAIG webhook limit. A function that outlasts that limit returns an error and its `set_global_data` is lost. The block below is a fragment. `self.billing` and `ask_reasoning_model` are your helpers. `ask_reasoning_model` raises `TimeoutError` when the call exceeds the timeout you pass, and the `except` branch relies on that. If it times out, apologize and offer a fallback: email the explanation, call back, or transfer to a person.
+
+Ask the large model for two or three sentences someone can follow on the phone, plus the data behind them. `global_data` is posted with every later function call, so save a short summary and an id there and keep the full analysis in your own store under that id. The follow-up tool loads the analysis by that id, so later questions do not take another trip to the slow model.
 
 ```python
+self.prompt_add_section(
+    "Slow questions",
+    "Before calling explain_bill_increase, say in one sentence "
+    "what you are about to look up."
+)
+
 @AgentBase.tool(
-    name="process_request",
-    description="Process a complex request",
+    name="explain_bill_increase",
+    description="Explain why the caller's bill changed",
     parameters={
-        "request_type": {"type": "string", "description": "Type of request"}
+        "question": {
+            "type": "string",
+            "description": "What the caller wants explained"
+        }
+    },
+    fillers={
+        "en-US": [
+            "Just a moment more",
+            "Thanks for your patience",
+            "Almost there"
+        ]
+    },
+    wait_file="https://example.com/keyboard.mp3",
+    wait_file_loops=-1
+)
+def explain_bill_increase(self, args, raw_data):
+    # self.billing and ask_reasoning_model are your helpers.
+    # ask_reasoning_model raises TimeoutError when it exceeds timeout.
+    invoices = self.billing.recent_invoices(
+        raw_data.get("call", {}).get("from")
+    )
+
+    question = args.get("question", "why the bill changed")
+    try:
+        result = self.ask_reasoning_model(
+            "Answer in two or three sentences someone can follow on the phone, "
+            f"and return the analysis behind them. Question: {question}",
+            invoices,
+            timeout=45,
+        )
+    except TimeoutError:
+        return FunctionResult(
+            "This is taking longer than it should. I can email you the "
+            "explanation, call you back, or transfer you to a person now. "
+            "Which would you like?"
+        ).add_action("set_global_data", {"analysis_status": "timed_out"})
+
+    analysis_id = self.billing.save_analysis(result["analysis"])
+    return (FunctionResult(
+        f"{result['spoken_summary']} "
+        "Want me to go into any part of that?"
+    )
+    .add_action("set_global_data", {
+        "bill_analysis_id": analysis_id,
+        "bill_summary": result["spoken_summary"],
+        "analysis_status": "done"
+    }))
+
+@AgentBase.tool(
+    name="get_bill_detail",
+    description="Answer a follow-up from the bill analysis already saved on this call",
+    parameters={
+        "question": {
+            "type": "string",
+            "description": "The follow-up question"
+        }
     }
 )
-def process_request(self, args, raw_data):
-    request_type = args.get("request_type")
+def get_bill_detail(self, args, raw_data):
+    analysis_id = (raw_data.get("global_data") or {}).get("bill_analysis_id")
+    if not analysis_id:
+        return FunctionResult(
+            "I don't have that saved; I'll run the full analysis. "
+            "Call explain_bill_increase."
+        )
 
-    # Start hold music
-    result = FunctionResult(
-        "This will take a moment. Please hold while I process that."
+    analysis = self.billing.load_analysis(analysis_id)
+    question = args.get("question", "that")
+    return FunctionResult(
+        f"From the saved analysis, answer this in a sentence or two: {question}. "
+        f"Analysis: {analysis}"
     )
-    result.add_action("playback_bg", {
-        "file": "https://example.com/hold-music.mp3"
-    })
-
-    # Do the work
-    outcome = self.do_complex_processing(request_type)
-
-    # Stop music and respond
-    result.add_action("stop_playback_bg", {})
-    result.set_response(f"All done! {outcome}")
-
-    return result
 ```
 
 ## SMS Follow-up Pattern
