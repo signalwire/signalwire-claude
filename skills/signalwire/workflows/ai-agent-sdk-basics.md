@@ -196,7 +196,7 @@ def function_name(self, args, raw_data):
 
     # Your logic here...
 
-    return FunctionResult("Response text the AI will speak")
+    return FunctionResult("Tell the caller the result of this lookup.")
 ```
 
 **Parameter Types:**
