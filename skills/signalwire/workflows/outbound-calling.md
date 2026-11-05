@@ -262,7 +262,7 @@ sections:
         to: "+15551111111"   # E.164 requires the leading +
 ```
 
-`parallel`, `serial`, and `serial_parallel` dial at most 20 destinations in total; any further destination never rings, and `connect` reports no error for it. The same 20-device total applies to Relay `dial` and `call.connect` (extra devices are skipped). A `queue:` connect does not continue the script after the bridge. Details: [swml-methods.md](swml-methods.md#connect).
+`parallel`, `serial`, and `serial_parallel` dial at most 20 destinations in total; any further destination never rings, and `connect` reports no error for it. The same 20-device total applies to Relay `dial` and `call.connect` (extra devices are skipped, and Relay reports each as `Too many devices` in `message_data`). A `queue:` connect does not continue the script after the bridge. Details: [swml-methods.md](swml-methods.md#connect).
 
 Or in JSON:
 ```json

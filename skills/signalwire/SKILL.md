@@ -107,7 +107,7 @@ These insights come from analysis of 89 SignalWire training videos, LiveWire ses
 
 ## Critical Pattern: Loop Protection
 
-SWML menu loops (`prompt` + retry) can trap callers. Use `goto` with its built-in `max` jump limit:
+SWML menu loops (`prompt` + retry) can trap callers. Use `goto` with its built-in `max` jump limit. `max` is also bounded by a per-call limit of 32 combined `transfer` and `goto` jumps (8 in a row without caller interaction). Past that the call is hung up, not fallen through.
 
 ```yaml
 - label: menu
