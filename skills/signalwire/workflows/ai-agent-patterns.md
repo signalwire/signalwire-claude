@@ -16,7 +16,7 @@ Look up information and respond conversationally:
             "description": "The order number (e.g., ORD-12345)"
         }
     },
-    fillers=["Let me look that up", "One moment please"]
+    fillers={"en-US": ["Let me look that up", "One moment please"]}
 )
 def lookup_order(self, args, raw_data):
     order_num = args.get("order_number")
