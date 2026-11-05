@@ -22,9 +22,6 @@ Docs: https://signalwire.com/docs/swml/reference/calling/ai-sidecar (subpages: `
 
 The only thing rejected is a **second sidecar** on the same call, which fails with `there is already a sidecar attached to this call`.
 
-> **Not currently documented publicly — and the docs state the opposite.**
-> `/docs/swml/reference/calling/ai-sidecar` says "One transcriber per call. `ai_sidecar` and plain `live_transcribe` cannot run on the same call at the same time — starting one while the other is active is rejected." That is incorrect; the behavior above was verified against the running platform. Do not revert this section to match the docs page.
-
 ## How It Works
 
 Each time the customer finishes speaking, the sidecar evaluates the conversation. This evaluation is a **tick**; every callback carries a `tick_id`. On each tick:
@@ -70,7 +67,7 @@ So expect an early `turn` and `request` callback — and possibly an `insight` o
 
 **Both legs are the constraint people actually hit.** `direction: ["remote-caller"]` is rejected at start with `sidecar requires both legs (remote-caller and local-caller)`. The requirement is documented; the error string is not.
 
-`lang` is the only required `ai_sidecar` setting.
+To attach a sidecar, `lang` is the only required setting. An `action.summarize` request needs none of the start settings.
 
 ### Permissions
 
@@ -316,7 +313,7 @@ Raw-call summaries (`action.summarize`) are the exception: each run adds a one-s
 
 ## Complete Example
 
-Place `ai_sidecar` before `connect` so the sidecar hears the whole conversation.
+Place `ai_sidecar` before `connect` so the sidecar hears the whole conversation. SWML `connect` blocks until the bridge ends, so a later `ai_sidecar` would only run after the call.
 
 ```yaml
 version: 1.0.0
@@ -353,7 +350,7 @@ sections:
 ## Limitations
 
 - One sidecar per call — a second attach is rejected (`live_transcribe` is *not* a conflict; see above)
-- If the call connects but no `start` callback arrives, the sidecar did not attach. The call connects either way, without an error: check the document, that the tunnel is running, and the password in `url`. If `start` arrives but no `tool_call`, SignalWire can't reach `/swaig` — check the host and password in `web_hook_url`.
+- SWML ignores the result of `ai_sidecar`, so a rejected attach (for example a missing `lang`) is silent and the call connects. If your webhook gets no `start`, either the attach was rejected or your server cannot be reached: check the document first, then that `url` (host, tunnel, basic-auth password) is reachable. If `start` arrives but no `tool_call`, the model may not have called the tool yet, or SignalWire cannot reach `/swaig`.
 - Both legs required — single-leg `direction` rejected at start
 - Turn detection calibrated for Deepgram (the default engine)
 - No voice on the call — `say` reports as a callback instead of speaking
