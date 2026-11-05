@@ -13,7 +13,7 @@ Every SignalWire Space has:
 - **API Token**: Secret key for authentication. Treat it as an opaque string — don't parse it, match a pattern, or assume a length. New project tokens begin with `swapi_` and are 42 characters. Older tokens begin with `PT` and are 50 characters. Both authenticate the same way. `PT` tokens are not deprecated and have no end date.
 - **Space Name**: Your subdomain (e.g., `mycompany` for `mycompany.signalwire.com`)
 
-A **personal access token** authenticates you as a person (your Space role), not as a project. New ones begin with `swpat_`, are 42 characters, include a checksum (a mistype returns `401`), and have no scopes. Older `pat_` tokens still work. Send one with Basic auth and an empty username: `-u ":swpat_..."`. It is accepted on `/api/space` and on the Projects and Project Tokens APIs. Docs: https://signalwire.com/docs/apis/authorization#personal-access-tokens
+A **personal access token** authenticates you as a person (your Space role), not as a project. Its holder must be an owner or admin of that Space, and it acts only on the Space whose subdomain you call. New ones begin with `swpat_`, are 42 characters, include a checksum (a mistype returns `401`), and have no scopes. Older `pat_` tokens still work. Send one with Basic auth and an empty username: `-u ":swpat_..."`. It is accepted on `/api/space` and on the Projects and Project Tokens APIs. Docs: https://signalwire.com/docs/apis/authorization#personal-access-tokens
 
 ### Finding Your Credentials
 
@@ -94,12 +94,22 @@ const response = await axios.post(
 
 **REST `dial` to an external SIP URI** accepts two more `params`:
 
-- `transport`: `udp`, `tcp`, or `tls`. Only when `to` is an external `sip:` or `sips:` URI; any other destination returns 422. It must match a transport already on the URI (`sips:` means `tls`). When neither is set, SignalWire chooses from DNS (NAPTR, then SRV) and falls back to `udp`. `udp` and `tcp` send unencrypted RTP. `tls`, or no transport set, offers SRTP and accepts RTP if the destination declines it.
+- `transport`: `udp`, `tcp`, or `tls`. Only when `to` is an external `sip:` or `sips:` URI. SignalWire-hosted SIP addresses (`*.sip.signalwire.com`) and Fabric addresses return 422 for `transport`, as does any other destination. It must match a transport already on the URI (`sips:` means `tls`). When neither is set, SignalWire chooses from DNS (NAPTR, then SRV) and falls back to `udp`. `udp` and `tcp` send unencrypted RTP. `tls`, or no transport set, offers SRTP and accepts RTP if the destination declines it.
 - `headers`: custom SIP headers on the INVITE, at most 20, or the request returns 422. Each entry is `{name, value}`. `name` is one SIP header token: letters, digits, and the symbols ! # $ % & ' * + - . ^ _ ` | ~, with no spaces. `Identity` and `X-ProjectID` are reserved in any letter case. `value` must be non-empty, must not contain CR, LF, or null, and is at most 1024 bytes.
 
+`transport` and `headers` go inside `params`:
+
 ```json
-"transport": "tls",
-"headers": [{ "name": "X-Custom-Header", "value": "custom-value" }]
+{
+  "command": "dial",
+  "params": {
+    "from": "sip:from-sip@example-112233445566.sip.signalwire.com",
+    "to": "sip:user@pbx.example.com",
+    "url": "https://example.com/swml",
+    "transport": "tls",
+    "headers": [{ "name": "X-Custom-Header", "value": "custom-value" }]
+  }
+}
 ```
 
 ### SDK Authentication
@@ -118,16 +128,20 @@ const client = await SignalWire({
 #### Python Realtime SDK
 
 ```python
-from signalwire.relay.consumer import Consumer
+from signalwire.relay import RelayClient
 
-class MyConsumer(Consumer):
-    def setup(self):
-        self.project = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-        self.token = 'swapi_0123456789ab0123456789ab0123456789ab'
+client = RelayClient(
+    project='xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+    token='swapi_0123456789ab0123456789ab0123456789ab',
+    host='mycompany.signalwire.com',
+    contexts=['default'],
+)
 
-    async def on_incoming_call(self, call):
-        # Handle incoming calls
-        await call.answer()
+@client.on_call
+async def handle(call):
+    await call.answer()
+
+client.run()
 ```
 
 #### Python AI Agents SDK
@@ -233,7 +247,7 @@ When creating API tokens in the Dashboard, you can limit scopes:
 
 1. **Never expose API tokens in client-side code** - Only Project ID and Room Tokens are safe for browsers
 2. **Use environment variables** - Don't hardcode credentials
-3. **Rotate tokens periodically** — [Regenerate API token](https://signalwire.com/docs/apis/rest/project-tokens/regenerate-token) replaces the value and keeps the ID, name, and scopes. The previous value stops working immediately. [List API tokens](https://signalwire.com/docs/apis/rest/project-tokens/list-tokens) returns each token's ID and last-auth time, never the value.
+3. **Rotate tokens periodically** — [Regenerate API token](https://signalwire.com/docs/apis/rest/project-tokens/regenerate-token) replaces the value and keeps the ID, name, and scopes. Regenerating a legacy `PT` token returns a 42-character `swapi_` token. The previous value stops working immediately. [List API tokens](https://signalwire.com/docs/apis/rest/project-tokens/list-tokens) returns each token's ID and last-auth time, never the value.
 4. **Use minimal scopes** - Only grant permissions your application needs
 5. **Validate webhooks** - Verify webhook signatures if available
 6. **Use HTTPS only** - All API calls must be over HTTPS
