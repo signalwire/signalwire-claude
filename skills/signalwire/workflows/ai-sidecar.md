@@ -248,8 +248,7 @@ Unwrap `sidecar_event` before reading `type`. Every callback carries `type`, `ts
 | `action` | SWAIG action returned (and executed if enabled) | `action`, `source_function?`, `executed` |
 | `global_data_change` | Global data changed | `key`, `old_value?`, `new_value?` |
 | `history_pruned` | History trimmed to token budget | `dropped_count`, `kept_count`, `tokens_before`, `tokens_after` |
-| `error` | Failure or anti-loop guard | `error_reason`, `detail?` |
-| `malformed_tool_call` | Model returned tool calls that can't be answered (missing or repeated id, no function name, or a malformed list). Dropped and not run | `stripped`, `detail` |
+| `error` | Failure or anti-loop guard. `error_reason` values include `malformed_tool_call` (with `stripped` and `detail`): tool calls dropped because they could not be answered | `error_reason`, `detail?` |
 | `ask_request` | An `ai_sidecar.ask` call command was queued | `question`, `ask_id` |
 | `ask_answer` | Answer to an `ai_sidecar.ask` | `raw`, `iter`, `total_iters`, `ask_id`, `triggered_by` |
 | `stop` | Sidecar shutting down | `stop_reason` |
@@ -270,6 +269,7 @@ Within one evaluation (`request`/`thought`/`tool_call`/`tool_result`/`insight`),
 | `llm_error` | Model error; `detail` carries provider message |
 | `webhook_http_failure` | Tool webhook failed; carries `function`, `http_code`, `curl_code` |
 | `event_log_truncated` | Event log hit size limit; older entries dropped |
+| `malformed_tool_call` | Tool calls dropped because they could not be answered (missing or repeated id, no function name, or a malformed list). Carries `stripped` and `detail` |
 
 ## Runtime Control (Relay Only)
 
