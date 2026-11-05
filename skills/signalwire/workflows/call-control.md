@@ -431,7 +431,7 @@ call.on('ended', (call) => {
 
 ### Listing Active Calls (REST)
 
-To enumerate live calls — for example, a cleanup job that ends stale calls — use the **Voice Logs API**. The logs include calls handled by cXML, SWML, and the Calling API. The Compatibility API's `GET /Calls` does NOT return SWML/AI call data.
+To enumerate live calls — for example, a cleanup job that ends stale calls — use the **Voice Logs API**. The logs are historical voice activity — calls handled by cXML, SWML, and the Calling API — for usage reporting, billing review, and troubleshooting, not live call control. Finding calls still in progress there is observed behavior. The Compatibility API's `GET /Calls` does NOT return SWML/AI call data.
 
 ```
 GET https://{space}.signalwire.com/api/voice/logs
