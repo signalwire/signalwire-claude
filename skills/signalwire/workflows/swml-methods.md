@@ -132,7 +132,7 @@ sections:
 
 Dial one destination, or several with `parallel`, `serial`, or `serial_parallel`, and bridge the answered one. A single `to` may be an E.164 number (the leading `+` is required; `15552345678` is rejected), a SIP URI, a Resource Address, `queue:<name>`, `call:<id>` (a call in progress in the same project), or `stream:wss://`. An unencrypted `stream:ws://` URL is rejected. `queue:`, `call:`, and `stream:` must be lowercase.
 
-`parallel`, `serial`, and `serial_parallel` dial at most **20 destinations in total** (`serial_parallel` counts across groups). Any destination after the 20th never rings, and `connect` reports no error for it. Relay `dial` and `call.connect` have the same cap: at most 20 devices in total, and any device after the 20th is skipped (Relay reports each skipped device as `Too many devices` in `message_data`).
+`parallel`, `serial`, and `serial_parallel` dial at most **20 destinations in total** (a deployment default; `serial_parallel` counts across groups). Any destination after the 20th never rings, and `connect` reports no error for it. Relay `dial` and `call.connect` have the same cap: at most 20 devices in total, and any device after the 20th is skipped (Relay reports each skipped device as `Too many devices` in `message_data`).
 
 A `queue:` or `call:` destination can't be combined with any other destination. Once a queued call has been bridged, the script does not continue past `connect`; the call hangs up when the bridge ends unless `execute_after_queue` is set. If no queued call is bridged, `connect_result` is `failed` and `result` runs.
 
