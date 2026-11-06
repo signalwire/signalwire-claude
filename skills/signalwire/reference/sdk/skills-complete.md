@@ -164,7 +164,7 @@ agent.add_skill("swml_transfer", {
 
 ### datasphere
 
-Integration with SignalWire DataSphere.
+Integration with SignalWire DataSphere. Document create accepts PDF, plain text, and Markdown from a public `http` or `https` URL, up to 10 MB. Formats, chunking, and status are in [DataSphere Integration (RAG)](../../workflows/ai-agent-functions.md#datasphere-integration-rag).
 
 ```python
 agent.add_skill("datasphere", {

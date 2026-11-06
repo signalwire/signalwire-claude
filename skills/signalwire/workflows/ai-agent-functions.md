@@ -888,6 +888,14 @@ functions:
             response: "%{chunks[0].text}"
 ```
 
+**Ingest.** Create accepts PDF, plain text, and Markdown from a public `http` or `https` URL, up to 10 MB. DataSphere downloads the file from that URL.
+
+A PDF is recognized from its content. Word or Excel returns `422` even when served as `text/plain`. Text is identified by `Content-Type` (`text/plain`, `text/markdown`, `text/x-markdown`, or `text/x-web-markdown`), or by extension when that header is missing or `application/octet-stream`. An extension that names a more specific text type also overrides `text/plain`: `.md` served as `text/plain` is accepted as Markdown, while `.csv`, `.json`, or `.xml` served that way returns `422`. The filename, taken from `Content-Disposition` or the last segment of the URL path, must have a supported extension or none, so a PDF served from `/download.php` returns `422`.
+
+`chunking_strategy` defaults to `sentence`, which groups up to `max_sentences_per_chunk` sentences. `sliding` takes a word window with overlap. `paragraph` splits on blank lines. `page` makes one chunk per PDF page; plain text and Markdown have no pages, so they fall back to a blank-line split, like `paragraph`. Markdown is chunked as written, so chunks keep their markup. `split_newlines` applies only to `sentence`: when `true`, a line break also ends a sentence; the default `false` ends sentences on punctuation only.
+
+Status moves from `submitted` to `in_progress`, then to `completed`, or to `failed` when a chunk can't be indexed (for example, because it is too long). A file with no extractable text, such as a scanned PDF with no text layer, stays `in_progress`.
+
 **Use Cases:**
 - Medical information lookup (HIPAA-compliant)
 - Product documentation search
