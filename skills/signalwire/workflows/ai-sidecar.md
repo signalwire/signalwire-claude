@@ -63,6 +63,8 @@ So expect an early `turn` and `request` callback — and possibly an `insight` o
 | `params` | object | Tuning options (see Tuning Params below). |
 | `action` | object | `action.summarize` asks a sidecar already attached to the call for a one-off summary. Without one, the request fails and no sidecar is started. `summarize.webhook` defaults to the sidecar `url`. `summarize.prompt` defaults to `params.transcribe_prompt`, then built-in summary instructions. |
 
+`global_data` / `ai_agents_global_data` persists across AI sessions on one leg only. It does not cross to another leg. Docs: https://signalwire.com/docs/platform/voice/call-legs
+
 **The field is `customer_role`, not `customer_leg`.** There is no `customer_leg` field — it is silently ignored if you set it, and the sidecar falls back to the `remote-caller` default. This is the single most likely configuration mistake.
 
 **Both legs are the constraint people actually hit.** `direction: ["remote-caller"]` is rejected at start with `sidecar requires both legs (remote-caller and local-caller)`. The requirement is documented; the error string is not.

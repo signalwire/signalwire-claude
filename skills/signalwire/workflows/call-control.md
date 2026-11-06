@@ -546,12 +546,14 @@ async def warm_transfer(call, agent_number):
 
 ### Call Whisper (Agent Hears Announcement, Caller Doesn't)
 
+`confirm` runs on the leg `connect` dialed. That document starts with empty `vars` and its own `call` (`call_id`, `from`, `to`, and `direction` for that leg; a B-leg has `parent` and usually `peer` pointing at the A-leg). A-leg `vars` such as `%{vars.caller_name}` are empty there. Use `%{call.from}`, embed the values when you build the A-leg document, or set `confirm` to a URL that looks the caller up by `call.parent` or `call.peer`. The leg that issued `connect` keeps its vars across the bridge. SignalWire clears `call.peer` when that document resumes, so code after `connect` must not rely on it. Docs: https://signalwire.com/docs/platform/voice/call-legs
+
 ```yaml
 - connect:
     to: "+15551234567"
     from: "%{call.from}"
     answer_on_bridge: true
-    confirm:  # Runs on the agent leg before bridging - caller doesn't hear it
+    confirm:  # Runs on the dialed leg before bridging — caller doesn't hear it
       - play:
           url: "say:This is a sales call from %{call.from}"
 ```
@@ -704,7 +706,7 @@ ws.on('message', (data) => {
 
 ### Call Variables for Context
 
-**Pass data through the call:**
+**Pass data through this leg.** `%{vars.*}` below expands on the leg that issues `connect`. `confirm` on the dialed leg starts with empty `vars`.
 
 ```yaml
 - ai:
@@ -788,9 +790,9 @@ async def warm_transfer_with_context(call, agent_number, context):
     to: "+15551234567"
     from: "%{call.from}"
     answer_on_bridge: true
-    confirm:  # Runs on the agent leg before bridging - caller doesn't hear it
-      - play:
-          url: "say:Incoming call from %{vars.caller_name}, account %{vars.account_id}, issue type: %{vars.issue_type}"
+    # Dialed leg starts with empty vars. This URL is fetched for that leg;
+    # look the caller up from call.parent or call.peer. See Call Whisper above.
+    confirm: "https://yourserver.com/agent-whisper"
 ```
 
 ### Call Screening with Accept/Reject
@@ -800,9 +802,9 @@ async def warm_transfer_with_context(call, agent_number, context):
     url: "say:Please hold while we locate an agent"
 - connect:
     to: "+15551234567"
-    confirm:  # Screening script runs on the answered leg
+    confirm:  # Screening script runs on the answered leg; it does not need A-leg vars
       - prompt:
-          play: "say:You have an incoming call from %{vars.caller_name}. Press 1 to accept"
+          play: "say:You have an incoming call. Press 1 to accept"
           max_digits: 1
 - cond:
     - when: "connect_result == 'failed'"

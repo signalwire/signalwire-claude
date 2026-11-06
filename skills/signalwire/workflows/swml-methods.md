@@ -140,6 +140,8 @@ A `queue:` or `call:` destination can't be combined with any other destination. 
 
 `ringback: false` turns off SignalWire's ringback and passes the destination's early media through. `stop_all_on_reject` (default `false`) stops the other ringing destinations when one rejects and, after the `result` block runs, hangs up the caller. `true` matches `busy` and `decline`; use a non-empty array of `busy`, `decline`, and `noAnswer` to include `noAnswer`.
 
+**Variables set** (on the leg that issued `connect`, which keeps its `vars` across the bridge): `connect_result` (`connected` \| `failed`), `connect_failed_reason`, `return_value` (same as `connect_result`). A document on the dialed leg, including `confirm`, starts with empty `vars` and that leg's own `call`. `call.peer` is present on that leg and on `connect` status callbacks, including `disconnected`. SignalWire clears `call.peer` when this document resumes, so code after `connect` must not rely on it. See [Variables](#variables).
+
 Docs: https://signalwire.com/docs/swml/reference/calling/connect
 
 ## Conferencing
@@ -898,6 +900,7 @@ Docs: https://signalwire.com/docs/swml/reference/variables
 
 - **Syntax:** wrap a variable path in `${...}` or `%{...}` inside any string value. In **Calling** documents the two are interchangeable; **Messaging** documents accept `%{...}` only. If the placeholder body isn't a plain path (operators, method calls), it's evaluated as a JavaScript expression. Unset-but-valid paths resolve to an empty string.
 - **Scopes:** `call` (Calling) / `message` (Messaging) hold the inbound webhook fields (`${call.from}`, `%{message.body}`); `params` holds subroutine/handoff parameters; `vars` holds values you `set` (and method output variables); `envs` (Calling only) holds environment values. Bare output variables like `prompt_value` or `detect_result` are also readable directly.
+- **Per leg:** Calling `vars` and `call` belong to the leg running the document. They persist across sections, `execute`, and `transfer` on that leg, and they do not cross to another leg. A document on the leg `connect` dialed, such as `confirm`, starts with empty `vars` and its own `call` (`call_id`, `from`, `to`, `direction`; a B-leg has `parent` and usually `peer` pointing at the A-leg). The leg that issued `connect` keeps its vars and, when the document resumes, receives that method's outputs (see [`connect`](#connect)). `call.peer` is present on the dialed leg and on `connect` status callbacks, including `disconnected`. SignalWire clears `call.peer` when the document resumes after `connect`. Docs: https://signalwire.com/docs/platform/voice/call-legs and https://signalwire.com/docs/swml/reference/calling
 - **Nested data:** dot notation for objects, zero-based brackets for arrays — `${user.address.city}`, `${employees[0].name}`, `%{message.media[0].url}`.
 - **Deployment:** serverless (Dashboard-hosted) documents are substituted at runtime by SignalWire; server-based documents can either return SWML containing placeholders (SignalWire substitutes) or read `call`/`vars`/`envs`/`params` from the webhook POST body and substitute server-side before responding.
 - **Not SWML:** mustache-style `{{variable}}` templating is **not** valid SWML syntax — always use `%{...}` or `${...}`.
