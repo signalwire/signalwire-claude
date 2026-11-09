@@ -845,7 +845,7 @@ def create_ticket():
 ### Real-Time Transcription Integration
 
 ```yaml
-# Enable live transcription
+# Enable live transcription. direction is required.
 sections:
   main:
     - live_transcribe:
@@ -854,40 +854,34 @@ sections:
             webhook: "https://yourserver.com/transcribe"
             lang: en
             live_events: true
+            direction: [remote-caller, local-caller]
     - ai:
         prompt: "Your agent instructions"
 ```
 
-### WebSocket Transcription Handler
+`direction` is required. Events are HTTP POSTs to that `webhook`, told apart by `channel_data.content_disposition`. Payload fields: [live_transcribe](swml-methods.md#live_transcribe). Guide: https://signalwire.com/docs/platform/voice/transcribe-calls
+
+### Transcription Webhook Handler
 
 ```javascript
-const WebSocket = require('ws');
+const express = require('express');
+const app = express();
 
-const wss = new WebSocket.Server({ port: 8080 });
+app.use(express.json());
 
-wss.on('connection', (ws) => {
-  console.log('Transcription connection established');
+app.post('/transcribe', (req, res) => {
+  const kind = req.body.channel_data.content_disposition;
 
-  ws.on('message', (data) => {
-    const message = JSON.parse(data);
+  if (kind === 'transcribe.utterance') {
+    const { role, content } = req.body.utterance;
+    console.log(`${role}: ${content}`);
+  } else if (kind === 'transcribe.live_summarize') {
+    console.log(req.body.conversation_summary);
+  } else if (kind === 'transcribe.conversation_log') {
+    console.log(req.body.conversation_log.length);
+  }
 
-    if (message.event === 'transcription') {
-      console.log('User said:', message.transcription.text);
-
-      // Real-time processing
-      analyzeIntent(message.transcription.text);
-
-      // Store for records
-      saveTranscript(message.transcription.text);
-
-      // Update live dashboard
-      broadcastToAgents({
-        type: 'live_transcript',
-        text: message.transcription.text,
-        timestamp: Date.now()
-      });
-    }
-  });
+  res.sendStatus(200);
 });
 ```
 
