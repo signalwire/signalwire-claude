@@ -139,6 +139,57 @@ Webhook receives:
 }
 ```
 
+### Per-turn call log fields
+
+Voice post-prompt `call_log` (filtered) and `raw_call_log` (unfiltered, append-only) entries carry the per-turn fields below. Use them to debug latency, recognition, and interruptions. AI Chat `chat_log` entries do not carry them. Times are milliseconds unless noted.
+
+Caller entries (`user`):
+
+| Field | Meaning |
+|-------|---------|
+| `confidence` | How confident recognition was, from 0 to 1. On a merged entry, the average across the merged speech, weighted by text length. |
+| `content_type` | `Detected Speech` or `DTMF`. |
+| `speaking_to_turn_detection` | From when the caller started speaking until turn detection decided they had finished. Omitted when the turn ended without a turn-detection decision. |
+| `turn_detection_to_final_event` | From the turn-detection decision until the final recognition result. Present alongside `speaking_to_turn_detection`. |
+| `merge_count` | How many caller entries were combined into this one the last time consecutive caller speech was merged, for example words added after an interruption. An entry that was already merged counts as one. Present once merging has run. |
+
+Replies (`assistant`, or `assistant-manual` for a filler):
+
+| Field | Meaning |
+|-------|---------|
+| `latency` | From the start of the model request to the first token. The request starts once the caller's speech is final, or once a function returns. |
+| `utterance_latency` | From the start of the model request until the first part of the reply was ready to speak. |
+| `audio_latency` | From the start of the model request until the first audio played. It does not include detecting the end of the caller's speech. |
+| `acoustic_latency` | From the caller's last word until the first audio of the reply: the silence the caller heard. `null` when unmeasured, such as on the greeting. |
+| `eos_to_push_latency` | From the caller's last word until the final speech result. `null` when unmeasured, and always `null` on a filler. |
+| `stamps_us` | Unix timestamps in microseconds. `last_word_end` is when the caller's last word ended; `first_audio` is when the first audio was sent. Subtract `last_word_end` from `first_audio` for the same silence as `acoustic_latency`. A stamp is omitted when unknown, and other stamps can appear. `last_word_end` is omitted when the reply does not respond to caller speech, such as the greeting or a filler. |
+
+On a standard agent, if any of `latency`, `utterance_latency`, and `audio_latency` could not be measured for a reply, all three are `0`, as on the greeting.
+
+Interrupted replies:
+
+| Field | Meaning |
+|-------|---------|
+| `barged` | `true` when present. The caller interrupted this reply. |
+| `barge_elapsed_ms` | How long the reply had been playing when the caller interrupted. |
+| `text_spoken_total` | The full text of the reply. |
+| `text_heard_approx` | An estimate of what the caller heard: the start of `text_spoken_total`, ending at a word boundary, from how long the reply had played. |
+
+`barged`, `barge_elapsed_ms`, `text_spoken_total`, `text_heard_approx`, and `merge_count` are recorded on one copy of the conversation, so any of them can be missing from either `call_log` or `raw_call_log`. Check both. A standard agent records no interruption fields on a reply that [`transparent_barge`](ai-agent-prompting.md#transparent-barge) removed from the conversation.
+
+Function results (`tool`):
+
+| Field | Meaning |
+|-------|---------|
+| `function_latency` | From the start of the model request until the model called this function, or until a first reply was ready to speak if that was sooner. |
+| `execution_latency` | From the start of the model request until the function returned. On a standard agent this is the only one of `latency`, `function_latency`, and `execution_latency` that includes the function's own run time. Use it to spot a slow function. |
+
+On a `tool` entry, `latency` is the first-token time of the model request that called the function. Do not read it as the spoken reply's model latency. `utterance_latency` repeats `function_latency`, and `audio_latency` repeats `execution_latency`. `latency`, `utterance_latency`, `audio_latency`, `function_latency`, and `execution_latency` are omitted when unmeasured, and always for a function the post-prompt calls. A function result does not send `0` for an unmeasured `latency`, `utterance_latency`, or `audio_latency`.
+
+A speech-to-speech agent measures `latency` from when the reply started. An unmeasured `acoustic_latency` is `0` rather than `null`. `function_latency` and `execution_latency` carry reply timing rather than function timing, and `text_spoken_total` is present on every reply.
+
+An agent using the `amazon_bedrock` method reports approximate `latency`, `utterance_latency`, and `audio_latency` on replies, and the same fixed `confidence` on every caller entry. Do not use those values to measure responsiveness or recognition.
+
 ### Handling in on_summary()
 
 You can also handle summaries in your agent code:
