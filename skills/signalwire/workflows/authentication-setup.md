@@ -13,7 +13,7 @@ Every SignalWire Space has:
 - **API Token**: Secret key for authentication. Treat it as an opaque string — don't parse it, match a pattern, or assume a length. New project tokens begin with `swapi_` and are 42 characters. Older tokens begin with `PT` and are 50 characters. Both authenticate the same way. `PT` tokens are not deprecated and have no end date.
 - **Space Name**: Your subdomain (e.g., `mycompany` for `mycompany.signalwire.com`)
 
-A **personal access token** authenticates you as a person (your Space role), not as a project. Its holder must be an owner or admin of that Space, and it acts only on the Space whose subdomain you call. New ones begin with `swpat_`, are 42 characters, include a checksum (a mistype returns `401`), and have no scopes. Older `pat_` tokens still work. Send one with Basic auth and an empty username: `-u ":swpat_..."`. It is accepted on `/api/space` and on the Projects and Project Tokens APIs. Docs: https://signalwire.com/docs/apis/authorization#personal-access-tokens
+A **personal access token** authenticates you as a person (your Space role), not as a project. Its holder must be an owner or admin of that Space, and it acts only on the Space whose subdomain you call. New ones begin with `swpat_`, are 42 characters, and have no scopes. Older `pat_` tokens are 28 characters and still work. Treat either as opaque: don't pattern-match it or assume a length. A mistyped or altered token is rejected with `401`. Send one with Basic auth and an empty username: `-u ":swpat_..."`. It is accepted on `/api/space` and on the Projects and Project Tokens APIs. Docs: https://signalwire.com/docs/apis/authorization#personal-access-tokens
 
 ### Finding Your Credentials
 
@@ -249,7 +249,7 @@ When creating API tokens in the Dashboard, you can limit scopes:
 2. **Use environment variables** - Don't hardcode credentials
 3. **Rotate tokens periodically** — [Regenerate API token](https://signalwire.com/docs/apis/rest/project-tokens/regenerate-token) replaces the value and keeps the ID, name, and scopes. Regenerating a legacy `PT` token returns a 42-character `swapi_` token. The previous value stops working immediately. [List API tokens](https://signalwire.com/docs/apis/rest/project-tokens/list-tokens) returns each token's ID and last-auth time, never the value.
 4. **Use minimal scopes** - Only grant permissions your application needs
-5. **Validate webhooks** - Verify webhook signatures if available
+5. **Validate webhooks** - Verify webhook signatures. See [Request Signing](ai-agent-security.md#request-signing).
 6. **Use HTTPS only** - All API calls must be over HTTPS
 
 ## Common Authentication Errors

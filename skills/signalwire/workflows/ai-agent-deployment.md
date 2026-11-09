@@ -742,6 +742,8 @@ server {
 }
 ```
 
+More than one process needs the same `SIGNALWIRE_SWAIG_SECRET`. Without a fixed secret, each process generates its own, and a function token or the post-prompt token from one replica fails on another. Set `token_expiry_secs` longer than your longest call; the default is one hour. Set fixed basic-auth credentials too. Generated ones change on restart, and calls already in progress fail their next function call and their post-prompt summary.
+
 ### Path-Prefix Proxying and Callback URLs
 
 The Nginx example above proxies at the root (`location /`). If you instead mount an agent behind a path prefix (e.g. `location /myagent/`), the prefix must appear in the **agent's own `route`**, not just in the proxy config or a `register()` override:
@@ -756,7 +758,7 @@ agent = MyAgent(name="screener", route="/myagent/screener")
 server.register(agent)
 ```
 
-`register(route=...)` overrides only where the app is mounted. The `swaig`, `post_prompt`, and `debug_events` callback URLs handed to SignalWire are built from the agent's own `route` attribute plus `SWML_PROXY_URL_BASE` — with a mismatched prefix, every callback 404s: the agent still serves SWML, but no function ever fires and no webhook arrives.
+`register(route=...)` overrides only where the app is mounted. The `swaig`, `post_prompt`, and `debug_events` callback URLs handed to SignalWire are built from the agent's own `route` attribute plus `SWML_PROXY_URL_BASE` — with a mismatched prefix, every callback 404s: the agent still serves SWML, but no function ever fires and no webhook arrives. Set `SWML_PROXY_URL_BASE` to the public base URL. Signature checks use that URL, not the host the proxy forwarded.
 
 Verify after deploying behind any proxy:
 

@@ -174,7 +174,7 @@ MCP server tools are discovered at startup and registered as callable functions 
 
 ### Tool Webhook Contract
 
-Platform POSTs JSON to the function's `web_hook_url` (smaller field set than the `ai` method's SWAIG webhook; caller details grouped under `channel_data`). Your response:
+Platform POSTs JSON to the function's `web_hook_url` (smaller field set than the `ai` method's SWAIG webhook; caller details grouped under `channel_data`). The request is signed with the project's signing key. Your response:
 
 ```json
 {

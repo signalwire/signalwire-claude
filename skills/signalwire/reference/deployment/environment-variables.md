@@ -26,7 +26,7 @@ export SIGNALWIRE_API_TOKEN="swapi_0123456789ab0123456789ab0123456789ab"
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SWML_PROXY_URL_BASE` | None | Base URL for SWML callbacks (required for SignalWire to reach your agent) |
+| `SWML_PROXY_URL_BASE` | None | Public base URL for SWML callbacks (required for SignalWire to reach your agent). Signature checks use this URL, not the host a proxy forwarded. |
 | `SWML_SSL_ENABLED` | `false` | Enable HTTPS for callback URLs |
 
 **Example:**
@@ -58,6 +58,17 @@ URLs with embedded credentials:
 ```
 https://admin:secretpassword@abc123.ngrok.io/agent
 ```
+
+If these are unset, the SDK generates a username (`signalwire`) and a new password on every startup. That pair is for development only. A restart changes the password, and calls already in progress fail their next function call and their post-prompt summary. Set a fixed pair in production.
+
+### Request signatures and function tokens
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SIGNALWIRE_SIGNING_KEY` | None | Project signing key. With it set, unsigned or mis-signed POSTs to the SWML, SWAIG, and post-prompt endpoints get 403. Without it, the agent logs a startup warning and accepts unsigned requests. Python `signing_key=` and TypeScript `signingKey` override it. |
+| `SIGNALWIRE_SWAIG_SECRET` | None | Secret for function tokens and the post-prompt token (`__token`). Without a fixed secret, each process generates its own, so tokens break across restarts and replicas. Python `swaig_secret=` and TypeScript `swaigSecret` override it. |
+
+Set the token lifetime with `token_expiry_secs` (TypeScript `tokenExpirySecs`). The default is one hour. Set it longer than your longest call.
 
 ## Debug Webhooks
 
@@ -210,6 +221,8 @@ SWML_SSL_ENABLED=true
 # Security
 SWML_BASIC_AUTH_USER=api
 SWML_BASIC_AUTH_PASSWORD=<strong-random-password>
+SIGNALWIRE_SIGNING_KEY=<project-signing-key>
+SIGNALWIRE_SWAIG_SECRET=<shared-across-replicas>
 
 # Minimal logging
 SWML_LOG_LEVEL=WARNING

@@ -32,9 +32,11 @@ class AgentBase(
 | `route` | str | `"/"` | HTTP endpoint path for this agent |
 | `host` | str | `"0.0.0.0"` | Host address to bind server |
 | `port` | int | `3000` | Port number for HTTP server |
-| `basic_auth` | tuple | `None` | `(username, password)` for HTTP basic auth |
+| `basic_auth` | tuple | `None` | `(username, password)` for HTTP basic auth. Leave unset and the SDK generates a development-only pair (username `signalwire`, new password each startup). A restart then fails the next function call and the post-prompt summary on calls already in progress. Set a fixed pair in production. |
+| `signing_key` | str | `None` | Project signing key. TypeScript: `signingKey`. Or set `SIGNALWIRE_SIGNING_KEY`. With a key, unsigned or mis-signed POSTs to the SWML, SWAIG, and post-prompt endpoints get 403. Without one, the agent logs a startup warning and accepts unsigned requests. |
 | `use_pom` | bool | `True` | Enable Prompt Object Model for structured prompts |
-| `token_expiry_secs` | int | `3600` | Session token lifetime in seconds |
+| `swaig_secret` | str | `None` | Secret for function tokens and the post-prompt token. The query parameter is `__token`. TypeScript: `swaigSecret`. Or set `SIGNALWIRE_SWAIG_SECRET`. Without a fixed secret, each process generates its own and tokens break across restarts and replicas. |
+| `token_expiry_secs` | int | `3600` | Token lifetime in seconds. TypeScript: `tokenExpirySecs`. One hour by default; set it longer than your longest call. |
 | `auto_answer` | bool | `True` | Automatically answer incoming calls |
 | `record_call` | bool | `False` | Enable call recording |
 | `record_format` | str | `"mp4"` | Recording format (mp4, wav, mp3) |
