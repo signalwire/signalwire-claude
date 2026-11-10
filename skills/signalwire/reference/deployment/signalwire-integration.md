@@ -287,6 +287,18 @@ curl -X POST "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/relay/rest/end
 
 Route the SIP endpoint to your agent similarly to phone numbers.
 
+### From header on outbound calls
+
+A softphone, phone, or PBX must place outbound calls from your SIP Credential's address, `username@your-space.sip.signalwire.com`, in the `From` header. SignalWire identifies the credential from that header, so any other `From` fails before the call starts and no call log is created.
+
+| `From` header sent | Result | Fix |
+|--------------------|--------|-----|
+| Your device's IP address or hostname | `404 Domain unavailable` | Set the device's From domain to your SIP Credential domain. |
+| `anonymous@anonymous.invalid` | `404 Domain unavailable` | Turn off caller ID blocking (anonymous calling) on the device. |
+| A phone number instead of your username | `407 Proxy Authentication Required` on every attempt | Set the device's From user to your SIP Credential username. |
+
+The `From` header doesn't set caller ID on calls to phone numbers. Set caller ID on the SIP credential, and leave caller ID blocking off.
+
 ## Complete Integration Example
 
 This example creates a full deployment with phone + WebRTC:

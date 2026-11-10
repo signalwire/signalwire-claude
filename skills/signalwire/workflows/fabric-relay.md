@@ -696,6 +696,11 @@ def schedule_cleanup(subscriber_id, minutes):
 - For connecting to existing PBX systems
 - Custom routing rules
 
+**How SignalWire dials the gateway URI:**
+- Exactly as configured, with one exception. When a call to one of your phone numbers routes to the gateway and the URI has no user part, SignalWire adds the dialed number without the leading `+`. With `sip:pbx.example.com`, a call to `+15551234567` goes to `sip:15551234567@pbx.example.com`.
+- A URI with a user part is never changed, such as `sip:support@pbx.example.com`. Set a user part when the destination routes calls on it, for example by a project ID or an agent name.
+- Calls that reach the gateway through a Resource SIP Address, or a dial to the gateway's Resource Address, always use the URI as configured. If that URI has no user part, the call goes out with no user part.
+
 ## Resource-Based Architecture
 
 ### Core Concept
