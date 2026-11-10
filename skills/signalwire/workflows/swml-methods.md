@@ -834,7 +834,7 @@ sections:
 
 ## Messaging SWML
 
-The Messaging flavor of SWML handles inbound SMS/MMS. Documents use the same `version`/`sections`/`main` shape, but variables use `%{...}` only, the inbound message is exposed on the `message` scope (`%{message.from}`, `%{message.body}`, `%{message.media[0].url}`), and the method set is:
+The Messaging flavor of SWML handles inbound SMS/MMS and RCS. For an RCS agent, `reply` takes `body` or `content` (not both) and sends files as `content` type `media`; see [RCS](messaging.md#rcs). Documents use the same `version`/`sections`/`main` shape, but variables use `%{...}` only, the inbound message is exposed on the `message` scope (`%{message.from}`, `%{message.body}`, `%{message.media[0].url}`), and the method set is:
 
 | Method | Purpose |
 |--------|---------|
