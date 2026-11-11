@@ -405,6 +405,12 @@ response = requests.put(
 
 **Note**: CNAM updates may take 24-72 hours to propagate across carriers.
 
+### STIR/SHAKEN attestation
+
+Levels **A** and **B** require vetting. Request it with a SignalWire support ticket. Once vetting is complete, SignalWire assigns the level from what it has verified. **A (Full)** means both your identity and your authorization to use the calling number are verified. Calls from a number bought on or ported to SignalWire, in the same project that places the call, receive **A**. **B (Partial)** means your identity is verified but your authorization to use the number is not. Calls from a verified caller ID number or an imported phone number receive **B**. See [STIR/SHAKEN](https://signalwire.com/docs/platform/voice/stir-shaken).
+
+A blocked outbound call can be diagnosed from the SIP response the destination network returned. An analytics program blocks the call with SIP `603` and a `Reason` header whose text starts with `v=analytics1` (`603+`). That header usually includes a redress `url` and can include an `id`. `607 Unwanted` means the called party marked the call unwanted. `608 Rejected` means an intermediary rejected it; in the US, a terminating provider that blocks on analytics returns `603+` instead. Get the code and `Reason` header from SignalWire Support with the call's Segment ID from Dashboard Logs. Support can review the account for A attestation, set CNAM where the number's carrier supports it, confirm the number is assigned to you, and investigate the failed call. SignalWire can't remove a label or block that another carrier or reputation provider applied. See [Resolve spam labels and blocked calls](https://signalwire.com/docs/platform/voice/resolving-spam-labels).
+
 ## Number Porting
 
 ### Porting Numbers to SignalWire
