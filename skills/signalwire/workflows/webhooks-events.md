@@ -54,7 +54,9 @@ SignalWire sends POST requests with JSON body:
 - **created**: Call has been created
 - **ringing**: Destination is ringing
 - **answered**: Call was answered
-- **ended**: Call has terminated
+- **ended**: Placed call has ended, however it ended. The cause is `end_reason`, for example `busy` or `noAnswer`
+
+The `ended` callback is sent when the destination was busy, didn't answer, or declined, and when a ringing call is canceled. A call that is never placed sends no callback, whatever `status_events` lists: status `failed`, or a call canceled or completed with the `update` command while it is still `queued`.
 
 ### Handling Status Webhooks (Python/Flask)
 
