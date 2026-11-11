@@ -537,22 +537,28 @@ class MultiTenant(Consumer):
 
 ### Retrieving Fabric Address
 
+Project administration code lists the addresses on a resource with the project API token:
+
 ```python
 response = requests.get(
-    f"{space_url}/api/fabric/addresses",
+    f"{space_url}/api/fabric/resources/{resource_id}/addresses",
     auth=HTTPBasicAuth(project_id, api_token)
 )
 
-addresses = response.json()
-for addr in addresses:
-    print(f"Address: {addr['address']} - Type: {addr['type']}")
+for addr in response.json()["data"]:
+    print(f"{addr['name']}: {addr['type']}")
 ```
+
+A Subscriber client lists the addresses it can reach at `GET /api/fabric/subscriber/addresses` and fetches one at `GET /api/fabric/subscriber/addresses/{id}`, with a Subscriber Access Token. Those operations were previously served at `/api/fabric/addresses` and `/api/fabric/addresses/{id}`. The old paths still answer SAT requests with the same response. Pagination links on the list keep the old path. Both add `Deprecation: true` and a `Link` header naming `/api/fabric/subscriber/addresses` as the successor. No removal date is set.
+
+On RELAY `calling.call.state`, `params.subscriber_id` is the Subscriber who placed the call from the Browser SDK or who answered it there. `params.address_id` is the Resource Address the call was placed to, and `params.subscriber_name` is the placing Subscriber's display name, or if that's empty their first name, then their email, then `Subscriber`. `address_id` and `subscriber_name` are present when a Subscriber places the call to an Address. On `calling.call.dial`, `call.subscriber_id` is the Subscriber who answered the dialed leg in the Browser SDK, present when a Subscriber answers. On `calling.conference`, participant events include `params.subscriber_id` (the Subscriber who placed the participant's call from the Browser SDK or answered it there). `params.address_id` and `params.subscriber_name` are on those participant events when the call was placed to an Address, and `subscriber_name` uses the same display name, first name, email, then `Subscriber` order. `params.deaf` is whether the participant can't hear the conference, present on events about a participant except `participant-call-quality`.
 
 ### Address Types
 
-- **phone**: Phone number (+15551234567)
-- **sip**: SIP URI (sip:user@domain)
-- **subscriber**: Subscriber identifier
+- **app**: points to an application
+- **room**: points to a Conference Room
+- **call**: points to a call
+- **subscriber**: points to a Subscriber
 
 ## Testing Relay Applications
 
