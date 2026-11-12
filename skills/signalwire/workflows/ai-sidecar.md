@@ -58,10 +58,12 @@ So expect an early `turn` and `request` callback — and possibly an `insight` o
 | `url` | string | Webhook URL for callbacks. When unset, callbacks publish only on relay topic `calling.ai.sidecar` (relay always fires; webhook is opt-in). Basic auth embeddable: `username:password@url`. |
 | `SWAIG` | object | Functions and MCP servers available to the sidecar (see below). |
 | `permissions` | object | SWAIG permission overrides. Defaults to all enabled. |
-| `global_data` | object | Initial key-value data. Reference in prompt via `${global_data.key}`; included in tool requests; persists across sessions on the same call leg as `${ai_agents_global_data.key}`. |
+| `global_data` | object | Initial key-value data. Reference in prompt via `${global_data.key}`; included in tool requests; persists across sessions on the same call leg as `${ai_agents_global_data.key}`. It does not cross to another leg. |
 | `hints` | array | ASR hints biasing recognition toward terms (product names, jargon, SWAIG enum values). Strongly recommended. Example: `["ACME", "Globex", "FedRAMP", "SOC 2"]`. |
 | `params` | object | Tuning options (see Tuning Params below). |
 | `action` | object | `action.summarize` asks a sidecar already attached to the call for a one-off summary. Without one, the request fails and no sidecar is started. `summarize.webhook` defaults to the sidecar `url`. `summarize.prompt` defaults to `params.transcribe_prompt`, then built-in summary instructions. |
+
+Docs: https://signalwire.com/docs/platform/voice/call-legs
 
 **The field is `customer_role`, not `customer_leg`.** There is no `customer_leg` field — it is silently ignored if you set it, and the sidecar falls back to the `remote-caller` default. This is the single most likely configuration mistake.
 
