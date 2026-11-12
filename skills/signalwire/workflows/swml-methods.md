@@ -1,6 +1,6 @@
 # SWML Method Reference
 
-SWML (SignalWire Markup Language) is a YAML/JSON document format for scripting calls and messages. A document declares `version: 1.0.0` and a `sections` map whose `main` section runs first; each section is an array of method statements executed in order. SWML comes in two flavors: **Calling** documents (voice calls — the full method set below) and **Messaging** documents (inbound SMS/MMS handling — a smaller method set, see [Messaging SWML](#messaging-swml)). This file is a reference for the methods not covered in depth by other workflow docs; the index links each method to where it's documented.
+SWML (SignalWire Markup Language) is a YAML/JSON document format for scripting calls and messages. A document declares `version: 1.0.0` and a `sections` map whose `main` section runs first; each section is an array of method statements executed in order. SWML comes in two flavors: **Calling** documents (voice calls — the full method set below) and **Messaging** documents (inbound SMS, MMS, and RCS handling — a smaller method set, see [Messaging SWML](#messaging-swml)). This file is a reference for the methods not covered in depth by other workflow docs; the index links each method to where it's documented.
 
 ## Method Index (Calling)
 
@@ -849,7 +849,7 @@ sections:
 
 ## Messaging SWML
 
-The Messaging flavor of SWML handles inbound SMS/MMS. Documents use the same `version`/`sections`/`main` shape, but variables use `%{...}` only, the inbound message is exposed on the `message` scope (`%{message.from}`, `%{message.body}`, `%{message.media[0].url}`), and the method set is:
+The Messaging flavor of SWML handles inbound SMS/MMS and RCS. For an RCS agent, `reply` takes `body` or `content` (not both) and sends files as `content` type `media`; see [RCS](messaging.md#rcs). Documents use the same `version`/`sections`/`main` shape, but variables use `%{...}` only, the inbound message is exposed on the `message` scope (`%{message.from}`, `%{message.body}`, `%{message.media[0].url}`), and the method set is:
 
 | Method | Purpose |
 |--------|---------|
@@ -873,10 +873,11 @@ Object form:
 
 | Property | Type / Default | Description |
 |----------|----------------|-------------|
-| `body` | string | Text body. Required when `media` is not set |
-| `media` | array | Media URLs to attach (converts to MMS, max 8). Required if no `body` |
-| `to` | string | Destination in E.164 format (default: inbound `from`) |
-| `from` | string | Sending number/short code — must be owned by your project with messaging capability (default: inbound `to`) |
+| `body` | string | Text body. Required when `media` is not set, and not used with RCS `content` |
+| `content` | object | RCS rich content. For an RCS agent, set `body` or `content`, not both. Send files as `content` with `type: media`; `media` is not supported |
+| `media` | array | Media URLs to attach (converts to MMS, max 8). Required if no `body`. Not supported for RCS |
+| `to` | string | Destination in E.164 format (default: inbound `from`). For RCS, a US number |
+| `from` | string | Sending number or short code, which must be owned by your project with messaging capability, or for RCS another agent in the same Project (default: inbound `to`) |
 | `status_url` | string | Delivery status callback URL for the **outbound reply** (fires independently after the document completes) |
 
 Inline `switch` form: `{switch: {variable, transform, case, default}}` — `variable` is a path without the `%{}` wrapper (e.g. `message.body`), `transform` is one of `lowercase`, `uppercase`, `trim`, `lowercase_trim`, `uppercase_trim`, and each `case`/`default` value is either a body string or a full reply object. Don't set `body`/`media`/`to`/`from`/`status_url` alongside an inline `switch` — put them inside the case values. If no case matches and no `default` exists, the step fails and execution stops.

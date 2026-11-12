@@ -2,9 +2,107 @@
 
 ## Overview
 
-Send and receive SMS and MMS messages using SignalWire REST APIs, Realtime SDK, or SWML.
+Send and receive SMS, MMS, and RCS messages using SignalWire REST APIs, Realtime SDK, or SWML. RCS sends and replies are in [RCS](#rcs).
 
 **IMPORTANT**: Use modern messaging APIs, NOT LAML/CXML compatibility endpoints.
+
+## RCS
+
+RCS is how a branded agent (name, logo, color, and description) sends plain text or rich content on the same `POST /api/messaging/messages` endpoint as SMS and MMS. The message is RCS when `from` is the agent's ID, a UUID shown on the agent's page in the Dashboard. The Relay SDK sends it the same way: pass that ID as the sender.
+
+Register the agent under **Messaging Campaigns → RCS Agents → Add New**. That menu appears only after Support enables RCS agent registration for the Space.
+
+The agent must be `in_review`, `launching`, or `launched` to send:
+
+| Status | Meaning | Can send |
+|--------|---------|----------|
+| `pending` | Submitted, waiting to be provisioned | No |
+| `in_review` | Provisioned for testing | Test devices registered on the agent only |
+| `launching` | Applying to US mobile operators | Test devices only |
+| `launched` | Operators approved the agent | Any US subscriber on those networks |
+| `rejected` | Registration was not approved | No |
+| `suspended` | The agent was suspended | No |
+
+Until the agent is `launched`, it can reach only those test devices. Send does not check this: a message to any other number is accepted with `status: queued` and is not delivered. Follow delivery status instead of expecting a `422`.
+
+`to` must be a US number. Canada, US territories such as Puerto Rico, and every other country are rejected with `rcs_recipient_country_not_supported`.
+
+Send `body` for plain text or `content` for rich content, not both. `media` and `message_type` are not supported; send a file as `content` with `type: media`. `status_callback` and `custom_variables` work the same way as for SMS.
+
+```json
+{
+  "from": "7d3e1f2a-9b8c-4d5e-a6f7-1234567890ab",
+  "to": "+15559876543",
+  "body": "Your appointment is confirmed for tomorrow at 2pm."
+}
+```
+
+`content.type` is one of:
+
+| `type` | Fields |
+|--------|--------|
+| `media` | HTTP or HTTPS file `url` |
+| `location` | `title`, `latitude`, `longitude`, optional `label` |
+| `suggestions` | `text` (max 3072 characters) and at least one action |
+| `card` | `title` (max 200 characters); optional `subtitle` (max 2000 characters), media URL, and actions |
+| `carousel` | 1 to 10 cards, and at most 3 suggestions in `actions` under the cards |
+
+Action `type` is `reply`, `url`, `call`, `location`, `calendar`, or `request_location`. A successful create returns `kind: rcs` and `status: queued`. For rich content, `body` in the response is `content` as a JSON string.
+
+```json
+{
+  "from": "7d3e1f2a-9b8c-4d5e-a6f7-1234567890ab",
+  "to": "+15559876543",
+  "content": {
+    "type": "suggestions",
+    "text": "Can you make your appointment tomorrow at 2pm?",
+    "actions": [
+      { "type": "reply", "title": "Yes, confirm" },
+      { "type": "reply", "title": "Reschedule" }
+    ]
+  }
+}
+```
+
+A rejected send is a `422` whose `code` says why:
+
+| Code | Cause |
+|------|-------|
+| `invalid_from_number` | `from` is not an RCS agent in this Project |
+| `rcs_agent_not_sendable` | Agent is not `in_review`, `launching`, or `launched` |
+| `rcs_agent_not_configured` | Agent is not set up for sending yet |
+| `rcs_messaging_not_enabled` | RCS is not enabled for this Space |
+| `rcs_recipient_country_not_supported` | `to` is not a US number |
+| `body_not_allowed_with_rcs_content` | Both `body` and `content` are set |
+| `body_or_media_required` | Neither `body` nor `content` is set |
+| `rcs_media_not_supported` | `media` is set. Use `content` type `media` |
+| `rcs_message_type_not_supported` | `message_type` is set. Use `content` |
+| `rcs_content_too_many_items` | Carousel has more than 10 cards or more than 3 suggestions |
+
+Other `rcs_content_*` codes name a missing field, a disallowed `type` or `webview`, a bad URL or coordinate, text over its maximum, or the wrong JSON type. `rcs_content_not_supported` means `content` was sent from a phone number.
+
+### Receiving and replying
+
+Assign the agent to one Resource once it is `in_review`, `launching`, or `launched`: a messaging SWML script, a messaging SWML webhook, or a Relay Application. A `pending` agent is not in the list. To move the agent, remove its address from the current Resource first.
+
+An inbound message has `kind: rcs` and `direction: inbound`. `from` is the sender's phone number and `to` is the agent ID. The application receives text, tapped suggested replies, and media. Anything else the recipient sends, including a location shared from a `request_location` suggestion, is not delivered and does not appear in message logs.
+
+Reply with another create-message call (`from` is the agent ID), or with SWML `reply` on that Resource. The script runs as it does for SMS, and `reply` answers over RCS. By default the reply goes to the sender, from the agent that received the message. `to` can be overridden; it must be a US number. In the script, `%{message.type}` is `rcs`, `%{message.to}` and `%{message.agent_id}` are the agent ID, and `%{message.from}` is the sender's number. Set `body` or `content`, not both. `media` is not supported. `from` is optional; set it to another RCS agent in the same Project to reply from that agent. `to` must be a US number. If the reply cannot be queued, the script stops and the inbound message is marked `failed`, with the reason in `error_code` and `error_message`. Agent checks, `media`, `body` together with `content`, `content` problems, and a non-US `to` use the same codes as send. Reply-only codes are `swml_rcs_reply_invalid_from_agent`, `swml_rcs_reply_body_or_content_required`, `swml_reply_invalid_to_number`, `swml_rcs_reply_to_number_not_allowed`, `swml_reply_character_limit_exceeded`, and `swml_reply_failed`.
+
+```yaml
+version: 1.0.0
+sections:
+  main:
+    - reply:
+        content:
+          type: suggestions
+          text: "Thanks for reaching out! What can we help with?"
+          actions:
+            - type: reply
+              title: "Track an order"
+```
+
+RCS moves through the same delivery states as SMS and can also reach `read` when the recipient opens the message. SignalWire does not fall back to SMS when an RCS message ends `failed` or `undelivered`. Send a new message from a phone number to reach that recipient another way.
 
 ## Sending Messages
 
@@ -359,12 +457,13 @@ response = requests.post(
 ```
 
 **Status values**:
-- `queued`: Message queued for sending
-- `sending`: Currently being sent
-- `sent`: Sent to carrier
-- `delivered`: Delivered to recipient
-- `failed`: Delivery failed
-- `undelivered`: Could not deliver
+- `queued`: SignalWire accepted the message and queued it for delivery
+- `initiated`: Delivery has started
+- `sent`: The message left SignalWire for the carrier network
+- `delivered`: The carrier confirmed delivery to the recipient
+- `read`: The recipient opened the message. Only WhatsApp and RCS messages reach this state
+- `undelivered`: The carrier couldn't deliver the message
+- `failed`: The message never left SignalWire. `error_code` and `error_message` say why
 
 ## Common Use Cases
 
