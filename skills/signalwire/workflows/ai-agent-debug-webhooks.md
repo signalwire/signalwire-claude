@@ -184,11 +184,11 @@ Function results (`tool`):
 | `function_latency` | From the start of the model request until the model called this function, or until a first reply was ready to speak if that was sooner. |
 | `execution_latency` | From the start of the model request until the function returned. On a standard agent this is the only one of `latency`, `function_latency`, and `execution_latency` that includes the function's own run time. Use it to spot a slow function. |
 
-On a `tool` entry, `latency` is the first-token time of the model request that called the function. Do not read it as the spoken reply's model latency. `utterance_latency` repeats `function_latency`, and `audio_latency` repeats `execution_latency`. `latency`, `utterance_latency`, `audio_latency`, `function_latency`, and `execution_latency` are omitted when unmeasured, and always for a function the post-prompt calls. A function result does not send `0` for an unmeasured `latency`, `utterance_latency`, or `audio_latency`.
+On a `tool` entry, `latency` is the first-token time of the model request that called the function. Do not read it as the spoken reply's model latency. `utterance_latency` repeats `function_latency`, and `audio_latency` repeats `execution_latency`. If any of `latency`, `utterance_latency`, or `audio_latency` can't be measured, all three are omitted. `execution_latency` is omitted whenever `function_latency` is. These fields are always omitted for a function the post-prompt calls. A function result does not send `0` for an unmeasured `latency`, `utterance_latency`, or `audio_latency`.
 
 A speech-to-speech agent measures `latency` from when the reply started. An unmeasured `acoustic_latency` is `0` rather than `null`. `function_latency` and `execution_latency` carry reply timing rather than function timing, and `text_spoken_total` is present on every reply.
 
-An agent using the `amazon_bedrock` method reports approximate `latency`, `utterance_latency`, and `audio_latency` on replies, and the same fixed `confidence` on every caller entry. Do not use those values to measure responsiveness or recognition.
+An agent using the `amazon_bedrock` method reports approximate `latency`, `utterance_latency`, and `audio_latency` on replies, and the same fixed `confidence` on every caller entry. Do not use those values to measure responsiveness or recognition. For `amazon_bedrock`, `raw_call_log` is a copy of `call_log`.
 
 ### Handling in on_summary()
 
