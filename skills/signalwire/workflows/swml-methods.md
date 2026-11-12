@@ -243,7 +243,7 @@ Docs: https://signalwire.com/docs/swml/reference/calling/live-transcribe. Guide:
 
 `action: stop` ends the session. `summarize` is the string `summarize` (the start webhook and the default on-demand prompt) or an object with optional `webhook` and `prompt`. `ai_summary: true` summarizes at session end, and `ai_summary_prompt` applies only to that summary.
 
-Relay SDK: `call.live_transcribe` / `liveTranscribe` takes one action dict with exactly one key, `start`, `summarize`, or `stop`: `{"start": {"lang": "en-US", "direction": ["remote-caller", "local-caller"], "webhook": "https://example.com/transcription-events", "live_events": true}}`. `stop` is `{"stop": {}}`. An empty `summarize` object uses the start webhook and the default on-demand prompt.
+Relay SDK: `call.live_transcribe` / `liveTranscribe` takes one action dict with exactly one key, `start`, `summarize`, or `stop`. In Python: `{"start": {"lang": "en-US", "direction": ["remote-caller", "local-caller"], "webhook": "https://example.com/transcription-events", "live_events": True}}`. JSON and TypeScript use `true`. `stop` is `{"stop": {}}`. An empty `summarize` object uses the start webhook and the default on-demand prompt.
 
 ```yaml
 version: 1.0.0
