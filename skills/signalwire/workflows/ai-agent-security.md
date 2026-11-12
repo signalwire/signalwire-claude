@@ -89,7 +89,7 @@ POST https://{space}.signalwire.com/api/projects/{id}/signing-key/rotate
 
 Docs: `/docs/apis/rest/projects/rotate-signing-key`. **The new key takes 1–2 minutes to become active.** Until then, requests can still arrive signed with the old key, so accept either key during that window, then drop the old one. A project created before the `swpsk_` format can receive a `PSK_` key from its first rotation.
 
-A newly created subproject's response includes `signing_key` once. Later requests do not return it, so capture it from that response. The rotate response is the other time the API returns the key.
+A create-project response includes `signing_key` once. Later requests do not return it, so capture it from that response. The rotate response is the other time the API returns the key.
 
 ## Content Redaction
 
@@ -157,7 +157,7 @@ export SWML_BASIC_AUTH_PASSWORD="$(openssl rand -base64 32)"
 
 Python takes the pair as `basic_auth=(user, password)`.
 
-If you leave credentials unset, the SDK uses the username `signalwire` and generates a new password on every startup, then prints it. Use that pair only in development. A restart changes the password, and calls already in progress fail their next function call and their post-prompt summary. Set fixed credentials in production.
+If you leave credentials unset, the Python SDK uses the username `signalwire` and generates a new password on every startup, then prints it. In TypeScript, when the password is generated, the user falls back to the agent's `name`. Use that pair only in development. A restart changes the password, and calls already in progress fail their next function call and their post-prompt summary. Set fixed credentials in production.
 
 ### Token-Based Function Security
 

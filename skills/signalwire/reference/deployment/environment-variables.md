@@ -59,14 +59,14 @@ URLs with embedded credentials:
 https://admin:secretpassword@abc123.ngrok.io/agent
 ```
 
-If these are unset, the SDK generates a username (`signalwire`) and a new password on every startup. That pair is for development only. A restart changes the password, and calls already in progress fail their next function call and their post-prompt summary. Set a fixed pair in production.
+If these are unset, the Python SDK generates a username (`signalwire`) and a new password on every startup. In TypeScript, when the password is generated, the user falls back to the agent's `name`. That pair is for development only. A restart changes the password, and calls already in progress fail their next function call and their post-prompt summary. Set a fixed pair in production.
 
 ### Request signatures and function tokens
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SIGNALWIRE_SIGNING_KEY` | None | Project signing key. With it set, unsigned or mis-signed POSTs to the SWML, SWAIG, and post-prompt endpoints get 403. Without it, the agent logs a startup warning and accepts unsigned requests. Python `signing_key=` and TypeScript `signingKey` override it. |
-| `SIGNALWIRE_SWAIG_SECRET` | None | Secret for function tokens and the post-prompt token (`__token`). Without a fixed secret, each process generates its own, so tokens break across restarts and replicas. Python `swaig_secret=` and TypeScript `swaigSecret` override it. |
+| `SIGNALWIRE_SWAIG_SECRET` | None | Secret for function tokens (the `__token` query parameter on a secure function `web_hook_url`) and the post-prompt token. Without a fixed secret, each process generates its own, so tokens break across restarts and replicas. Python `swaig_secret=` and TypeScript `swaigSecret` override it. |
 
 Set the token lifetime with `token_expiry_secs` (TypeScript `tokenExpirySecs`). The default is one hour. Set it longer than your longest call.
 
