@@ -888,7 +888,7 @@ functions:
             response: "%{chunks[0].text}"
 ```
 
-**Ingest.** Create accepts PDF, plain text, and Markdown from a public `http` or `https` URL, up to 10 MB. DataSphere downloads the file from that URL.
+**Ingest.** [`POST /api/datasphere/documents`](https://signalwire.com/docs/apis/rest/documents/create-document) accepts PDF, plain text, and Markdown from a public `http` or `https` URL, up to 10 MB. DataSphere downloads the file from that URL.
 
 A PDF is recognized from its content. Word or Excel returns `422` even when served as `text/plain`. Text is identified by `Content-Type` (`text/plain`, `text/markdown`, `text/x-markdown`, or `text/x-web-markdown`), or by extension when that header is missing or `application/octet-stream`. An extension that names a more specific text type also overrides `text/plain`: `.md` served as `text/plain` is accepted as Markdown, while `.csv`, `.json`, or `.xml` served that way returns `422`. The filename, taken from `Content-Disposition` or the last segment of the URL path, must have a supported extension or none, so a PDF served from `/download.php` returns `422`.
 
