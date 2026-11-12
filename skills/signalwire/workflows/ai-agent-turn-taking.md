@@ -115,7 +115,7 @@ Tool turns are the ones that feel slow, because the agent goes quiet while the t
 
 Turn settings belong in code. `end_of_speech_timeout` is how much silence closes a turn. `barge_min_words` is how many words count as an interruption. Set them with `set_params`. Steps have no params of their own. `end_of_speech_timeout` can change mid-call with `FunctionResult.set_end_of_speech_timeout()`, so a step that collects an account number can allow more silence than a yes or no. A longer timeout does not replace checking the collected value and asking again. A prompt cannot hold the floor open: the turn boundary is decided before the model sees text.
 
-[latency_checker](https://github.com/signalwire/latency_checker) measures a recording from the end of the caller's speech to the agent's first audio, on any platform.
+[latency_checker](https://github.com/signalwire/latency_checker) measures a recording from the end of the caller's speech to the agent's first audio, on any platform. The post-prompt call log reports that gap as `acoustic_latency`. See [Per-turn call log fields](ai-agent-debug-webhooks.md#per-turn-call-log-fields).
 
 ## Related
 
