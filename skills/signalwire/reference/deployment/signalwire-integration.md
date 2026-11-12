@@ -289,7 +289,7 @@ Route the SIP endpoint to your agent similarly to phone numbers.
 
 ### From header on outbound calls
 
-A softphone, phone, or PBX must place outbound calls from your SIP Credential's address, `username@your-space.sip.signalwire.com`, in the `From` header. SignalWire identifies the credential from that header, so any other `From` fails before the call starts and no call log is created.
+A softphone, phone, or PBX must place outbound calls from your SIP Credential's (SIP endpoint) address, `username@your-space.sip.signalwire.com`, in the `From` header. SignalWire identifies the credential from that header, so any other `From` fails before the call starts and no call log is created.
 
 | `From` header sent | Result | Fix |
 |--------------------|--------|-----|
@@ -297,7 +297,7 @@ A softphone, phone, or PBX must place outbound calls from your SIP Credential's 
 | `anonymous@anonymous.invalid` | `404 Domain unavailable` | Turn off caller ID blocking (anonymous calling) on the device. |
 | A phone number instead of your username | `407 Proxy Authentication Required` on every attempt | Set the device's From user to your SIP Credential username. |
 
-The `From` header doesn't set caller ID on calls to phone numbers. Set caller ID on the SIP credential, and leave caller ID blocking off.
+The `From` header doesn't set caller ID on calls to phone numbers. On those calls, set **Send As** (`send_as`) on the SIP credential, and leave caller ID blocking off. **Caller ID** (`caller_id`) is for CNAM or SIP-to-SIP From.
 
 ## Complete Integration Example
 
