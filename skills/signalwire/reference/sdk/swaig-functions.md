@@ -87,7 +87,7 @@ weather_map = (DataMap("get_weather")
     .purpose("Get current weather for a location")
     .parameter("city", "string", "City name", required=True)
     .webhook("GET", "https://api.weather.com/v1/current?q=${args.city}&key=API_KEY")
-    .output(FunctionResult("Weather in ${args.city}: ${response.temp}°F"))
+    .output(FunctionResult("Weather in ${input.args.city}: ${temp}°F"))
 )
 
 agent.register_swaig_function(weather_map.to_swaig_function())

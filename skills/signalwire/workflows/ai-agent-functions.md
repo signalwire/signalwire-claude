@@ -497,8 +497,8 @@ weather_func = (DataMap("get_weather")
     .parameter("city", "string", "City name", required=True)
     .webhook("GET", "https://api.weather.com/v1/current?q=${args.city}&key=API_KEY")
     .output(FunctionResult(
-        "The weather in ${args.city} is ${response.condition} "
-        "and ${response.temp_f}°F"
+        "The weather in ${input.args.city} is ${condition} "
+        "and ${temp_f}°F"
     ))
 )
 
