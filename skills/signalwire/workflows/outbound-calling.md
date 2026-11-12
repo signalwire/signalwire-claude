@@ -171,15 +171,17 @@ curl -L 'https://kalsey.signalwire.com/api/calling/calls' \
 
 The `status_url` parameter is **DOCUMENTED** and receives webhooks for call state changes.
 
+The `ended` callback is sent however a placed call ended, including when the destination was busy, didn't answer, or declined, and when a ringing call is canceled. Read `end_reason` for the cause, for example `busy` or `noAnswer`. A call that is never placed sends no callback, whatever `status_events` lists. That covers a status of `failed`, and a call canceled or completed with the `update` command while it is still `queued`.
+
 ### Status Events
 
-SignalWire sends HTTP POST requests to your status_url with these states:
+`status_url` receives HTTP POST requests whose `call_state` is `created`, `ringing`, `answered`, `ending`, or `ended`. `queued` is a call status, but it is never sent to `status_url`. `status_events` defaults to `["ended"]`, so the other states arrive only when you list them.
 
-- **queued**: Call request received
 - **created**: Call has been created
 - **ringing**: Destination is ringing
 - **answered**: Call was answered
-- **ended**: Call has terminated
+- **ending**: The call is ending
+- **ended**: Placed call has ended, however it ended. Read `end_reason`
 
 ### Status Webhook Format
 

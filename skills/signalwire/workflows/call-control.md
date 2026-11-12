@@ -500,13 +500,22 @@ Relay entries (`relay_pstn_call`, `relay_sip_call`, `relay_webrtc_call`) carry a
 
 ## Common Call States
 
-- **created**: Call has been created
-- **ringing**: Destination is ringing
-- **answered**: Call was answered
-- **ended**: Call has terminated
-- **busy**: Destination is busy
-- **failed**: Call failed to connect
-- **no-answer**: Destination didn't answer
+A placed call moves through `queued`, `initiated`, `created`, `ringing`, `answered`, `ending`, and `ended`. It can skip some, such as `answered`. `ended` is the final status of every call that was placed, however it ended. The cause is `end_reason` on the `ended` call state callback, for example `busy` or `noAnswer`.
+
+`failed`, `canceled`, and `completed` are outcomes for a call that was never placed. No call state callback is sent for them, whatever `status_events` lists.
+
+- **queued**: Accepted and waiting to be placed
+- **initiated**: SignalWire has started placing the call
+- **created**: Set up and being placed
+- **ringing**: Ringing at the destination
+- **answered**: Answered and in progress
+- **ending**: Hanging up, on the way to `ended`
+- **ended**: Ended, however it ended. Read `end_reason` on the `ended` callback
+- **failed**: Could not be placed (destination blocked, call flagged as spam, no registered SIP endpoint, or a temporary error)
+- **canceled**: Canceled with the `update` command while still `queued`
+- **completed**: Ended with the `update` command while still `queued`
+
+`status: canceled` is valid only while the call is `queued` or `ringing`. Canceling a `ringing` call, or completing a call that has been placed, hangs it up and the status becomes `ended`. A `url` or `swml` redirect is valid only while `answered`. A call whose status is `failed`, `canceled`, or `completed` cannot be updated.
 
 ### Disconnect vs. End
 

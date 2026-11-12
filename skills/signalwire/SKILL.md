@@ -105,7 +105,7 @@ These insights come from analysis of 89 SignalWire training videos, LiveWire ses
 
 ## Key Concepts
 
-**Call States:** queued → created → ringing → answered → ended
+**Call States:** queued → initiated → created → ringing → answered → ending → ended (may skip some, such as answered). `ended` is the final status of every placed call; `end_reason` on that callback says why (`busy`, `noAnswer`). `failed`, `canceled`, and `completed` mean the call was never placed and send no callback.
 
 **SWML Sections:** `main` (required entry point) | `execute` (call + return) | `transfer` (goto)
 
