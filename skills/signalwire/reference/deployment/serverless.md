@@ -629,13 +629,13 @@ def lambda_handler(event, context):
 ### DataMap Variable Patterns
 
 ```
-${args.param}              # Function argument (URL, params, body, fallback output)
-${input.args.param}        # Function argument (webhook output, expressions, foreach)
+${args.param}              # Function argument (URL, params, body, fallback output, top-level expressions)
+${input.args.param}        # Function argument (webhook output, webhook expressions, foreach)
 ${enc:args.param}          # URL-encoded argument
 ${lc:args.param}           # Lowercase argument
 ${fmt_ph:args.phone}       # Format as phone number
-${field}                   # Webhook response field at the root (output only)
-${arr[0]}                  # Array element in the webhook response (output only)
+${field}                   # Webhook response field at the root (webhook output, webhook expressions, foreach)
+${arr[0]}                  # Array element in the webhook response (webhook output, webhook expressions, foreach)
 ${global_data.key}         # Global session data
 ${meta_data.key}           # Call metadata
 ${env.VAR_NAME}            # Environment variable
