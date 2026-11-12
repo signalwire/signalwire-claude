@@ -87,7 +87,7 @@ Assign the agent to one Resource once it is `in_review`, `launching`, or `launch
 
 An inbound message has `kind: rcs` and `direction: inbound`. `from` is the sender's phone number and `to` is the agent ID. The application receives text, tapped suggested replies, and media. Anything else the recipient sends, including a location shared from a `request_location` suggestion, is not delivered and does not appear in message logs.
 
-Reply with another create-message call (`from` is the agent ID), or with SWML `reply` on that Resource. The script runs as it does for SMS, and `reply` answers over RCS, to the sender, from the agent that received the message. In the script, `%{message.type}` is `rcs`, `%{message.to}` and `%{message.agent_id}` are the agent ID, and `%{message.from}` is the sender's number. Set `body` or `content`, not both. `media` is not supported. `from` is optional; set it to another RCS agent in the same Project to reply from that agent. `to` must be a US number. If the reply cannot be queued, the script stops and the inbound message is marked `failed`, with the reason in `error_code` and `error_message`. Agent checks, `media`, `body` together with `content`, `content` problems, and a non-US `to` use the same codes as send. Reply-only codes are `swml_rcs_reply_invalid_from_agent`, `swml_rcs_reply_body_or_content_required`, `swml_reply_invalid_to_number`, `swml_rcs_reply_to_number_not_allowed`, `swml_reply_character_limit_exceeded`, and `swml_reply_failed`.
+Reply with another create-message call (`from` is the agent ID), or with SWML `reply` on that Resource. The script runs as it does for SMS, and `reply` answers over RCS. By default the reply goes to the sender, from the agent that received the message. `to` can be overridden; it must be a US number. In the script, `%{message.type}` is `rcs`, `%{message.to}` and `%{message.agent_id}` are the agent ID, and `%{message.from}` is the sender's number. Set `body` or `content`, not both. `media` is not supported. `from` is optional; set it to another RCS agent in the same Project to reply from that agent. `to` must be a US number. If the reply cannot be queued, the script stops and the inbound message is marked `failed`, with the reason in `error_code` and `error_message`. Agent checks, `media`, `body` together with `content`, `content` problems, and a non-US `to` use the same codes as send. Reply-only codes are `swml_rcs_reply_invalid_from_agent`, `swml_rcs_reply_body_or_content_required`, `swml_reply_invalid_to_number`, `swml_rcs_reply_to_number_not_allowed`, `swml_reply_character_limit_exceeded`, and `swml_reply_failed`.
 
 ```yaml
 version: 1.0.0
@@ -457,12 +457,13 @@ response = requests.post(
 ```
 
 **Status values**:
-- `queued`: Message queued for sending
-- `sending`: Currently being sent
-- `sent`: Sent to carrier
-- `delivered`: Delivered to recipient
-- `failed`: Delivery failed
-- `undelivered`: Could not deliver
+- `queued`: SignalWire accepted the message and queued it for delivery
+- `initiated`: Delivery has started
+- `sent`: The message left SignalWire for the carrier network
+- `delivered`: The carrier confirmed delivery to the recipient
+- `read`: The recipient opened the message. Only WhatsApp and RCS messages reach this state
+- `undelivered`: The carrier couldn't deliver the message
+- `failed`: The message never left SignalWire. `error_code` and `error_message` say why
 
 ## Common Use Cases
 

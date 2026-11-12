@@ -89,7 +89,7 @@ These insights come from analysis of 89 SignalWire training videos, LiveWire ses
 **Other:**
 - [Messaging (SMS, MMS, RCS)](workflows/messaging.md) | [Video](workflows/video.md) | [Fabric & Relay](workflows/fabric-relay.md) | [Webhooks & Events](workflows/webhooks-events.md)
 
-**SWML Method Reference:** [All SWML methods](workflows/swml-methods.md) - complete method catalog including queuing, conferencing, AMD, fax, transcription, streaming, taps, payment, control flow, Messaging SWML (`reply` to SMS), and variable syntax
+**SWML Method Reference:** [All SWML methods](workflows/swml-methods.md) - complete method catalog including queuing, conferencing, AMD, fax, transcription, streaming, taps, payment, control flow, Messaging SWML (`reply` to SMS, MMS, and RCS), and variable syntax
 
 ## Quick Start Patterns
 
