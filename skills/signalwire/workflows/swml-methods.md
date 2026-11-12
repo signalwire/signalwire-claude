@@ -140,7 +140,7 @@ A `queue:` or `call:` destination can't be combined with any other destination. 
 
 `ringback: false` turns off SignalWire's ringback and passes the destination's early media through. `stop_all_on_reject` (default `false`) stops the other ringing destinations when one rejects and, after the `result` block runs, hangs up the caller. `true` matches `busy` and `decline`; use a non-empty array of `busy`, `decline`, and `noAnswer` to include `noAnswer`.
 
-**Variables set** (on the leg that issued `connect`, which keeps its `vars` across the bridge): `connect_result` (`connected` \| `failed`), `connect_failed_reason`, `return_value` (same as `connect_result`). A document on the dialed leg, including `confirm`, starts with empty `vars` and that leg's own `call`. `call.peer` is present on that leg and on `connect` status callbacks, including `disconnected`. SignalWire clears `call.peer` when this document resumes, so code after `connect` must not rely on it. See [Variables](#variables).
+**Variables set** (on the leg that issued `connect`, which keeps its `vars` across the bridge): `connect_result` (`connected` \| `failed`), `connect_failed_reason`, `return_value` (same as `connect_result`). The issuing leg receives them when this document resumes (except queue bridges, above). A document on the dialed leg, including `confirm`, starts with empty `vars` and that leg's own `call`. `call.peer` is present on that leg and on `connect` status callbacks, including `disconnected`. SignalWire clears `call.peer` when this document resumes, so code after `connect` must not rely on it. See [Variables](#variables).
 
 Docs: https://signalwire.com/docs/swml/reference/calling/connect
 
