@@ -713,7 +713,7 @@ People and code reach a Resource through an Address. SignalWire creates one alia
 /public/support-agent     # AI Agent added in the Dashboard
 /private/main-ivr         # SWML script stored in your Space
 /private/john-doe         # Subscriber
-/office/queue-1           # Relay application in 'office' context
+/private/queue-1          # Relay Application
 ```
 
 ### Resource Types
