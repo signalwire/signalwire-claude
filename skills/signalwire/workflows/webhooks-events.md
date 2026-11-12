@@ -50,10 +50,12 @@ SignalWire sends POST requests with JSON body:
 
 ### Call States
 
-- **queued**: Call request received, not yet initiated
+`status_url` callbacks use `call_state` values `created`, `ringing`, `answered`, `ending`, and `ended`. `queued` is never sent. `status_events` defaults to `["ended"]`, so the other states arrive only when you list them.
+
 - **created**: Call has been created
 - **ringing**: Destination is ringing
 - **answered**: Call was answered
+- **ending**: The call is ending
 - **ended**: Placed call has ended, however it ended. The cause is `end_reason`, for example `busy` or `noAnswer`
 
 The `ended` callback is sent when the destination was busy, didn't answer, or declined, and when a ringing call is canceled. A call that is never placed sends no callback, whatever `status_events` lists: status `failed`, or a call canceled or completed with the `update` command while it is still `queued`.
@@ -79,8 +81,8 @@ def handle_call_status():
     logging.info(f"Call {call_id}: {status}")
 
     # Handle different states
-    if status == 'queued':
-        # Call queued, log or update UI
+    if status == 'created':
+        # Call has been created
         pass
 
     elif status == 'ringing':
@@ -92,6 +94,10 @@ def handle_call_status():
         # Call answered - start timer, analytics, etc.
         logging.info(f"Call answered at {timestamp}")
         start_call_timer(call_id)
+
+    elif status == 'ending':
+        # Call is ending
+        pass
 
     elif status == 'ended':
         # Call ended - calculate duration, billing, etc.
@@ -130,8 +136,8 @@ app.post('/call-status', (req, res) => {
   console.log(`Call ${call_id}: ${call_state}`);
 
   switch (call_state) {
-    case 'queued':
-      // Handle queued state
+    case 'created':
+      // Call has been created
       break;
 
     case 'ringing':
@@ -142,6 +148,10 @@ app.post('/call-status', (req, res) => {
     case 'answered':
       console.log(`Call answered at ${timestamp}`);
       startCallTimer(call_id);
+      break;
+
+    case 'ending':
+      // Call is ending
       break;
 
     case 'ended':
@@ -996,10 +1006,10 @@ from enum import Enum
 from datetime import datetime
 
 class CallState(Enum):
-    QUEUED = "queued"
     CREATED = "created"
     RINGING = "ringing"
     ANSWERED = "answered"
+    ENDING = "ending"
     ENDED = "ended"
 
 # Track all call states
@@ -1026,15 +1036,15 @@ def track_call_lifecycle():
     call_states[call_id]['states'][state] = timestamp
 
     # Handle specific states
-    if state == CallState.QUEUED.value:
-        log_call_queued(call_id)
+    if state == CallState.CREATED.value:
+        log_call_created(call_id)
 
     elif state == CallState.RINGING.value:
-        # Calculate queue time
-        queued_time = call_states[call_id]['states'].get('queued')
-        if queued_time:
+        # Time from created until ringing
+        created_time = call_states[call_id]['states'].get('created')
+        if created_time:
             queue_duration = (datetime.fromisoformat(timestamp) -
-                            datetime.fromisoformat(queued_time)).total_seconds()
+                            datetime.fromisoformat(created_time)).total_seconds()
             metrics.record('queue_time', queue_duration)
 
     elif state == CallState.ANSWERED.value:
@@ -1047,6 +1057,9 @@ def track_call_lifecycle():
 
         # Start billing
         start_billing(call_id)
+
+    elif state == CallState.ENDING.value:
+        pass
 
     elif state == CallState.ENDED.value:
         # Calculate call duration

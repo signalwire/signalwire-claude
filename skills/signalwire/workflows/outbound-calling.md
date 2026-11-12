@@ -175,12 +175,12 @@ The `ended` callback is sent however a placed call ended, including when the des
 
 ### Status Events
 
-SignalWire sends HTTP POST requests to your status_url with these states:
+`status_url` receives HTTP POST requests whose `call_state` is `created`, `ringing`, `answered`, `ending`, or `ended`. `queued` is a call status, but it is never sent to `status_url`. `status_events` defaults to `["ended"]`, so the other states arrive only when you list them.
 
-- **queued**: Call request received
 - **created**: Call has been created
 - **ringing**: Destination is ringing
 - **answered**: Call was answered
+- **ending**: The call is ending
 - **ended**: Placed call has ended, however it ended. Read `end_reason`
 
 ### Status Webhook Format
