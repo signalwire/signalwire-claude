@@ -81,7 +81,7 @@ Response includes your agent's address:
 {
     "id": "subscriber-id",
     "name": "my-agent",
-    "address": "/public/my-agent"
+    "address": "/private/my-agent"
 }
 ```
 
@@ -142,7 +142,7 @@ Use the SignalWire JavaScript SDK to connect:
 
     <script>
         const GUEST_TOKEN = 'YOUR_GUEST_TOKEN';
-        const AGENT_ADDRESS = '/public/my-agent';
+        const AGENT_ADDRESS = '/public/my-agent'; // public alias you add; the subscriber alias above is private
 
         let client = null;
         let call = null;

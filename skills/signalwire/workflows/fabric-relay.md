@@ -61,28 +61,31 @@ Two different call-control APIs exist, and they do not mix.
 
 ### Call Fabric Resources
 
-Everything in Fabric is a "resource":
+A Resource handles a call or message. An Address is how people and code reach it: a phone number, a SIP Address (SIP URI), or an alias. Each Address has exactly one handler Resource, and a Resource can have many Addresses. Deleting an Address never deletes the Resource. Deleting a Resource deletes its aliases, and a Resource still assigned as a handler can't be deleted.
 
-1. **Subscribers**: Internal users within your application
-2. **Relay Applications**: Your apps connected via WebSocket
+1. **Subscribers**: Users of your application whose devices ring
+2. **Relay Applications**: Hand calls and messages to your server over WebSocket
 3. **AI Agents**: Conversational AI endpoints
-4. **SWML Scripts**: Call flow documents
-5. **Video Rooms**: Video conference spaces
-6. **SIP Gateways**: External SIP connections
-7. **Fabric Addresses**: Routing identifiers (phone numbers, SIP URIs)
+4. **SWML Scripts**: SWML documents for call and message logic
+5. **Call Flows**: Visual call routing
+6. **Video Rooms**: Video conference spaces
+7. **SIP Credentials**: Username and password for SIP devices that register and place calls
+8. **SIP Gateways**: Connections from your Space to an external SIP network
+
+A SIP Address carries calls only. It is separate from a SIP Credential and a SIP Gateway. The URI is `sip:*@<space>-<domain>.dapp.signalwire.com`, the user defaults to `*`, and the REST API defaults the domain to `public`. An AI Agent added in the Dashboard can't take over an existing SIP Address.
 
 ### Subscribers
 
 Subscribers are internal account-holders in your SignalWire application - programmable identities within Call Fabric.
 
 **Key Properties**:
-- Always use private context (internal to your app)
+- First alias is private, from the display name or the email local part (for example `/private/john-doe`)
 - Can receive or initiate calls, messages, video sessions
 - Registered endpoints for communication
 
 #### Creating Subscribers (Dashboard)
 
-1. Go to **Call Fabric** > **Resources**
+1. Select **My Resources** in the left sidebar
 2. Click **+ Add**
 3. Select **Subscriber**
 4. Fill in:
@@ -700,39 +703,44 @@ def schedule_cleanup(subscriber_id, minutes):
 
 ### Core Concept
 
-Everything in SignalWire Fabric is an addressable resource:
+People and code reach a Resource through an Address. SignalWire creates one alias when you create the Resource. From REST, SWML `connect`, or a client, dial that alias as the full `/<context>/<name>`. Its Resource stays fixed: delete the alias and create one with the same name and context on the new Resource.
 
 ```yaml
-# Resource addressing format
-<context>/<name>
+# Alias format
+/<context>/<name>
 
 # Examples:
-public/main-ivr           # Public SWML script
-public/support-agent      # Public AI agent
-private/admin-dashboard   # Private video room
-office/queue-1           # Relay application in 'office' context
+/public/support-agent     # AI Agent added in the Dashboard
+/private/main-ivr         # SWML script stored in your Space
+/private/john-doe         # Subscriber
+/office/queue-1           # Relay application in 'office' context
 ```
 
 ### Resource Types
 
-1. **Scripts** - SWML documents for call control
+1. **SWML Scripts** - SWML documents for calls and messages
 2. **AI Agents** - Conversational AI endpoints
-3. **Video Rooms** - Multi-party video conferences
-4. **Queues** - Call waiting/distribution
-5. **Subscribers** - User endpoints (SIP/WebRTC)
-6. **Relay Applications** - Your custom apps
+3. **Call Flows** - Visual call routing
+4. **Video Rooms** - Multi-party video conferences
+5. **Subscribers** - Users of your application whose devices ring
+6. **Relay Applications** - Your server apps over WebSocket
+7. **SIP Credentials** - Username and password for SIP devices that register and place calls
+8. **SIP Gateways** - Connections from your Space to an external SIP network
 
 ### Context Types
 
+Every project has two built-in contexts, `public` and `private`, which can't be changed.
+
 **Public Context:**
-- Accessible by anyone
-- Used for inbound calls from PSTN
-- AI agents, IVR scripts
+- Anyone, including unauthenticated callers, such as a call button on a website
+- First alias is public for types including an AI Agent added in the Dashboard, a SWML Script served from your own URL, a Video Room, a SIP Credential, and a SIP Gateway
+- The first alias of a Dashboard-added AI Agent takes audio calls only
 
 **Private Context:**
-- Only accessible by authenticated subscribers
-- Internal communication
-- Admin dashboards
+- Only authenticated users
+- First alias is private for a Subscriber, an AI Agent created with the REST API, a SWML Script stored in your Space, a Call Flow, and a Relay Application
+
+Phone numbers are placed in the `external` context, not one you choose. A number gives two Addresses, assigned independently: a calling Address and a messaging Address, each with its own handler.
 
 ### Context Routing Patterns
 
