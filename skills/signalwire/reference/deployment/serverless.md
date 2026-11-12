@@ -580,7 +580,7 @@ class APIAgent(AgentBase):
             .parameter("location", "string", "City or zip code", required=True)
             .webhook("GET", "https://api.weather.com/v1/current?q=${enc:args.location}")
             .output(FunctionResult(
-                "Current conditions in ${args.location}: ${response.condition}, ${response.temp}°F"
+                "Current conditions in ${input.args.location}: ${condition}, ${temp}°F"
             ))
             .fallback_output(FunctionResult("Weather service is currently unavailable"))
         )
@@ -596,8 +596,8 @@ class APIAgent(AgentBase):
                 headers={"Authorization": "Bearer ${env.API_KEY}"}
             )
             .output(FunctionResult(
-                "Order ${args.order_id}: ${response.status}. "
-                "Expected delivery: ${response.delivery_date}"
+                "Order ${input.args.order_id}: ${status}. "
+                "Expected delivery: ${delivery_date}"
             ))
         )
 
@@ -629,12 +629,13 @@ def lambda_handler(event, context):
 ### DataMap Variable Patterns
 
 ```
-${args.param}              # Function argument value
+${args.param}              # Function argument (URL, params, body, fallback output, top-level expressions)
+${input.args.param}        # Function argument (webhook output, webhook expressions, foreach)
 ${enc:args.param}          # URL-encoded argument
 ${lc:args.param}           # Lowercase argument
 ${fmt_ph:args.phone}       # Format as phone number
-${response.field}          # API response field
-${response.arr[0]}         # Array element
+${field}                   # Webhook response field at the root (webhook output, webhook expressions, foreach)
+${arr[0]}                  # Array element in the webhook response (webhook output, webhook expressions, foreach)
 ${global_data.key}         # Global session data
 ${meta_data.key}           # Call metadata
 ${env.VAR_NAME}            # Environment variable

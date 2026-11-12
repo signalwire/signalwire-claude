@@ -67,10 +67,10 @@ class DataMapAgent(AgentBase):
                 "https://wttr.in/${lc:args.city}?format=j1"
             )
             .output(FunctionResult(
-                "The weather in ${args.city} is currently "
-                "${response.current_condition[0].temp_F} degrees Fahrenheit "
-                "with ${response.current_condition[0].weatherDesc[0].value}. "
-                "Humidity is ${response.current_condition[0].humidity}%."
+                "The weather in ${input.args.city} is currently "
+                "${current_condition[0].temp_F} degrees Fahrenheit "
+                "with ${current_condition[0].weatherDesc[0].value}. "
+                "Humidity is ${current_condition[0].humidity}%."
             ))
         )
         self.register_swaig_function(weather_map.to_swaig_function())
@@ -84,7 +84,7 @@ class DataMapAgent(AgentBase):
                 "https://en.wikipedia.org/api/rest_v1/page/summary/${enc:args.query}"
             )
             .output(FunctionResult(
-                "${response.extract}"
+                "${extract}"
             ))
         )
         self.register_swaig_function(wiki_map.to_swaig_function())
@@ -97,7 +97,7 @@ class DataMapAgent(AgentBase):
                 "https://uselessfacts.jsph.pl/api/v2/facts/random?language=en"
             )
             .output(FunctionResult(
-                "Here's an interesting fact: ${response.text}"
+                "Here's an interesting fact: ${text}"
             ))
         )
         self.register_swaig_function(fact_map.to_swaig_function())
@@ -111,9 +111,9 @@ class DataMapAgent(AgentBase):
                 "http://ip-api.com/json/${args.ip}"
             )
             .output(FunctionResult(
-                "IP address ${args.ip} is located in ${response.city}, "
-                "${response.regionName}, ${response.country}. "
-                "The ISP is ${response.isp}."
+                "IP address ${input.args.ip} is located in ${city}, "
+                "${regionName}, ${country}. "
+                "The ISP is ${isp}."
             ))
         )
         self.register_swaig_function(geo_map.to_swaig_function())
