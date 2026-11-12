@@ -388,7 +388,7 @@ def handle_recording_ready():
 
 #### Option 0: Request signatures (preferred where available)
 
-Every POST SignalWire makes to **fetch a SWML document** from a URL you control is signed. That is the real mechanism — reach for it before IP allowlists or shared secrets.
+Every POST SignalWire makes to **fetch a SWML document** from a URL you control is signed. So are these AI agent requests during a call: each SWAIG function `web_hook_url` (including one set in `SWAIG.defaults`), `data_map` webhooks, the `SWAIG.includes` function-definition request, the `ai` method's `post_prompt_url` summary, and `ai_sidecar` SWAIG requests. There is no setting to enable signing. That is the real mechanism — reach for it before IP allowlists or shared secrets.
 
 ```
 signature = hex( HMAC( signing_key, url + raw_body ) )

@@ -818,7 +818,7 @@ Docs: https://signalwire.com/docs/swml/reference/calling/unset
 
 ### amazon_bedrock
 
-Create an Amazon Bedrock voice agent on the call — the Bedrock counterpart to the `ai` method, with the same overall shape: `prompt` (text or POM, plus tuning params like `temperature`/`top_p` and a Bedrock `voice_id` such as `tiffany`), `post_prompt` and `post_prompt_url` (end-of-session summary callback with the full call log, SWAIG log, and token counts), `SWAIG` (functions, includes, defaults), `params`, and `global_data`.
+Create an Amazon Bedrock voice agent on the call — the Bedrock counterpart to the `ai` method, with the same overall shape: `prompt` (text or POM, plus tuning params like `temperature`/`top_p` and a Bedrock `voice_id` such as `tiffany`), `post_prompt` and `post_prompt_url` (end-of-session summary callback with the full call log, SWAIG log, and token counts), `SWAIG` (functions, includes, defaults), `params`, and `global_data`. Function webhooks are signed with the project's signing key. The summary sent to `post_prompt_url`, and the `summarize_conversation` request, are not. Embed basic auth in those URLs.
 
 Docs: https://signalwire.com/docs/swml/reference/calling/amazon-bedrock — for building Bedrock agents with the Agents SDK, see [reference/sdk/bedrock-agent.md](../reference/sdk/bedrock-agent.md).
 
