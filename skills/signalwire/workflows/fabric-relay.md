@@ -551,14 +551,20 @@ for addr in response.json()["data"]:
 
 A Subscriber client lists the addresses it can reach at `GET /api/fabric/subscriber/addresses` and fetches one at `GET /api/fabric/subscriber/addresses/{id}`, with a Subscriber Access Token. Those operations were previously served at `/api/fabric/addresses` and `/api/fabric/addresses/{id}`. The old paths still answer SAT requests with the same response. Pagination links on the list keep the old path. Both add `Deprecation: true` and a `Link` header naming `/api/fabric/subscriber/addresses` as the successor. No removal date is set.
 
-On RELAY `calling.call.state`, `params.subscriber_id` is the Subscriber who placed the call from the Browser SDK or who answered it there. `params.address_id` is the Resource Address the call was placed to, and `params.subscriber_name` is the placing Subscriber's display name, or if that's empty their first name, then their email, then `Subscriber`. `address_id` and `subscriber_name` are present when a Subscriber places the call to an Address. On `calling.call.dial`, `call.subscriber_id` is the Subscriber who answered the dialed leg in the Browser SDK, present when a Subscriber answers. On `calling.conference`, participant events include `params.subscriber_id` (the Subscriber who placed the participant's call from the Browser SDK or answered it there). `params.address_id` and `params.subscriber_name` are on those participant events when the call was placed to an Address, and `subscriber_name` uses the same display name, first name, email, then `Subscriber` order. `params.deaf` is whether the participant can't hear the conference, present on events about a participant except `participant-call-quality`.
+### RELAY event fields
 
-### Address Types
+- `calling.call.state`: `params.subscriber_id` is the Subscriber who placed the call from the Browser SDK or who answered it there. `params.address_id` is the Resource Address the call was placed to, and `params.subscriber_name` is the placing Subscriber's display name, or if that's empty their first name, then their email, then `Subscriber`. `address_id` and `subscriber_name` are present when a Subscriber places the call to an Address.
+- `calling.call.dial`: `call.subscriber_id` is the Subscriber who answered the dialed leg in the Browser SDK, present when a Subscriber answers.
+- `calling.conference`: participant events include `params.subscriber_id` (the Subscriber who placed the participant's call from the Browser SDK or answered it there). `params.address_id` and `params.subscriber_name` are on those participant events when the call was placed to an Address, and `subscriber_name` uses the same display name, first name, email, then `Subscriber` order. `params.deaf` is whether the participant can't hear the conference, present on events about a participant except `participant-call-quality`.
 
-- **app**: points to an application
-- **room**: points to a Conference Room
-- **call**: points to a call
-- **subscriber**: points to a Subscriber
+### Address `type` (display type)
+
+These are values of the address `type` field, which the Dashboard calls **Display As**: how the alias appears to client applications.
+
+- **app**: shown to clients as an application
+- **room**: shown to clients as a Conference Room
+- **call**: shown to clients as a call
+- **subscriber**: shown to clients as a Subscriber
 
 ## Testing Relay Applications
 
