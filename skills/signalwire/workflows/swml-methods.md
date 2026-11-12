@@ -222,9 +222,9 @@ sections:
 
 ### live_transcribe
 
-Real-time transcription of the call, delivered to a webhook as it happens. Controlled by a single `action` property: a `start` object, the string `stop`, or a `summarize` object. `stop` and `summarize` are for active calls (via the Call Commands REST API, or SWML run by `transfer`/`execute` mid-call).
+Real-time transcription of the call, delivered to a webhook as it happens. Controlled by a single `action` property: a `start` object, the string `stop`, the string `summarize`, or a `summarize` object. `stop` and `summarize` are for active calls (via the Call Commands REST API, or SWML run by `transfer`/`execute` mid-call).
 
-Docs: https://signalwire.com/docs/swml/reference/calling/live-transcribe
+Docs: https://signalwire.com/docs/swml/reference/calling/live-transcribe. Guide: https://signalwire.com/docs/platform/voice/transcribe-calls
 
 `action.start` properties:
 
@@ -232,17 +232,20 @@ Docs: https://signalwire.com/docs/swml/reference/calling/live-transcribe
 |----------|----------------|-------------|
 | `webhook` | string | URL receiving transcription events via POST. Basic auth embeddable: `username:password@url` |
 | `lang` | string, required | Language to transcribe |
-| `live_events` | boolean, `false` | Send partial results as they occur |
+| `live_events` | boolean, `false` | When true, POST each utterance as soon as it's transcribed |
 | `ai_summary` | boolean, `false` | Send an AI summary to the webhook when the session ends |
 | `speech_timeout` | integer, `60000` | Speech recognition timeout (ms), min 1500 |
-| `vad_silence_ms` | integer, `300` (Deepgram) / `500` (Google) | VAD silence time (ms) |
+| `vad_silence_ms` | integer, `700` (Deepgram) / `500` (Google) | VAD silence time (ms). Omit or `0` uses the engine default |
 | `vad_thresh` | integer, `400` | VAD threshold, range 0–1800 |
 | `debug_level` | integer, `0` | Logging verbosity |
 | `direction` | array, required | Legs to transcribe: `remote-caller`, `local-caller` |
 | `speech_engine` | string, `deepgram` | `deepgram` or `google` |
-| `ai_summary_prompt` | string | Prompt guiding the end-of-session summary |
+| `ai_summary_prompt` | string | Prompt for the end-of-session summary only |
+| `hints` | array | Words or phrases that help recognition, such as product names or jargon. Empty strings are ignored |
 
-`action: stop` ends the session. `action.summarize` (`webhook`, `prompt`; both optional) requests an on-demand summary mid-session — versus `ai_summary: true`, which summarizes automatically at session end.
+`action: stop` ends the session. `summarize` is the string `summarize` (the start webhook and the default on-demand prompt) or an object with optional `webhook` and `prompt`. `ai_summary: true` summarizes at session end, and `ai_summary_prompt` applies only to that summary.
+
+Relay SDK: `call.live_transcribe` / `liveTranscribe` takes one action dict with exactly one key, `start`, `summarize`, or `stop`. In Python: `{"start": {"lang": "en-US", "direction": ["remote-caller", "local-caller"], "webhook": "https://example.com/transcription-events", "live_events": True}}`. JSON and TypeScript use `true`. `stop` is `{"stop": {}}`. An empty `summarize` object uses the start webhook and the default on-demand prompt.
 
 ```yaml
 version: 1.0.0
@@ -259,6 +262,16 @@ sections:
             speech_engine: deepgram
 ```
 
+Every event is an HTTP POST to the `webhook` URL. Tell them apart by `channel_data.content_disposition`. `call_info.content_disposition` is `post_data` on all three.
+
+| `content_disposition` | When | Payload |
+|---|---|---|
+| `transcribe.utterance` | One utterance, when `live_events` is true. Each direction listed in `direction` sends its own events. | `utterance.role`, `utterance.content`, `utterance.lang`, `utterance.timestamp` (Unix microseconds), `utterance.utterance_id`, and `confidence` |
+| `transcribe.live_summarize` | The summary from `summarize`. Posted to `summarize.webhook`, or to the start webhook when that is unset. | `conversation_summary`, `conversation_log` |
+| `transcribe.conversation_log` | Once when the session ends, whether you stopped it or the call ended. | Full `conversation_log`, `metrics` (session totals), and `conversation_summary` when `ai_summary` is true and a summary was produced |
+
+`role` is `remote-caller` or `local-caller`. `utterance.confidence` (0–1) is omitted when it is 0 or the engine reported none. The utterance event's top-level `confidence` is that score or `null`, and it is present when the score is 0. On `transcribe.live_summarize`, `conversation_summary` is `Error creating summary` when no summary could be produced. `conversation_log` entries are in spoken order: `role`, `content`, optional `confidence`, optional `language`. `metrics` is `total_utterances`, `remote_caller_turns`, `local_caller_turns`, `remote_caller_words`, `local_caller_words`, optional `remote_caller_avg_confidence` and `local_caller_avg_confidence`, and optional `first_utterance_ts` and `last_utterance_ts` (Unix microseconds). `channel_data` also includes `call_id` and `content_type` (`text/json`).
+
 `live_transcribe` and `ai_sidecar` can run on the same call. A call can have only one sidecar.
 
 ### live_translate
@@ -267,7 +280,7 @@ Real-time translation of the call, spoken back via TTS and delivered to a webhoo
 
 Docs: https://signalwire.com/docs/swml/reference/calling/live-translate
 
-`action.start` — everything in `live_transcribe`'s start table (minus `lang`), plus:
+`action.start` — everything in `live_transcribe`'s start table except `lang` and `hints` (`live_events` still sends partial results here), plus:
 
 | Property | Type / Default | Description |
 |----------|----------------|-------------|
@@ -299,7 +312,7 @@ sections:
 
 `transcribe` transcribes the entire call in the background: execution continues immediately, and the transcript is delivered when the call ends. Only one transcription can be active on a call at a time. For real-time delivery use `live_transcribe` instead.
 
-Docs: https://signalwire.com/docs/swml/reference/calling/transcribe and `/transcribe-stop`
+Docs: https://signalwire.com/docs/swml/reference/calling/transcribe and `/transcribe-stop`. Guide: https://signalwire.com/docs/platform/voice/transcribe-calls
 
 | Property | Type / Default | Description |
 |----------|----------------|-------------|
