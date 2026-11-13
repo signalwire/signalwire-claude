@@ -4,6 +4,8 @@
 
 Provision, configure, and manage phone numbers for voice calls, SMS/MMS, and fax using SignalWire's REST API or Dashboard.
 
+A phone number can only be assigned to Resources in its own Project, and moves to another Project in the same Space through the Compatibility API's Update incoming phone number by setting `AccountSid` to the destination Project ID; the API rejects the move while a port-in is in progress, and the Dashboard also blocks it while an E911 address is assigned. See [Projects and Subprojects](https://signalwire.com/docs/platform/projects).
+
 ## Searching for Available Numbers
 
 ### Search by Area Code

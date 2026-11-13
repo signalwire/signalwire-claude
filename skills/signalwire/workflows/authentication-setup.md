@@ -15,6 +15,10 @@ Every SignalWire Space has:
 
 A **personal access token** authenticates you as a person (your Space role), not as a project. Its holder must be an owner or admin of that Space, and it acts only on the Space whose subdomain you call. New ones begin with `swpat_`, are 42 characters, and have no scopes. Older `pat_` tokens are 28 characters and still work. Treat either as opaque: don't pattern-match it or assume a length. A mistyped or altered token is rejected with `401`. Send one with Basic auth and an empty username: `-u ":swpat_..."`. It is accepted on `/api/space` and on the Projects and Project Tokens APIs. Docs: https://signalwire.com/docs/apis/authorization#personal-access-tokens
 
+### Project scope and Subprojects
+
+Every API request acts only on the Project it authenticated as, so lists of phone numbers, Resources, and logs return that Project's alone. A Subproject is a full Project — its own Project ID, API tokens, phone numbers, Resources, and signing key — one level deep, and a create authenticated as a Subproject returns `422 nested_subprojects_not_allowed`. Create one with `POST /api/projects`, authenticated as the root Project with a token that has the Management permission, then issue its token with `POST /api/project/tokens`, passing `subproject_id`. Balance, members, trial mode, and voice and messaging rate limits are shared across the Space. The Compatibility API calls a Project's ID its Account SID and lists Subprojects as Accounts. Docs: https://signalwire.com/docs/platform/projects
+
 ### Finding Your Credentials
 
 1. Log in to your SignalWire Dashboard: `https://{space-name}.signalwire.com`
