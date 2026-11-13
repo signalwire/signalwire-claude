@@ -6,15 +6,85 @@ Build video conferencing applications with SignalWire's Video API, supporting ro
 
 ## Key Concepts
 
-- **Room**: A video conference space
-- **Room Token**: Limited-scope token for client access (never expose API token to browser)
+- **Video Room**: A Resource several people join at once. The REST reference calls it a conference room. Names are unique in a project and use letters, numbers, `_`, and `-`.
+- **Address**: What the page dials. Copy `channels.video` from the address list (for example `/public/team-standup?channel=video`). SignalWire names the address after the room's display name and adds a suffix when that name is already taken, so don't build it from the room name.
+- **Guest token**: Token the page signs in with. Issued for the room address. Never send the API token to the browser.
+- **Room token (Browser SDK v3)**: Limited-scope token for `Video.RoomSession`. See [Browser SDK v3](#browser-sdk-v3).
 - **Layout**: Visual arrangement of participant videos
 - **Moderator**: Participant with full control
 - **Member/Guest**: Regular participant with limited permissions
 
-## Creating Video Rooms
+## Create a Video Room and join it
 
-### Option 1: Via REST API (Server-Side)
+The room is the Resource. The server lists its address and issues a guest token for that address. The page signs in with the token and dials the address. The API token needs the **Video** permission, and **Voice** when phone callers join over Relay.
+
+### Create the room
+
+```
+POST https://{space}.signalwire.com/api/fabric/resources/conference_rooms
+```
+
+```python
+import os
+import requests
+from requests.auth import HTTPBasicAuth
+
+project_id = os.getenv('SIGNALWIRE_PROJECT_ID')
+api_token = os.getenv('SIGNALWIRE_API_TOKEN')
+space_url = os.getenv('SIGNALWIRE_SPACE_URL')
+
+response = requests.post(
+    f"{space_url}/api/fabric/resources/conference_rooms",
+    auth=HTTPBasicAuth(project_id, api_token),
+    headers={"Content-Type": "application/json"},
+    json={"name": "team-standup"},
+)
+
+room_id = response.json()["id"]
+```
+
+`name` is unique in the project; a second create with the same name fails. Allowed characters: letters, numbers, `_`, `-`. The response's top-level `id` is the Resource id.
+
+In the Dashboard: **Resources** → **Add** → **Video Room**, enter a room name, choose **Build From Scratch**, then **Create**.
+
+### List the address
+
+```
+GET https://{space}.signalwire.com/api/fabric/resources/{id}/addresses
+```
+
+A new room has one address. `data[0].id` is the address id. Dial `data[0].channels.video`. Copy that value rather than building it from the room name.
+
+### Issue a guest token
+
+```
+POST https://{space}.signalwire.com/api/fabric/guests/tokens
+```
+
+```python
+response = requests.post(
+    f"{space_url}/api/fabric/guests/tokens",
+    auth=HTTPBasicAuth(project_id, api_token),
+    headers={"Content-Type": "application/json"},
+    json={"allowed_addresses": [address_id]},
+)
+
+guest_token = response.json()["token"]
+```
+
+`allowed_addresses` takes up to 10 address ids. The token lasts two hours by default and places calls only.
+
+### Join from the page
+
+Serve the page over HTTPS or `localhost`. Browsers share the camera and microphone only on those origins. Sign in with the guest token and dial the copied address; see [Browser client](#browser-client-javascript).
+
+Phone callers join with SWML `join_room`, passing the room's `name`, not its address. A name that matches no room creates a new empty room, and the caller waits alone in it. See [join_room](swml-methods.md#join_room).
+
+## Browser SDK v3
+
+`POST /api/video/rooms` and room tokens are the Browser SDK v3 path. Pages on that path map to the flow above: `/docs/browser-sdk/v4/guides/migrate-from-v3`.
+
+### Via REST API (Server-Side)
 
 ```
 POST https://{space}.signalwire.com/api/video/rooms
@@ -114,20 +184,20 @@ createRoom();
 - **enable_room_previews**: Show video preview before joining (default: `true`)
 - **record_on_start**: Auto-start recording (default: `false`)
 
-### Option 2: Auto-Creation
+### Auto-creation
 
-Rooms are automatically created when requesting a token for a non-existent room.
+On this path, a room is created when a room token is requested for a name that does not exist yet.
 
-### Option 3: Via Dashboard
+### Dashboard
 
 1. Go to **Video** section in Dashboard
 2. Click **Create Room**
 3. Configure settings
 4. Save
 
-## Room Tokens (Client Access)
+## Room Tokens (Browser SDK v3)
 
-**CRITICAL**: Never expose API tokens to browsers. Always use room tokens.
+**CRITICAL**: Never expose API tokens to browsers. This path uses room tokens. The current path uses a [guest token](#issue-a-guest-token).
 
 ### Creating Room Tokens (Server-Side)
 
@@ -191,7 +261,7 @@ json={
 }
 ```
 
-**Guest Token** (limited permissions):
+**Guest Token** (v3 room token, limited permissions):
 ```python
 json={
     "room_name": "my-meeting-room",
@@ -234,14 +304,18 @@ npm install @signalwire/js@latest rxjs
 import { SignalWire, StaticCredentialProvider } from "@signalwire/js";
 
 const client = new SignalWire(
-  new StaticCredentialProvider({ token: "YOUR_SUBSCRIBER_ACCESS_TOKEN" })
+  new StaticCredentialProvider({ token: guestToken })
 );
 
-await client.dial("/public/test-room", {
-  audio: true, video: true,
-  receiveAudio: true, receiveVideo: true
+// channels.video from the address list. Copy it; don't build it from the name.
+await client.dial("/public/team-standup?channel=video", {
+  audio: true,
+  video: true,
+  receiveVideo: true,
 });
 ```
+
+The `?channel=video` suffix turns on audio, video, and receiving video. Pass the three options anyway: without the suffix, receiving video is off by default. Serve the page over HTTPS or `localhost`. Browsers share the camera and microphone only on those origins.
 
 **2. Web components** — one element, a styled working call UI:
 
@@ -254,7 +328,9 @@ This is the right answer for marketing sites and click-to-call buttons. Do not h
 
 ### Authentication
 
-A **Subscriber Access Token (SAT)**, minted from the Dashboard's Subscribers section.
+A room page signs in with the [guest token](#issue-a-guest-token) for the room address.
+
+A **Subscriber Access Token (SAT)**, minted from the Dashboard's Subscribers section, signs a person in as a Subscriber instead.
 
 For public widgets — chatbots, click-to-call — an **embed token** works with no backend at all. Guide: `/docs/browser-sdk/v4/guides/authentication`.
 
@@ -684,6 +760,8 @@ if __name__ == '__main__':
 
 ## Managing Rooms
 
+These calls are the Browser SDK v3 room API (`/api/video/rooms`).
+
 ### List All Rooms
 
 ```python
@@ -721,9 +799,9 @@ response = requests.delete(
 
 ## Best Practices
 
-1. **Token Security**: Never expose API tokens to browsers - always use room tokens
+1. **Token Security**: Never expose API tokens to browsers. A room page signs in with a guest token (the v3 path uses a room token).
 2. **Token Generation**: Generate tokens server-side on-demand
-3. **Permissions**: Use least-privilege permissions for guest tokens
+3. **Permissions**: Scope a guest token with `allowed_addresses` (up to 10). On the v3 room-token path, pass only the permissions that guest needs.
 4. **Quality**: Match video quality to user bandwidth
 5. **Layout**: Start with responsive layouts for flexibility
 6. **Recording**: Inform participants when recording is active
