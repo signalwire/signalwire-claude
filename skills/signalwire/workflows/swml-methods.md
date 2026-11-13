@@ -276,22 +276,26 @@ Every event is an HTTP POST to the `webhook` URL. Tell them apart by `channel_da
 
 ### live_translate
 
-Real-time translation of the call, spoken back via TTS and delivered to a webhook. Same `action` pattern as `live_transcribe` (`start` / `stop` / `summarize`), plus an `inject` action.
+Real-time translation of the call. For each side listed in `direction`, that person's own voice is muted and the translation is played in its place. A side left out passes through untouched. Results go to a webhook. Same `action` pattern as `live_transcribe` (`start` / `stop` / `summarize`), plus an `inject` action. `start` returns immediately and the call continues. The `local-caller` side has audio only once another party is on the call.
 
-Docs: https://signalwire.com/docs/swml/reference/calling/live-translate
+Docs: https://signalwire.com/docs/swml/reference/calling/live-translate. Guide: https://signalwire.com/docs/platform/voice/translate-calls
 
-`action.start` — everything in `live_transcribe`'s start table except `lang` and `hints` (`live_events` still sends partial results here), plus:
+`action.start` — everything in `live_transcribe`'s start table except `lang` and `hints` (`live_events` posts one event per spoken utterance, with both languages in that event), plus:
 
 | Property | Type / Default | Description |
 |----------|----------------|-------------|
-| `from_lang` | string, required | Language to translate from |
-| `to_lang` | string, required | Language to translate to |
-| `from_voice` | string, `elevenlabs.josh` | TTS voice for the source language |
-| `to_voice` | string, `elevenlabs.josh` | TTS voice for the target language |
-| `filter_from` | string | Tone/style filter for the source direction: `polite`, `rude`, `professional`, `shakespeare`, `gen-z`, or custom via `prompt:` prefix (e.g. `prompt:Use formal business language`) |
-| `filter_to` | string | Same, for the target direction |
+| `from_lang` | string, required | One of the two languages. `from_voice` speaks it. Which side speaks it depends on `direction` order |
+| `to_lang` | string, required | The other language. `to_voice` speaks it |
+| `from_voice` | string, `azure.en-US-RyanMultilingualNeural` | TTS voice for `from_lang`: lowercase engine, a dot, then the voice id (`azure.es-ES-ElviraNeural`, `elevenlabs.josh`) |
+| `to_voice` | string, `azure.en-US-RyanMultilingualNeural` | TTS voice for `to_lang`, same form |
+| `filter_from` | string | Tone filter for speech in `from_lang`. Rewrites the translation before it is spoken: `polite`, `rude`, `professional`, `shakespeare`, `gen-z`, or `prompt:` plus an instruction (`prompt:Use formal business language`) |
+| `filter_to` | string | Same, for speech in `to_lang` |
+
+`direction` is ordered. With `local-caller` first, `remote-caller` speaks `from_lang` and `local-caller` speaks `to_lang`. Listing `remote-caller` first swaps them. One side only: that side speaks `to_lang`, and the other person hears it in `from_lang`. `from_voice` always speaks `from_lang`; `to_voice` always speaks `to_lang`. A `start` missing `from_lang`, `to_lang`, or `direction` lets the document continue, and the call connects with no translation. Another `start` with the same languages, while a session is running, changes nothing; different languages restart the session. An unrecognized voice, including an engine prefix that is not lowercase, falls back to the default. The same language on both sides, with a filter, rewrites the spoken tone. With no filter, a same-language session repeats each person's words in the synthesized voice.
 
 `action.inject` (`message`, `direction`: `remote-caller`/`local-caller`) inserts a message into the conversation, translated and spoken to the specified party — mid-call only.
+
+Relay SDK: `call.live_translate` / `liveTranslate` takes one action dict with exactly one key, `start`, `summarize`, `inject`, or `stop`. `stop` is `{"stop": {}}`. REST passes the same action as `action` (Python) or the second argument (TypeScript): a `start`, `summarize`, or `inject` object, or the string `"stop"`. The platform accepts either stop form. An empty `summarize` object uses the start webhook and the default summary prompt.
 
 ```yaml
 version: 1.0.0
@@ -307,6 +311,18 @@ sections:
             live_events: true
             direction: [remote-caller, local-caller]
 ```
+
+In that example `remote-caller` is first, so that side speaks `to_lang`.
+
+Every event is an HTTP POST to the `webhook` URL. Tell them apart by `channel_data.content_disposition`.
+
+| `content_disposition` | When | Payload |
+|---|---|---|
+| `translate.translate_utterance` | Once per spoken utterance, when `live_events` is true | `primary_utterance`, `secondary_utterance` |
+| `translate.live_summary` | When you send `summarize`. Posted to `summarize.webhook`, or to the start webhook when that is unset. Translation continues | `primary_conversation_summary`, `secondary_conversation_summary` |
+| `translate.conversation_log` | Once when the session ends, whether you stopped it or the call ended. Sent whenever `start` set a `webhook` | `primary_conversation_log`, `secondary_conversation_log`, `translate_data`, and both summaries when `ai_summary` is true |
+
+`primary_` fields are the conversation in `from_lang`; `secondary_` fields are `to_lang`. An utterance has `role`, `lang`, `content`, and `utterance_id`, plus optional `confidence`, and `filter_type` and `filter_value` when a filter rewrote it. `role` is the side that spoke. An utterance event that fails to connect, or gets a `5xx`, is retried, so the same `utterance_id` can arrive again; use it to ignore repeats. Log entries are `role`, `language`, and `content`. `translate_data` lists each translated side with `role`, `from_language`, and `to_language`. When `ai_summary` is true, `translate_data` is a flat object for the first-listed side only, with `from_language`, `to_language`, `to_voice`, `role`, and `position`. `channel_data` also includes `call_id` and `content_type` (`text/json`). With `live_events` off, the end-of-session event can arrive without an `X-SignalWire-Signature`.
 
 ### transcribe / transcribe_stop
 
