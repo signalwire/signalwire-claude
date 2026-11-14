@@ -97,9 +97,15 @@ Condense a procedural guide to its prerequisites, its steps in order, the reques
 
 ## The routine
 
-Pages in scope are those holding facts an agent needs to act correctly: reference pages, procedural guides, limits, allowlists, and catalogs such as TTS voices. Skip overviews, conceptual explainers, onboarding, and the changelog. Keep the URLs of in-scope pages in `skills/signalwire/docs/pages.txt`, one per line. `docs_mirror.py fetch` records each page's hash in `manifest.json` in its output directory.
+Pages in scope are those holding facts an agent needs to act correctly: reference pages, procedural guides, limits, allowlists, and catalogs such as TTS voices. Skip overviews, conceptual explainers, onboarding, and the changelog. The Compatibility API (LaML/cXML) is out of scope, and so are the Browser SDK and Server SDK docs, which belong to separate SDK skills.
 
-- **Daily:** run `docs_mirror.py check --manifest <manifest.json>` with the URLs from `pages.txt`. Re-condense changed pages. Compare the product indexes (the `llms.txt` files) with `pages.txt` to find new pages; condense the ones in scope and add them to `pages.txt`. When a page is removed or moved, flag it for review instead of keeping the old copy.
-- **Each run that passes every check:** run `docs_mirror.py stamp skills/signalwire/SKILL.md <today>`. SKILL.md must contain the line `Bundled docs verified against live docs: YYYY-MM-DD`. The date means "last confirmed against the live docs", not "last changed".
+Three files in this directory hold the state between runs:
+
+- `pages.txt` lists the in-scope URLs, one per line. Lines starting with `#` are comments: `# skip: <url> — <reason>` records a page left out on purpose, and `# review:` marks a judgment call worth a second look.
+- `manifest.json` records the hash of each page as last condensed. Commit it.
+- `cache/` holds the raw pages from the latest fetch. It is ignored by git; delete it whenever you like.
+
+- **Daily:** run `docs_mirror.py check --manifest manifest.json --urls-file pages.txt`. For each changed or new page, run `docs_mirror.py fetch --out cache --manifest manifest.json <url>`, re-condense it from the copy in `cache/`, and verify it. Fetch updates the page's hash in the manifest, so fetch only pages you are about to condense, and if a page fails verification, restore its manifest entry so the next run picks it up again. Compare the product indexes (the `llms.txt` files) with `pages.txt` to find new pages; condense the ones in scope and add them to `pages.txt`. When a page is removed or moved, flag it for review instead of keeping the old copy.
+- **Each run that passes every check:** run `docs_mirror.py stamp skills/signalwire/SKILL.md <today>`. SKILL.md must contain the line `Bundled docs verified against live docs: YYYY-MM-DD` (`never` until the first run). The date means "last confirmed against the live docs", not "last changed".
 - **When a skipped page changes substantially:** check it against the scope rule again, because it may now hold facts.
 - **Quarterly:** check every page in the product indexes against the scope rule to catch restructuring.

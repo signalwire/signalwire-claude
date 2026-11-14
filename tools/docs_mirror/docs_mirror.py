@@ -9,8 +9,10 @@ Condensing is done by an agent following CONDENSING.md. This script does the
 parts that must never vary, and the coverage check that catches a condensed
 file dropping a parameter, enum value, endpoint, status code, or default.
 
-  docs_mirror.py fetch --out DIR URL...          save pages, update DIR/manifest.json
-  docs_mirror.py check --manifest FILE URL...    list changed/new/removed pages
+  docs_mirror.py fetch --out DIR [--manifest FILE] [--urls-file pages.txt] [URL...]
+        save pages under DIR and record their hashes (manifest defaults to DIR/manifest.json)
+  docs_mirror.py check --manifest FILE [--urls-file pages.txt] [URL...]
+        list changed/new/removed pages; a page returning 404 or 410 counts as removed
   docs_mirror.py coverage --condensed FILE SRC... exit 1 if anything is missing
   docs_mirror.py stamp SKILL.md YYYY-MM-DD       update the freshness date
   docs_mirror.py tokens FILE...                  approximate token counts
@@ -20,6 +22,7 @@ import hashlib
 import json
 import re
 import sys
+import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from datetime import date
@@ -42,7 +45,7 @@ ENDPOINT = re.compile(r"^(GET|POST|PUT|PATCH|DELETE)\s+(\S+)", re.M)
 STATUS = re.compile(r"^#{2,4}\s+([1-5]\d\d)\b", re.M)
 DEFAULT = re.compile(r"\bdefault:\s*(.+)$")
 DEFAULT_LINE = re.compile(r"^\*\*Default:\*\*\s*(.+)$")
-FRESHNESS = re.compile(r"(verified against live docs: )\d{4}-\d{2}-\d{2}")
+FRESHNESS = re.compile(r"(verified against live docs: )(\d{4}-\d{2}-\d{2}|never)")
 SINGLE_TOKEN = re.compile(r"^[\w.+\-@:/]+$")
 
 
@@ -204,7 +207,7 @@ def changed_pages(manifest: dict, fresh: dict[str, str]) -> dict[str, list[str]]
 
 def stamp_freshness(skill_md: str, day: str) -> str:
     if not FRESHNESS.search(skill_md):
-        raise ValueError("SKILL.md has no 'verified against live docs: YYYY-MM-DD' line")
+        raise ValueError("SKILL.md has no 'verified against live docs: YYYY-MM-DD' (or 'never') line")
     return FRESHNESS.sub(rf"\g<1>{day}", skill_md)
 
 
@@ -218,6 +221,23 @@ def fetch(url: str) -> str:
         return r.read().decode()
 
 
+def read_url_list(text: str) -> list[str]:
+    """URLs from a pages.txt-style list: one per line, '#' comments and blank lines ignored."""
+    return [s for line in text.splitlines() if (s := line.strip()) and not s.startswith("#")]
+
+
+def fetch_hashes(urls: list[str]) -> dict[str, str]:
+    """Current content hash of each URL. Pages that are gone (404/410) are left out, so they show as removed."""
+    hashes = {}
+    for url in urls:
+        try:
+            hashes[url] = content_hash(fetch(url))
+        except urllib.error.HTTPError as e:
+            if e.code not in (404, 410):
+                raise
+    return hashes
+
+
 def local_path(url: str) -> str:
     path = urlparse(url).path.removeprefix("/docs/")
     return path if path.endswith(".md") else path + ".md"
@@ -226,16 +246,21 @@ def local_path(url: str) -> str:
 def main(argv: list[str]) -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
-    f = sub.add_parser("fetch"); f.add_argument("--out", required=True); f.add_argument("urls", nargs="+")
-    c = sub.add_parser("check"); c.add_argument("--manifest", required=True); c.add_argument("urls", nargs="+")
+    f = sub.add_parser("fetch"); f.add_argument("--out", required=True); f.add_argument("--manifest")
+    c = sub.add_parser("check"); c.add_argument("--manifest", required=True)
+    for cmd in (f, c):
+        cmd.add_argument("--urls-file", help="pages.txt-style list of URLs")
+        cmd.add_argument("urls", nargs="*")
     v = sub.add_parser("coverage"); v.add_argument("--condensed", required=True); v.add_argument("sources", nargs="+")
     s = sub.add_parser("stamp"); s.add_argument("skill_md"); s.add_argument("day")
     t = sub.add_parser("tokens"); t.add_argument("files", nargs="+")
     a = p.parse_args(argv)
+    if a.cmd in ("fetch", "check") and a.urls_file:
+        a.urls += read_url_list(Path(a.urls_file).read_text())
 
     if a.cmd == "fetch":
         out = Path(a.out)
-        manifest_path = out / "manifest.json"
+        manifest_path = Path(a.manifest) if a.manifest else out / "manifest.json"
         manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
         for url in a.urls:
             md = fetch(url)
@@ -247,7 +272,7 @@ def main(argv: list[str]) -> int:
         manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     elif a.cmd == "check":
         manifest = json.loads(Path(a.manifest).read_text())
-        print(json.dumps(changed_pages(manifest, {u: content_hash(fetch(u)) for u in a.urls}), indent=2))
+        print(json.dumps(changed_pages(manifest, fetch_hashes(a.urls)), indent=2))
     elif a.cmd == "coverage":
         report = coverage([Path(s).read_text() for s in a.sources], Path(a.condensed).read_text())
         print(report.render())

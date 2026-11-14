@@ -1,1 +1,7 @@
 __pycache__/
+
+# Raw pages downloaded by tools/docs_mirror/docs_mirror.py fetch
+tools/docs_mirror/cache/
+
+# Local working list for content refactors; not part of the skill
+retire-list.md

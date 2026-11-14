@@ -3,6 +3,7 @@
 # requires-python = ">=3.11"
 # dependencies = ["pytest"]
 # ///
+import json
 import sys
 from pathlib import Path
 
@@ -321,6 +322,66 @@ def test_field_inside_fenced_block_counts_as_code():
     condensed = "```yaml\napp_name: x\n```\n"
     report = dm.coverage([PARAMS_PAGE], condensed)
     assert "app_name" not in report.missing["fields"]
+
+
+
+def test_stamp_freshness_replaces_never():
+    skill = "<!-- Bundled docs verified against live docs: never -->\n"
+    assert dm.stamp_freshness(skill, "2026-11-20") == "<!-- Bundled docs verified against live docs: 2026-11-20 -->\n"
+
+
+def test_read_url_list_skips_comments_and_blanks():
+    text = "# SWML\nhttps://a.example/x.md\n\n  https://a.example/y.md  \n# skipped below\n"
+    assert dm.read_url_list(text) == ["https://a.example/x.md", "https://a.example/y.md"]
+
+
+def _fake_fetch(monkeypatch, pages):
+    monkeypatch.setattr(dm, "fetch", lambda url: pages[url])
+
+
+def test_fetch_writes_manifest_to_given_path(tmp_path, monkeypatch):
+    url = "https://signalwire.com/docs/swml/reference/calling/connect.md"
+    _fake_fetch(monkeypatch, {url: SWML_PAGE})
+    manifest = tmp_path / "keep" / "manifest.json"
+    manifest.parent.mkdir()
+    out = tmp_path / "cache"
+    assert dm.main(["fetch", "--out", str(out), "--manifest", str(manifest), url]) == 0
+    assert (out / "swml/reference/calling/connect.md").read_text() == SWML_PAGE
+    assert not (out / "manifest.json").exists()
+    entry = json.loads(manifest.read_text())[url]
+    assert entry["sha256"] == dm.content_hash(SWML_PAGE)
+    assert entry["path"] == "swml/reference/calling/connect.md"
+
+
+def test_fetch_and_check_read_urls_file(tmp_path, monkeypatch, capsys):
+    a, b = "https://signalwire.com/docs/a.md", "https://signalwire.com/docs/b.md"
+    _fake_fetch(monkeypatch, {a: "# a\n", b: "# b\n"})
+    urls = tmp_path / "pages.txt"
+    urls.write_text(f"# group\n{a}\n{b}\n")
+    manifest = tmp_path / "manifest.json"
+    dm.main(["fetch", "--out", str(tmp_path / "cache"), "--manifest", str(manifest), "--urls-file", str(urls)])
+    assert set(json.loads(manifest.read_text())) == {a, b}
+
+    _fake_fetch(monkeypatch, {a: "# a\n", b: "# b changed\n"})
+    capsys.readouterr()
+    dm.main(["check", "--manifest", str(manifest), "--urls-file", str(urls)])
+    assert json.loads(capsys.readouterr().out)["changed"] == [b]
+
+
+
+def test_check_reports_404_page_as_removed(tmp_path, monkeypatch, capsys):
+    import urllib.error
+    gone = "https://signalwire.com/docs/gone.md"
+
+    def fetch(url):
+        raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
+
+    monkeypatch.setattr(dm, "fetch", fetch)
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(json.dumps({gone: {"sha256": "x"}}))
+    capsys.readouterr()
+    dm.main(["check", "--manifest", str(manifest), gone])
+    assert json.loads(capsys.readouterr().out)["removed"] == [gone]
 
 
 if __name__ == "__main__":
