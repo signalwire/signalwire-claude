@@ -149,7 +149,7 @@ makeCall();
 ### cURL
 
 ```bash
-curl -L 'https://kalsey.signalwire.com/api/calling/calls' \
+curl -L 'https://{your-space}.signalwire.com/api/calling/calls' \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json' \
   -H 'Authorization: Basic <base64_creds>' \
