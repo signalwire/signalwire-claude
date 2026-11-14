@@ -10,7 +10,7 @@ Four layers of control. Only the first one depends on the model cooperating:
 |-------|-----------|
 | Guidance | Prompts and tool descriptions. Probabilistic. |
 | Tool scope | Each step lists its own tools. A tool that is not offered cannot be called. |
-| Transition scope | `set_valid_steps([])` removes `next_step`. Leave `set_valid_contexts` unset so `change_context` is not offered; an empty list still offers it. |
+| Transition scope | `set_valid_steps([])` removes `next_step`. Leave `set_valid_contexts` unset so `change_context` is not offered (see [Gotchas](#gotchas)). |
 | Execution authority | The handler checks real state, then commits. The model can ask. Code decides. |
 
 ```python
@@ -25,7 +25,7 @@ The only way out of a step is a handler that has checked state and then returns 
 
 Keep truth in a system of record keyed by `call_id`. A confirm takes the revision number of the proposal the caller just heard: a repeat with that revision returns the same record, and a stale revision is refused. Tool handlers receive `(self, args, raw_data)`, and `self` is shared across calls, so writing per-call facts to it leaks one caller into the next call. Read per-call facts from `raw_data` or your store. Per-request agent configuration goes in an `add_per_call_config()` callback. That callback gets its own copy of the SDK-managed configuration. Subclass attributes are shared, so assign new values rather than mutating them.
 
-`params.static_greeting` speaks a fixed disclosure, word for word, before the model says anything. It repeats on every turn until the caller first speaks, including attention timeouts, so a required disclosure can play more than once. Set `params.static_greeting_no_barge` when the caller must not talk over it. Do not leave a required disclosure to the prompt.
+`params.static_greeting` speaks a fixed disclosure, word for word, before the model says anything, so a required disclosure doesn't depend on the prompt. Set `params.static_greeting_no_barge` when the caller must not talk over it. It can play more than once: see [Gotchas](#gotchas).
 
 `say()` is an action, so it finishes before the next action. Without `post_process`, actions run immediately, so a notice left to the model can be cut off: `say()` first. With `post_process=True`, let the model speak. Use one, not both. `connect(final=True)` runs inline when the call is not from RELAY.
 
@@ -249,9 +249,9 @@ Keep the slow reasoning model off the conversation. The fast model stays on the 
 
 The acknowledgment is a prompt requirement. On the agent, add a section that tells the model to say, in one sentence, what it is about to look up before it calls the tool.
 
-Per-language `fillers` cover the start of the call. A filler covers the moment a tool call is issued. It does not cover the wait. For the wait, loop `wait_file` with `wait_file_loops=-1`, which plays until the function returns. Omitting `wait_file_loops` plays the file once. A wait script, a nested list inside the per-language filler array, speaks phrases one at a time across the wait. A wait script will not talk over an open `wait_file`, and realtime agents do not support wait scripts.
+Per-language `fillers` cover the moment the tool call is issued, not the wait. For the wait, loop a `wait_file` or use a wait script: see [Gotchas](#gotchas).
 
-Put a timeout on the slow call, and keep it well under the platform's 120 s SWAIG webhook limit. A function that outlasts that limit returns an error and its `set_global_data` is lost. The block below is a fragment. `self.billing` and `ask_reasoning_model` are your helpers. `ask_reasoning_model` raises `TimeoutError` when the call exceeds the timeout you pass, and the `except` branch relies on that. If it times out, apologize and offer a fallback: email the explanation, call back, or transfer to a person.
+Put a timeout on the slow call, and keep it well under the SWAIG webhook limit in [Gotchas](#gotchas). The block below is a fragment. `self.billing` and `ask_reasoning_model` are your helpers. `ask_reasoning_model` raises `TimeoutError` when the call exceeds the timeout you pass, and the `except` branch relies on that. If it times out, apologize and offer a fallback: email the explanation, call back, or transfer to a person.
 
 Ask the large model for two or three sentences someone can follow on the phone, plus the data behind them. `global_data` is posted with every later function call, so save a short summary and an id there and keep the full analysis in your own store under that id. The follow-up tool loads the analysis by that id, so later questions do not take another trip to the slow model.
 
@@ -579,3 +579,12 @@ def book_slot(self, args, raw_data):
                 f"Confirmation: {confirmation}"
     }))
 ```
+
+## Gotchas
+
+These behaviors are not on the docs site.
+
+- **`static_greeting` repeats until the caller speaks.** It plays again on every turn, attention timeouts included, until the caller first says something, so a required disclosure can play more than once.
+- **An empty `valid_contexts` list still offers `change_context`.** Leave it unset to keep the model in the current context.
+- **A filler covers only the moment the tool is called.** For the wait, loop `wait_file` with `wait_file_loops=-1`, which plays until the function returns. Without `wait_file_loops` the file plays once. A wait script (a nested list inside the per-language filler array) speaks its phrases one at a time across the wait. It won't talk over an open `wait_file`, and realtime agents don't support wait scripts.
+- **SWAIG webhooks time out at 120 seconds.** A function that runs longer returns an error, and its `set_global_data` is lost.

@@ -745,7 +745,7 @@ In `ai.params`:
 | `enable_inner_dialog` | boolean, `false` | Master switch |
 | `inner_dialog_prompt` | string | The assistant's personality, given to the helper as context. Documented default: *"The assistant is intelligent and straightforward, does its job well and is not excessively polite."* |
 | `inner_dialog_model` | string | Which model the helper uses. Defaults to `ai_model`. |
-| `inner_dialog_scorecard` | `true` or object | Defines the dials. **Setting it switches inner dialog on implicitly** — you do not also need `enable_inner_dialog`. *(Not on the docs site.)* |
+| `inner_dialog_scorecard` | `true` or object | Defines the dials. See [Gotchas](#gotchas) |
 | `inner_dialog_synced` | boolean | Has no effect. `prompt.confidence` and `post_prompt.confidence` also have no effect |
 
 Default dial set: `sentiment`, `engagement`, `frustration`, `rapport`, `read_confidence`, `expertise`, `intent`, `profile`. Passing an object overrides them by key.
@@ -769,7 +769,12 @@ Default dial set: `sentiment`, `engagement`, `frustration`, `rapport`, `read_con
 
 Your `escalate_to_human` endpoint receives `global_data.scorecard` alongside the usual payload, so it can branch on `frustration` without the model having to describe the caller's mood in words.
 
-**Bills per minute while enabled.**
+## Gotchas
+
+These behaviors are not on the docs site.
+
+- **`inner_dialog_scorecard` turns inner dialog on by itself.** You don't also need `enable_inner_dialog`.
+- **Inner dialog bills per minute while it's enabled.**
 
 ## Next Steps
 

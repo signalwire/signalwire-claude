@@ -193,35 +193,6 @@ SWAIG:
 | `mcp_servers[].resources` | boolean, default `false` | Fetch MCP resources in addition to tools |
 | `mcp_servers[].resource_vars` | object | Values for `{name}` placeholders in resource URIs. Used as written; a placeholder with no key is left as-is. Used only when `resources` is enabled |
 
-### The trap: `SWAIG` must be an object
-
-*(Not on the docs site.)* `mcp_servers` is only read when the `SWAIG` config block is an **object**. If `SWAIG` is given as a bare functions array, `mcp_servers` is silently ignored — no error, no log line you will see, the tools simply never appear.
-
-```yaml
-# ❌ mcp_servers has nowhere to live — silently dropped
-SWAIG:
-  - function: getWeather
-    web_hook_url: https://myapp.com/swaig
-
-# ✅
-SWAIG:
-  functions:
-    - function: getWeather
-      web_hook_url: https://myapp.com/swaig
-  mcp_servers:
-    - url: https://mcp.example.com/tools
-```
-
-If MCP tools are not showing up, check this first.
-
-### Discovery behavior
-
-Discovery happens **once per session, before the greeting**. A server that comes up later in the call is not picked up.
-
-If a server advertises neither `tools` nor `resources` in its capabilities handshake, it is skipped.
-
-SDK-side equivalent: `/docs/server-sdks/guides/mcp-gateway`.
-
 ## SWAIG Includes — Remote Function Discovery
 
 Pull a function list from a remote URL at session start instead of declaring every function inline. Useful for sharing one tool catalog across several agents.
@@ -894,7 +865,7 @@ A PDF is recognized from its content. Word or Excel returns `422` even when serv
 
 `chunking_strategy` defaults to `sentence`, which groups up to `max_sentences_per_chunk` sentences. `sliding` takes a word window with overlap. `paragraph` splits on blank lines. `page` makes one chunk per PDF page; plain text and Markdown have no pages, so they fall back to a blank-line split, like `paragraph`. Markdown is chunked as written, so chunks keep their markup. `split_newlines` applies only to `sentence`: when `true`, a line break also ends a sentence; the default `false` ends sentences on punctuation only.
 
-Status moves from `submitted` to `in_progress`, then to `completed`, or to `failed` when a chunk can't be indexed (for example, because it is too long). A file with no extractable text, such as a scanned PDF with no text layer, stays `in_progress`.
+Status moves from `submitted` to `in_progress`, then to `completed`, or to `failed` when a chunk can't be indexed (for example, because it is too long).
 
 **Use Cases:**
 - Medical information lookup (HIPAA-compliant)
@@ -977,6 +948,30 @@ gates:
         tool_result: cancel_ride was not run.
         tool_prompt: Ask the caller whether they want to cancel the ride.
 ```
+
+## Gotchas
+
+These behaviors are not on the docs site.
+
+- **`mcp_servers` needs `SWAIG` to be an object.** If `SWAIG` is a bare array of functions, `mcp_servers` is silently ignored and its tools never appear. Check this first when MCP tools are missing.
+
+  ```yaml
+  # mcp_servers has nowhere to live, so it's dropped
+  SWAIG:
+    - function: getWeather
+      web_hook_url: https://myapp.com/swaig
+
+  # mcp_servers is read
+  SWAIG:
+    functions:
+      - function: getWeather
+        web_hook_url: https://myapp.com/swaig
+    mcp_servers:
+      - url: https://mcp.example.com/tools
+  ```
+
+- **MCP discovery runs once per session, before the greeting.** A server that comes up later in the call isn't picked up. A server that advertises neither `tools` nor `resources` in its capabilities handshake is skipped. The SDK equivalent is at `https://signalwire.com/docs/server-sdks/guides/mcp-gateway`.
+- **A DataSphere document with no extractable text never fails.** A scanned PDF with no text layer stays `in_progress` instead of moving to `failed`.
 
 ## Next Steps
 

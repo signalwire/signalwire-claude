@@ -729,7 +729,7 @@ sections:
 
 **Problem:** Input-collection loops can repeat infinitely if the caller never responds.
 
-**Solution:** Use `label` + `goto` with `max` — `goto` stops jumping after `max` attempts (1-100), so the script falls through to your exit path. `max` is also bounded by a per-call limit of 32 combined `transfer` and `goto` jumps (8 in a row without caller interaction). Past that the call is hung up, not fallen through.
+**Solution:** Use `label` + `goto` with `max` — `goto` stops jumping after `max` attempts (1-100), so the script falls through to your exit path. The per-call jump limit still applies: see [Gotchas](#gotchas).
 
 ```yaml
 sections:
@@ -767,11 +767,6 @@ sections:
     - connect: { to: "+15552222222" }
 ```
 
-**Implementation per input-collection point:**
-- Use unique label names (`menu1`, `menu2`) for multiple input-collection points
-- Set `max` to the maximum retries (typically 2-3)
-- Provide helpful feedback before looping
-- Always end with hangup after max attempts (the methods after `goto` run once the jump limit is reached)
 
 ### Variable Management Best Practices
 
@@ -1348,6 +1343,12 @@ sections:
 # Bad - silent transfer
 - connect: { to: "+15551234567" }
 ```
+
+## Gotchas
+
+- **Jump limit.** Menu loops are bounded by the per-call limit on `transfer` and `goto` jumps, and past it the call is hung up rather than falling through to your exit path. See [SWML Methods: Gotchas](swml-methods.md#gotchas).
+- **One label per menu.** The `goto` jump count belongs to the target label and is shared by every `goto` that jumps there, so give each input-collection point its own label (`menu1`, `menu2`).
+- **End with `hangup`.** Once `max` is reached, `goto` stops jumping and the methods after it run, so put the exit path there.
 
 ## Next Steps
 

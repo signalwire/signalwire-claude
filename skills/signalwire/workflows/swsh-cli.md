@@ -14,7 +14,7 @@ It runs two ways: as an interactive shell, or as a scriptable one-liner.
 
 ## Install
 
-**Specify Python 3.11 for pip.** The docs call out a dependency issue under 3.12.
+Install with Python 3.11 (see [Gotchas](#gotchas)):
 
 ```bash
 python3 -m venv swsh
@@ -102,8 +102,6 @@ swsh get_call --all-active
 
 For flags on the `create` and `update` commands, fetch `/docs/platform/swsh` — the table above lists commands, not their arguments.
 
-**On `laml_bin`:** these commands manage cXML applications. This plugin does not teach LaML/cXML for new development, but the commands exist for accounts that still carry them.
-
 ## WireStarter — a local dev container
 
 `/docs/platform/wirestarter`
@@ -117,7 +115,11 @@ docker exec -ti wirestarter bash
 
 It is the fastest path from zero to a working local agent that SignalWire can reach.
 
-**ngrok is a prerequisite you supply, not something WireStarter bundles.** Setup prompts for ngrok credentials and wires the tunnel up for you, but you need an ngrok account first.
+## Gotchas
+
+- **Install with Python 3.11.** SWSH has a dependency issue under 3.12.
+- **WireStarter doesn't bundle ngrok.** Setup asks for ngrok credentials and wires up the tunnel, but you need an ngrok account first.
+- **`laml_bin` commands manage cXML applications.** This plugin doesn't teach cXML for new development; the commands are there for accounts that still have cXML applications.
 
 ## Related
 

@@ -45,7 +45,6 @@ HTTP Basic Auth with Project ID and API Token (see [Authentication](authenticati
 - **params.status_url**: Webhook URL for status updates
 - **params.fallback_url**: Fallback SWML if primary URL fails
 - **params.timeout**: Ring timeout in seconds
-- **params.max_duration**: Maximum call duration in seconds (default 14400 = 4 hours). There are no Space-level duration or spend caps — set this yourself on long-running or AI calls
 
 ### Response
 
@@ -264,7 +263,7 @@ sections:
         to: "+15551111111"   # E.164 requires the leading +
 ```
 
-`parallel`, `serial`, and `serial_parallel` dial at most 20 destinations in total (a deployment default); any further destination never rings, and `connect` reports no error for it. The same 20-device total applies to Relay `dial` and `call.connect` (extra devices are skipped, and Relay reports each as `Too many devices` in `message_data`). A `queue:` connect does not continue the script after the bridge. Details: [swml-methods.md](swml-methods.md#connect).
+`parallel`, `serial`, and `serial_parallel` dial at most 20 destinations in total (a deployment default); any further destination never rings, and `connect` reports no error for it. A `queue:` connect does not continue the script after the bridge. Details: [swml-methods.md](swml-methods.md#connect).
 
 Or in JSON:
 ```json
@@ -771,7 +770,7 @@ def handle_assessment():
 
 ### Bulk Outbound Campaign
 
-**Rate limit:** SignalWire dials outbound calls at **1 call per second, Space-wide** across all projects, for both PSTN and SIP. Excess calls are queued and dialed at 1 CPS; calls initiated while the queue is full receive a failed response. There is no per-number limit and no inbound rate limit. Higher throughput requires contacting SignalWire sales.
+**Rate limit:** SignalWire dials outbound calls at 1 call per second, Space-wide. See [Gotchas](#gotchas) for pacing.
 
 ```python
 def run_outbound_campaign(campaign_id):
@@ -780,9 +779,7 @@ def run_outbound_campaign(campaign_id):
     campaign = database.get_campaign(campaign_id)
     recipients = database.get_campaign_recipients(campaign_id)
 
-    # SignalWire dials at 1 call per second Space-wide, shared across
-    # ALL projects — local pacing reduces queue pressure but cannot
-    # guarantee headroom; treat queue-full failures as retryable
+    # Pace locally and treat queue-full failures as retryable (see Gotchas)
     from time import sleep
     delay = 1.0  # 1 second between calls (1 CPS)
 
@@ -822,6 +819,12 @@ def run_outbound_campaign(campaign_id):
         # Rate limit
         sleep(delay)
 ```
+
+## Gotchas
+
+- **No Space-level caps on call length or spend.** A call runs until `answer.max_duration` in its SWML (default and maximum 14400 seconds, 4 hours). Set it yourself on long-running and AI calls. `max_duration` is not a `dial` parameter.
+- **1 CPS covers SIP and every project.** Outbound calls are dialed at 1 call per second across the whole Space, for PSTN and SIP alike. Calls past that are queued, and a call placed while the queue is full gets a failed response, so pace locally and treat that failure as retryable. There is no per-number limit and no inbound rate limit. Contact SignalWire to raise the limit.
+- **Relay device cap.** Relay `dial` and `call.connect` share the 20-destination cap: see [SWML Methods: Gotchas](swml-methods.md#gotchas).
 
 ## Next Steps
 

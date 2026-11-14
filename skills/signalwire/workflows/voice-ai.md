@@ -118,7 +118,7 @@ These parameters are accepted and have no effect: `max_emotion`, `speech_timeout
 
 ### Voice Selection
 
-**Always declare the engine explicitly.** Voice specs take the form `<engine>.<voice>[:model]` — for example `elevenlabs.mark:eleven_turbo_v2_5`. The engine part is what keeps your agent's voice stable. A voice that cannot be resolved is substituted and reported once per call as a `relay_script_voice_unresolved` warning (`calling.script.warning`); the document keeps running. If the substitute voice also fails, the AI session ends.
+Voice specs take the form `<engine>.<voice>[:model]` — for example `elevenlabs.mark:eleven_turbo_v2_5`. The engine part is what keeps your agent's voice stable. A voice that cannot be resolved is substituted and reported once per call as a `relay_script_voice_unresolved` warning (`calling.script.warning`); the document keeps running. If the substitute voice also fails, the AI session ends.
 
 **The default changed twice in two months:**
 
@@ -495,17 +495,14 @@ Without these, a stuck AI call meters until the 4-hour platform limit ends it.
 
 ### Prompting
 - Treat AI like a person, not a program
-- Use clear, natural language
-- Avoid over-prompting and "never" statements
-- Use the RISE-M framework (Role, Instructions, Steps, Expectations, Methods)
+- Say what the agent should do, not what it must never do; enforce the "never" in code ([Patterns](ai-agent-patterns.md#code-runs-the-agent))
+- Avoid over-prompting
 
 **→ Full guide: [AI Agent Prompting](ai-agent-prompting.md)**
 
 ### Functions
-- Use SWAIG functions for all data retrieval
-- Store sensitive data in metadata, not in prompts
-- Provide clear function descriptions
-- Use progressive knowledge building
+- Fetch data through SWAIG functions, not the prompt
+- Keep sensitive values out of the prompt: see [Gotchas](#gotchas)
 
 **→ Full guide: [AI Agent Functions](ai-agent-functions.md)**
 
@@ -582,6 +579,12 @@ Without these, a stuck AI call meters until the 4-hour platform limit ends it.
 
 **When looking for working code examples:**
 - [Working Examples](../reference/examples/) directory has 6 complete implementations
+
+## Gotchas
+
+- **Name the engine in every voice string.** The default voice, and the engine a bare voice name resolves against, have both changed. See [Voice Selection](#voice-selection).
+- **Keep sensitive values in `meta_data`.** Values a function stores with `set_meta_data` go only to functions that share its `meta_data_token`, and the model never sees them. `global_data` is posted with the conversation, so keep secrets out of it and out of the prompt.
+- **Set your own limits on every AI call.** There are no Space-level spend or duration caps. See [Cost Guardrails](#cost-guardrails).
 
 ## Next Steps
 

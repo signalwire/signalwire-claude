@@ -77,7 +77,7 @@ The Server SDK checks this when you give the agent the project's signing key: `s
 
 ### Getting and rotating the signing key
 
-Dashboard: **API Credentials → Signing Key → Show**. Each project has its own key. The key appears once the project has at least one API token.
+Dashboard: **API Credentials → Signing Key → Show**. Each project has its own key.
 
 New signing keys begin with `swpsk_` and are 42 characters. Older keys begin with `PSK_` and are 28 characters. Both sign the same way. Treat the key as opaque: don't parse it, match a pattern, or assume a length.
 
@@ -371,7 +371,7 @@ The model decides it is time to pay. `pay` keeps the digits out of the model's c
 
 Metadata is scoped to a function's `meta_data_token`. The SDK mints a distinct URL token per function, so give the pricing and payment functions the same token; otherwise the payment function sees an empty `meta_data`.
 
-`post_process=True` lets the model speak the handoff before the SWML runs. Run `pay`, then `set` `ai_response`. `set` expands `${...}` when it runs, so `${pay_result}` is already filled when the model reads the stored text. Do not pass that template through `.pay(ai_response=)`: the helper writes `set` before `pay`, and the model then sees an empty status, or a stale one from an earlier `pay` on the same call. Running SWML from a function is allowed by default; if `swaig_allow_swml` is off, the `pay` step is skipped.
+`post_process=True` lets the model speak the handoff before the SWML runs. Run `pay`, then `set` `ai_response`. `set` expands `${...}` when it runs, so `${pay_result}` is already filled when the model reads the stored text. Build the `set` yourself rather than using `.pay(ai_response=)`, and see [Gotchas](#gotchas) for why.
 
 ```python
 @AgentBase.tool(
@@ -432,17 +432,13 @@ def collect_payment(self, args, raw_data):
     })
 ```
 
-In that `pay` object, `security_code` and `postal_code` must be strings (`"true"`); JSON booleans are rejected.
-
-Never put `${pay_payment_results}` in `ai_response`, a post-call summary, or a later function. The card number and CVV are masked there. The expiry and postal code are not, and the object stays on the call until it ends. `${pay_result}` is the status, which is all the model needs.
-
-The same goes for your own logs: never log card numbers, CVVs, or other sensitive caller data. Mask anything you must record.
+Give the model `${pay_result}`, the status, and nothing more: see [Gotchas](#gotchas).
 
 ### Secure Global Data
 
 Don't store sensitive info in global_data (it's visible in logs).
 
-Each tool receives a copy of `global_data` when it is called. `set_global_data` replaces a whole top-level key, so two tools that read and rewrite the same key lose one update. An increment such as `pin_attempts + 1` is that read-modify-write. Keep anything both tools might update in your own store, keyed by `call_id`.
+Keep anything two tools might both update in your own store, keyed by `call_id`: see [Gotchas](#gotchas).
 
 ```python
 # WRONG - sensitive data in global_data
@@ -582,15 +578,17 @@ def transfer(self, args, raw_data):
 
 ## Security Checklist
 
-- [ ] **Authentication**: Agent endpoints require auth
-- [ ] **Secrets**: All credentials in environment variables
-- [ ] **Validation**: All inputs validated and sanitized
-- [ ] **Verification**: Sensitive operations require identity verification
-- [ ] **Rate Limiting**: Abuse prevention in place
-- [ ] **Logging**: No sensitive data in logs
-- [ ] **Transfers**: Only allowed destinations
-- [ ] **HTTPS**: Production uses SSL/TLS
+- [ ] **Transfers**: The model picks a department, and code maps it to an allowed destination
 - [ ] **Secure Functions**: Destructive operations marked secure
-- [ ] **Data Protection**: Minimal data in global_data. `set_global_data` replaces a whole top-level key, so two tools that read and rewrite the same key lose one update
+- [ ] **Data Protection**: Minimal data in `global_data`, and shared counters kept in your own store
 - [ ] **Cards**: Digits never enter the conversation (DTMF); the model receives `${pay_result}`
 - [ ] **Semantic gates**: Irreversible SWAIG actions (cancel, refund, share account data, move money) sit behind a gate — one question, threshold `0.9` or higher. See [Semantic gates](ai-agent-functions.md#semantic-gates)
+
+## Gotchas
+
+- **`pay` takes `security_code` and `postal_code` as strings.** Pass `"true"`. JSON booleans are rejected.
+- **Run `pay` before `set ai_response`.** `set` expands `${pay_result}` when it runs, so it has to come after `pay`. The SDK's `.pay(ai_response=)` helper writes `set` before `pay`, and the model then sees an empty status, or a stale one from an earlier `pay` on the same call.
+- **`pay` from a SWAIG function needs `swaig_allow_swml`.** It's on by default. When it's off, the `pay` step is skipped.
+- **`${pay_payment_results}` leaves the expiry and postal code unmasked.** Only the card number and CVV are masked, and the object stays on the call until it ends. Keep it out of `ai_response`, post-call summaries, and later functions; `${pay_result}` is all the model needs.
+- **`set_global_data` replaces a whole top-level key.** Each tool gets its own copy of `global_data` when it's called, so two tools that read and rewrite the same key lose one update. An increment such as `pin_attempts + 1` is that read-modify-write.
+- **The signing key appears only once the project has an API token.** Create a token first if **API Credentials → Signing Key** is empty.

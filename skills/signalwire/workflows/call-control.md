@@ -8,7 +8,7 @@ Control active calls with transfer, recording, conferencing, and real-time manip
 
 ## Transfer Methods
 
-**Connect limits.** Phone numbers need a leading `+`. `parallel`, `serial`, and `serial_parallel` dial at most 20 destinations in total (a deployment default); extras never ring and `connect` reports no error. Relay `dial` / `call.connect` skip devices past the same cap and report each as `Too many devices` in `message_data`. A `queue:` or `call:` destination can't be mixed with others, and once a queued call is bridged the script does not continue past `connect` (`connect_result` is `failed` when nothing was bridged). `ringback: false` passes the destination's early media. See [swml-methods.md](swml-methods.md#connect).
+**Connect limits.** Phone numbers need a leading `+`. `parallel`, `serial`, and `serial_parallel` dial at most 20 destinations in total (a deployment default); extras never ring and `connect` reports no error. Relay has the same cap: see [Gotchas](#gotchas). A `queue:` or `call:` destination can't be mixed with others, and once a queued call is bridged the script does not continue past `connect` (`connect_result` is `failed` when nothing was bridged). `ringback: false` passes the destination's early media. See [swml-methods.md](swml-methods.md#connect).
 
 ### Blind Transfer (SWML)
 
@@ -80,7 +80,7 @@ return FunctionResult(
 ).connect("tel:+15551234567", final=True)
 ```
 
-An injected document containing `connect` only succeeds when the action carries the `transfer` flag **beside** the SWML document — the shape both `connect()` and `execute_swml(doc, transfer=True)` emit. If the flag ends up *inside* the document (for example, in hand-built action JSON), the platform ignores it, so the nested `connect` fast-fails — `connect_result=failed` within seconds, no B-leg dialed — while the identical document works at the top level of a call.
+Both helpers put the `transfer` flag where it has to be: see [Gotchas](#gotchas).
 
 ## Recording
 
@@ -515,7 +515,7 @@ A placed call moves through `queued`, `initiated`, `created`, `ringing`, `answer
 - **canceled**: Canceled with the `update` command while still `queued`
 - **completed**: Ended with the `update` command while still `queued`
 
-`status: canceled` is valid only while the call is `queued` or `ringing`. Canceling a `ringing` call, or completing a call that has been placed, hangs it up and the status becomes `ended`. A `url` or `swml` redirect is valid only while `answered`. A call whose status is `failed`, `canceled`, or `completed` cannot be updated.
+The `update` command is valid only in some states: see [Gotchas](#gotchas).
 
 ### Disconnect vs. End
 
@@ -1268,6 +1268,14 @@ sections:
     - join_conference:
         name: "weekly-standup"
 ```
+
+## Gotchas
+
+These behaviors are not on the docs site.
+
+- **`update` depends on the call's status.** `status: canceled` is valid only while the call is `queued` or `ringing`. Canceling a `ringing` call, or completing a call that has been placed, hangs it up and the status becomes `ended`. A `url` or `swml` redirect is valid only while `answered`. A call whose status is `failed`, `canceled`, or `completed` can't be updated.
+- **`connect` inside a SWAIG action needs the `transfer` flag beside the SWML.** An action whose SWML contains `connect` succeeds only when `transfer` sits next to the `SWML` object, which is the shape `connect()` and `execute_swml(doc, transfer=True)` emit. If the flag is missing or nested inside the document, as in hand-built action JSON, the SWML runs inline and `connect` fails within seconds with `connect_result=failed` and no B-leg dialed. The same document works at the top level of a call.
+- **Relay device cap.** Relay `dial` and `call.connect` share the 20-destination cap: see [SWML Methods: Gotchas](swml-methods.md#gotchas).
 
 ## Next Steps
 
