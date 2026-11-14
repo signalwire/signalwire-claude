@@ -6,21 +6,23 @@ Build conversational AI agents for phone calls using SignalWire's AI platform. T
 
 ## Quick Navigation
 
-**New to Voice AI? Start here:**
-- [AI Architecture Options](#ai-architecture-options) - Choose your approach
-- [SWML AI Basics](#swml-ai-basics) - Simplest declarative AI
-- [Example: Complete Drive-Thru Agent](#example-complete-drive-thru-agent) - Full working example
-
-**Building with Python SDK? Go to:**
-- [AI Agent SDK Basics](ai-agent-sdk-basics.md) - Installation and fundamentals
-- [AI Agent Prompting](ai-agent-prompting.md) - Prompting best practices
-- [AI Agent Functions](ai-agent-functions.md) - SWAIG function patterns
-- [AI Agent Deployment](ai-agent-deployment.md) - Production deployment
-
-**Looking for specific topics:**
-- [SWAIG Functions](#swaig-signalwire-ai-gateway) - Add server-side functions to SWML AI
-- [AI Billing & Metering](#ai-billing--metering) - How AI runtime is charged, cost guardrails
-- [When to Pull Additional Documentation](#when-to-pull-additional-documentation) - Reference guide
+| What you're doing | Read |
+|-------------------|------|
+| Choosing between SWML AI, SWAIG functions, the Agents SDK, and the sidecar | [AI Architecture Options](#ai-architecture-options) |
+| Writing a simple agent in SWML | [SWML AI Basics](#swml-ai-basics), [Example: Complete Drive-Thru Agent](#example-complete-drive-thru-agent) |
+| Deciding what code enforces and what the prompt only guides | [Patterns](ai-agent-patterns.md) |
+| Writing the agent's prompt | [Prompting](ai-agent-prompting.md) |
+| Giving the agent server-side functions, or gating one | [SWAIG](#swaig-signalwire-ai-gateway), [Functions](ai-agent-functions.md) |
+| Building the agent with the Agents SDK | [SDK Basics](ai-agent-sdk-basics.md) |
+| Choosing the agent's voice | [Voice Selection](#voice-selection) |
+| The agent interrupts callers or leaves dead air | [Turn Taking](ai-agent-turn-taking.md) |
+| Coaching a human agent on a live call | [AI Sidecar](ai-sidecar.md) |
+| Reaching the agent by text | [AI Agent Chat](ai-agent-chat.md) |
+| Deploying the agent | [Deployment](ai-agent-deployment.md) |
+| Testing the agent | [Testing](ai-agent-testing.md) |
+| Securing the agent: signed requests, card payments, transfers | [Security](ai-agent-security.md) |
+| Seeing what the agent did on a call | [Debug Webhooks](ai-agent-debug-webhooks.md) |
+| Estimating or capping what an agent costs | [AI Billing & Metering](#ai-billing--metering) |
 
 ## AI Architecture Options
 
