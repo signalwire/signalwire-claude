@@ -19,8 +19,6 @@ Plain silence detection (voice activity detection, or VAD) is the fallback when 
 
 A turn commits when FIRE fires and no veto holds. Every hold is bounded, so a held turn always commits eventually — a stuck veto cannot strand a caller.
 
-**The veto panel only runs when turn detection is on.** With `turn_detection: off`, the caller owns end-of-turn entirely through the silence timer and none of the hold logic applies.
-
 ## What Holds a Turn Open
 
 Worth knowing, because it tells you which problems are already solved and which need tuning:
@@ -87,12 +85,6 @@ Diagnosing from symptoms:
 
 `params.openai_asr_engine` selects the ASR engine and model. Documented default `deepgram:nova-3`. Common documented values include `deepgram:nova-2` and `deepgram:nova-3`.
 
-## What Not to Promise
-
-The neural components of the veto panel depend on model bundles being present on the node handling the call. **When a bundle is absent, the corresponding veto silently never holds** rather than erroring.
-
-So describe veto behavior as what the platform does, not as a guarantee. Do not write an example whose correctness depends on a hold firing — an agent that only collects a phone number correctly because the digit hold caught the pause between groups is an agent that will sometimes fail. Validate the collected value and re-prompt.
-
 ## Interruptions (barge-in)
 
 Barge-in is decided by the platform from the speech events, before the model sees anything, while playback is still going out. A prompt line like "if the user interrupts, stop talking" cannot stop that audio. Tune it with `ai` params, not the prompt. Set them on SWML `params`, with Python `set_params` or `set_param`, or with TypeScript `setParams`. The public params page omits or overstates several of these interactions.
@@ -105,17 +97,18 @@ Barge-in is decided by the platform from the speech events, before the model see
 
 `static_greeting_no_barge: true` stops speech from interrupting the static greeting; DTMF still does. Without it, any speech over a static greeting interrupts it, ignoring `barge_min_words` and `barge_match_string`. A greeting the model generates follows the normal barge filters.
 
-Cut in with one word, then three, then a full sentence. Talk over the greeting. Say "mm-hm" while the agent reads a list. Change one setting at a time and listen to the recordings.
-
 ## Latency Is a Sum
-
-The pause the caller hears is the sum of what is still on the path: audio transport, the turn decision, speech recognition, the language model, speech synthesis, and each vendor hop. Streaming overlaps some of those stages. It does not remove a hop. Inside inference and synthesis, model choice dominates: picking a slow model costs more than moving synthesis from the slowest engine to the fastest.
 
 Tool turns are the ones that feel slow, because the agent goes quiet while the tool runs. Per-function `fillers` are a per-language dict. They play when the tool is called and cover only that moment. For a long call use a wait script or a looped `wait_file`. Neither makes the tool faster.
 
 Turn settings belong in code. `end_of_speech_timeout` is how much silence closes a turn. `barge_min_words` is how many words count as an interruption. Set them with `set_params`. Steps have no params of their own. `end_of_speech_timeout` can change mid-call with `FunctionResult.set_end_of_speech_timeout()`, so a step that collects an account number can allow more silence than a yes or no. A longer timeout does not replace checking the collected value and asking again. A prompt cannot hold the floor open: the turn boundary is decided before the model sees text.
 
 [latency_checker](https://github.com/signalwire/latency_checker) measures a recording from the end of the caller's speech to the agent's first audio, on any platform. The post-prompt call log reports that gap as `acoustic_latency`. See [Per-turn call log fields](ai-agent-debug-webhooks.md#per-turn-call-log-fields).
+
+## Gotchas
+
+- **A veto can silently never hold.** The neural vetoes depend on model bundles on the node handling the call. When a bundle is missing, that veto never holds and nothing reports an error. Describe holds as what the platform does, not as a guarantee: an agent that collects a phone number correctly only because the digit hold caught the pause between groups will sometimes fail. Validate the collected value in code and ask again.
+- **The vetoes run only with turn detection on.** With `turn_detection: off`, the silence timer alone ends the turn, so the digit and spelling holds don't apply.
 
 ## Related
 

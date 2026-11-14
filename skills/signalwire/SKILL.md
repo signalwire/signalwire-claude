@@ -106,4 +106,4 @@ SWML documents define call flows, including AI agents (the `ai` method), and SWA
 
 ## Critical Pattern: Loop Protection
 
-Cap menu retries with `goto` and its `max`. Separately, a call is limited to 32 combined `transfer` and `goto` jumps, and 8 in a row without caller input. Past either limit the call is hung up, not passed on to the next step. See [`goto` / `label`](workflows/swml-methods.md#goto--label).
+Cap menu retries with `goto` and its `max`. Separately, a call is limited to 32 combined `transfer` and `goto` jumps, and 8 in a row without caller input. Past either limit the call is hung up, not passed on to the next step. See [SWML Methods: Gotchas](workflows/swml-methods.md#gotchas).

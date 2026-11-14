@@ -132,7 +132,7 @@ sections:
 
 Dial one destination, or several with `parallel`, `serial`, or `serial_parallel`, and bridge the answered one. A single `to` may be an E.164 number (the leading `+` is required; `15552345678` is rejected), a SIP URI, a Resource Address, `queue:<name>`, `call:<id>` (a call in progress in the same project), or `stream:wss://`. An unencrypted `stream:ws://` URL is rejected. `queue:`, `call:`, and `stream:` must be lowercase.
 
-`parallel`, `serial`, and `serial_parallel` dial at most **20 destinations in total** (a deployment default; `serial_parallel` counts across groups). Any destination after the 20th never rings, and `connect` reports no error for it. Relay `dial` and `call.connect` have the same cap: at most 20 devices in total, and any device after the 20th is skipped (Relay reports each skipped device as `Too many devices` in `message_data`).
+`parallel`, `serial`, and `serial_parallel` dial at most **20 destinations in total** (a deployment default; `serial_parallel` counts across groups). Any destination after the 20th never rings, and `connect` reports no error for it.
 
 A `queue:` or `call:` destination can't be combined with any other destination. Once a queued call has been bridged, the script does not continue past `connect`; the call hangs up when the bridge ends unless `execute_after_queue` is set. If no queued call is bridged, `connect_result` is `failed` and `result` runs.
 
@@ -160,7 +160,7 @@ Docs: https://signalwire.com/docs/swml/reference/calling/join-conference
 | `start_on_enter` | boolean, `true` | This participant can start the conference, once `min_participants` is also reached |
 | `end_on_exit` | boolean, `false` | End the conference when this participant leaves |
 | `wait_url` | string | Fetched with GET while waiting for the conference to start. Default hold music if unset; `""` plays silence |
-| `max_participants` | integer | Documented limit 250; the platform currently applies 100000 when it is unset, so set it explicitly to cap the room. Values below 2 or above 100000 are reset to 100000. Set when the conference is created |
+| `max_participants` | integer | Maximum participants. Set when the conference is created. See [Gotchas](#gotchas) |
 | `min_participants` | integer, `2` | Participants required before the conference starts (1 up to `max_participants`). A single participant with `start_on_enter` can start it when this is `1` |
 | `emit_call_quality` | boolean, `false` | When `true`, send `participant-call-quality` when this participant leaves, if statistics are available. Include `leave` in `status_callback_event` |
 | `record` | string, `do-not-record` | `do-not-record` or `record-from-start` |
@@ -441,11 +441,6 @@ sections:
 That form makes the WebSocket a call leg, so audio flows both ways. Shipped January 2026, in both SWML and Relay. **Note `realtime` defaults to `false`** — omitting it gives you a stream leg that does not carry audio back.
 
 Choosing between them: use `stream` to observe (transcription, compliance capture, analytics) while the call continues its SWML; use `connect: stream:` when the far end is a participant that needs to talk back (a voice bot, a translation bridge).
-
-**Concurrency limits** *(not on the docs site)*:
-
-- Reusing a `control_id` that is already active on the call fails with `Duplicate control_id`.
-- A **per-call cap on concurrent control-based operations, default 10**, is shared across *all* of them — streams, taps, transcriptions, recordings, detectors. Exceeding it fails with `Too many concurrent operations`. A call already running a recording and two taps has fewer stream slots than you would expect from reading about streams alone.
 
 **Relay form** — the same operation over the [calling commands endpoint](fabric-relay.md#calling-commands-over-http):
 
@@ -732,9 +727,9 @@ Docs: https://signalwire.com/docs/swml/reference/calling/goto and `/label`
 |-------------------|----------------|-------------|
 | `label` | string, required | Label in the current section to jump to |
 | `when` | string | JavaScript condition; jump only if `true`. Omitted = unconditional |
-| `max` | integer \| string, `100` | Max jumps to this label (1–100). An integer, or a variable such as `${vars.max_retries}` that resolves to a count in that range. Also bounded by a per-call limit of 32 combined `transfer` and `goto` jumps (8 in a row without caller interaction). Past that the call is hung up, not fallen through. A `max` above 32, such as `50`, cannot be honored |
+| `max` | integer \| string, `100` | Max jumps to this label (1–100). An integer, or a variable such as `${vars.max_retries}` that resolves to a count in that range. Also bounded by the per-call jump limit in [Gotchas](#gotchas) |
 
-The jump count belongs to the **target label**, shared by every `goto` that jumps there. Each `goto` compares its own `max` against that shared count. Once the count reaches `max`, the jump is skipped and execution continues with the next method. With `max: 3` the labeled block runs 4 times total (1 initial pass + 3 jumps), then execution falls through. That fall-through is only the per-label cap: the per-call limit of 32 combined `transfer` and `goto` jumps (8 in a row without caller interaction) hangs the call up instead. Combine with `when` for a conditional retry loop:
+The jump count belongs to the **target label**, shared by every `goto` that jumps there. Each `goto` compares its own `max` against that shared count. Once the count reaches `max`, the jump is skipped and execution continues with the next method. With `max: 3` the labeled block runs 4 times total (1 initial pass + 3 jumps), then execution falls through. That fall-through is only the per-label cap; the per-call jump limit in [Gotchas](#gotchas) hangs the call up instead. Combine with `when` for a conditional retry loop:
 
 ```yaml
 version: 1.0.0
@@ -917,4 +912,13 @@ Docs: https://signalwire.com/docs/swml/reference/variables
 - **Per leg:** Calling `vars` and `call` belong to the leg running the document. They persist across sections, `execute`, and `transfer` on that leg, and they do not cross to another leg. A document on the leg `connect` dialed, such as `confirm`, starts with empty `vars` and its own `call` (`call_id`, `from`, `to`, `direction`; a B-leg has `parent` and usually `peer` pointing at the A-leg). The leg that issued `connect` keeps its vars and, when the document resumes, receives that method's outputs (see [`connect`](#connect)). `call.peer` is present on the dialed leg and on `connect` status callbacks, including `disconnected`. SignalWire clears `call.peer` when the document resumes after `connect`. Docs: https://signalwire.com/docs/platform/voice/call-legs and https://signalwire.com/docs/swml/reference/calling
 - **Nested data:** dot notation for objects, zero-based brackets for arrays — `${user.address.city}`, `${employees[0].name}`, `%{message.media[0].url}`.
 - **Deployment:** serverless (Dashboard-hosted) documents are substituted at runtime by SignalWire; server-based documents can either return SWML containing placeholders (SignalWire substitutes) or read `call`/`vars`/`envs`/`params` from the webhook POST body and substitute server-side before responding.
-- **Not SWML:** mustache-style `{{variable}}` templating is **not** valid SWML syntax — always use `%{...}` or `${...}`.
+
+## Gotchas
+
+These behaviors are not on the docs site.
+
+- **Jump limit.** A call is limited to 32 combined `transfer` and `goto` jumps, and 8 in a row without caller input. Past either limit the call is hung up, not passed on to the next method, so a `goto` `max` above 32 can't be honored.
+- **Concurrent operations.** A call runs at most 10 control-based operations at once (a default), shared across streams, taps, transcriptions, recordings, and detectors. Going over fails with `Too many concurrent operations`, so a call already running a recording and two taps has fewer stream slots than you'd expect. Reusing a `control_id` that is still active fails with `Duplicate control_id`.
+- **Relay device cap.** Relay `dial` and `call.connect` dial at most 20 devices in total, like SWML `connect`. Each device past the 20th is skipped and reported as `Too many devices` in `message_data`.
+- **`join_conference.max_participants`.** The docs give 250 as the default and maximum. The platform applies 100000 when it is unset, and resets values below 2 or above 100000 to 100000, so set it explicitly to cap the room.
+- **No mustache templates.** `{{variable}}` is not SWML syntax. Use `%{...}` or `${...}`.
