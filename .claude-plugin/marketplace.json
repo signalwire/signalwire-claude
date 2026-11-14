@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "SignalWire development tools and knowledge base for building communication applications",
-    "version": "1.2.6"
+    "version": "1.2.7"
   },
   "plugins": [
     {
@@ -15,8 +15,8 @@
         "source": "github",
         "repo": "signalwire/signalwire-claude"
       },
-      "description": "Expert knowledge for building SignalWire applications including all SDKs, REST APIs, SWML, Relay/Fabric, AI Agents, and modern JSON/YAML-based communication systems. Includes 110+ Python examples, 24+ JavaScript examples, 44+ SWML examples, and 19 comprehensive workflow guides.",
-      "version": "1.2.6",
+      "description": "Build SignalWire voice, messaging, video, and voice AI applications: SWML call flows, SWAIG functions, the REST APIs, Relay, and the Server and Browser SDKs, with workflow guides, platform gotchas, and debugging help.",
+      "version": "1.2.7",
       "author": {
         "name": "SignalWire",
         "email": "support@signalwire.com"
