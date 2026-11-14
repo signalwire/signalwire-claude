@@ -282,11 +282,10 @@ self.prompt_add_section(
     wait_file_loops=-1
 )
 def explain_bill_increase(self, args, raw_data):
-    # self.billing and ask_reasoning_model are your helpers.
+    # self.billing and ask_reasoning_model are your helpers, shared by
+    # every call; nothing about this call is stored on self.
     # ask_reasoning_model raises TimeoutError when it exceeds timeout.
-    invoices = self.billing.recent_invoices(
-        raw_data.get("call", {}).get("from")
-    )
+    invoices = self.billing.recent_invoices(raw_data.get("caller_id_num"))
 
     question = args.get("question", "why the bill changed")
     try:
