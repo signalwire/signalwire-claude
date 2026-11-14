@@ -5,6 +5,8 @@ description: Use when building telephony, messaging (SMS, MMS, or RCS), or video
 
 # SignalWire
 
+<!-- Bundled docs verified against live docs: never -->
+
 ## ⚠️ AVOID Deprecated APIs
 
 SignalWire maintains compatibility APIs (LAML/CXML) that should NOT be used for new development:
