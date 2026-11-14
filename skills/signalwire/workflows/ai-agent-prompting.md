@@ -38,6 +38,8 @@ Never transfer the call until you validate their account.
 
 The word "never" creates rigid behavior that prevents proper execution. Strong negative language confuses AI agents.
 
+State what the agent should do. Anything that must never happen is enforced in code, not the prompt: see [Code Runs the Agent](ai-agent-patterns.md#code-runs-the-agent).
+
 ### 2. Avoid Overprompting
 
 Less is more - don't give excessive information:
@@ -395,17 +397,58 @@ Collect name, phone, and issue before transferring.
 
 **Why:** LLMs respond better to clear, concise instructions. Strong negative language creates confusion.
 
-### 2. Treating AI Like Code
+### 2. Prompts Are Not Code
 
-❌ **Wrong:** "I will program the AI to do X"
+A prompt that tries to be a program asks the model to follow control flow, and the model follows it most of the time.
 
-✅ **Right:** "I will guide the AI toward objective X"
+❌ **Wrong:** the flow and the rule live in the prompt.
 
-**Mindset Shift:**
-- Not programming - prompting
-- Not commands - instructions
-- Not deterministic - probabilistic
-- Not rigid - adaptable
+```text
+Step 1: Ask for the account number.
+Step 2: Ask for the PIN.
+If the caller says they forgot their PIN, go to step 5.
+You MUST verify the PIN before any transfer.
+Step 3: Ask what they need, then transfer them.
+```
+
+✅ **Right:** steps hold the flow, and a handler holds the rule. Each step offers only its own functions, and the `verify` step can't move on by itself:
+
+```yaml
+- ai:
+    prompt:
+      text: You are the front desk for Acme Bank.
+      steps:
+        - name: verify
+          text: Ask for the caller's account number and PIN, then check them with verify_pin.
+          functions: [verify_pin]
+          valid_steps: []
+        - name: route
+          text: Ask what the caller needs, then send them to the right team with transfer_call.
+          functions: [transfer_call]
+    SWAIG:
+      functions:
+        - function: verify_pin
+          description: Check the caller's account number and PIN.
+          web_hook_url: https://example.com/swaig
+          parameters:
+            type: object
+            properties:
+              account: { type: string }
+              pin: { type: string }
+            required: [account, pin]
+        - function: transfer_call
+          description: Transfer the caller to a team.
+          web_hook_url: https://example.com/swaig
+          parameters:
+            type: object
+            properties:
+              team: { type: string, enum: [billing, support] }
+            required: [team]
+```
+
+The `verify_pin` handler checks the PIN against your records. On a match it marks the call verified in your store, keyed by `call_id`, and returns `{"response": "Verified.", "action": [{"change_step": "route"}]}`. On a miss it returns a `response` telling the agent to ask again, and the call stays in `verify`. The `transfer_call` handler looks up `call_id` in the same store and refuses to transfer until it is verified, whatever the model sends. When it is verified, it maps `team` to a destination and returns `{"action": [{"transfer": "<section or URL>"}]}`.
+
+The prompt still says what each step is for. It doesn't have to enforce anything. See [Code Runs the Agent](ai-agent-patterns.md#code-runs-the-agent).
 
 ### 3. Relying on AI to Remember Facts
 
