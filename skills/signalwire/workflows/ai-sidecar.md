@@ -366,4 +366,4 @@ sections:
 - **Prefer relay for UIs.** The relay topic always fires. Add a webhook `url` only if a server needs the events.
 - **Roll out report-only.** Start with `params.act_on_channel: false`, so transfers and hangups show up as callbacks without affecting live calls, then turn it on.
 - **Tune how fast it reacts.** Lower `idle_timeout_ms` for snappier advice. Raise `min_interval_ms` on chatty calls to control model costs.
-- **Steer it mid-call.** Use the `ai_sidecar.ask` REST call command to ask the sidecar questions, or the `inject_message` action to steer it.
+- **Steer it mid-call.** Use the `ai_sidecar.ask` REST call command to ask the sidecar questions, or return a `user_input` action from a SWAIG function to steer it.

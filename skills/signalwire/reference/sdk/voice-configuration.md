@@ -97,16 +97,7 @@ agent.set_languages([
 
 ### The Default Voice
 
-An AI agent that sets no `voice` speaks with **ElevenLabs "Mark"** — compiled defaults are engine `elevenlabs`, voice `mark`. Mark is included in the regular AI agent price; it is not a premium add-on.
-
-Two separate changes produced this, and they are easy to conflate:
-
-| Date | Change |
-|------|--------|
-| 2026-08-13 | A voice string with **no engine prefix** resolves against `elevenlabs` instead of `gcloud`. |
-| 2026-09-05 | An agent specifying **no `voice` at all** now gets ElevenLabs "Mark". |
-
-Sources: `/docs/platform/changelog/2026/8/13`, `/docs/platform/changelog/2026/9/5`.
+The default AI agent voice, and how it has changed, is in [Voice AI: Voice Selection](../../workflows/voice-ai.md#voice-selection).
 
 ### Available Engines
 
@@ -232,8 +223,7 @@ agent.add_language("English", "en-US", "openai.echo")
 
 ## Gotchas
 
-- **Name the engine in every voice string.** The default has moved twice in two months, and an agent that relies on it changes voice without a deploy.
-- **The default voice above is for AI agents only.** `play` and `prompt` resolve voices through a separate mapping and land on a different default.
+- **Name the engine in every voice string.** The default voice has changed more than once: see [Voice AI: Voice Selection](../../workflows/voice-ai.md#voice-selection).
 - **Expression tags aren't interchangeable between engines.** The wrong syntax is spoken as literal text.
 
 ## Fillers Configuration

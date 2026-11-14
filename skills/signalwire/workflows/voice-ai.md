@@ -67,7 +67,7 @@ Real-time AI observer that watches a live call and coaches a human agent via cal
 
 ### Reaching an agent by text
 
-The same agent definition can be chatted with over text instead of voice, via a JSON-RPC endpoint. Billing is per turn rather than per minute.
+The same agent definition can be chatted with over text instead of voice, via a JSON-RPC endpoint, and it's billed differently.
 
 **→ Go to [AI Agent Chat](ai-agent-chat.md)**
 
@@ -584,7 +584,6 @@ Without these, a stuck AI call meters until the 4-hour platform limit ends it.
 
 - **Name the engine in every voice string.** The default voice, and the engine a bare voice name resolves against, have both changed. See [Voice Selection](#voice-selection).
 - **Keep sensitive values in `meta_data`.** Values a function stores with `set_meta_data` go only to functions that share its `meta_data_token`, and the model never sees them. `global_data` is posted with the conversation, so keep secrets out of it and out of the prompt.
-- **Set your own limits on every AI call.** There are no Space-level spend or duration caps. See [Cost Guardrails](#cost-guardrails).
 
 ## Next Steps
 
