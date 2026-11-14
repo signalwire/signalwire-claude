@@ -29,7 +29,7 @@ See [INSTALL.md](INSTALL.md) for updating, upgrading from `signalwire-builder`, 
 
 ## What's Included
 
-### Core Workflows (24 files, 17,100+ lines of documentation)
+### Core Workflows (24 files)
 
 Each workflow combines technical API documentation with practical implementation guidance:
 
@@ -185,31 +185,31 @@ signalwire-claude/
 ├── skills/
 │   └── signalwire/                    # SignalWire skill
 │       ├── SKILL.md                   # Main entry point
-│       ├── workflows/                 # 24 workflow files, 17,100+ lines total
-│       │   ├── inbound-call-handling.md       # 1,350 lines: SWML, loops, IVR
-│       │   ├── video.md                       # 1,287 lines: WebRTC, Browser SDK v4
-│       │   ├── messaging.md                   # 1,233 lines: SMS, Messaging SWML
-│       │   ├── call-control.md                # 1,185 lines: Transfers, recording
-│       │   ├── fabric-relay.md                # 1,166 lines: Calling commands, subscribers
-│       │   ├── webhooks-events.md             # 1,162 lines: Signatures, analytics
-│       │   ├── number-management.md           #   960 lines: Compliance
-│       │   ├── ai-agent-functions.md          #   915 lines: SWAIG, MCP, includes
-│       │   ├── swml-methods.md                #   868 lines: Full method catalog
-│       │   ├── ai-agent-deployment.md         #   835 lines: Server/serverless
-│       │   ├── outbound-calling.md            #   824 lines: Dialer, CRM, reminders
-│       │   ├── ai-agent-prompting.md          #   750 lines: Prompting, inner dialog
-│       │   ├── authentication-setup.md        #   602 lines: Auth, MFA, security
-│       │   ├── ai-agent-sdk-basics.md         #   591 lines: Ten-language SDK
-│       │   ├── voice-ai.md                    #   571 lines: AI navigation hub
-│       │   ├── ai-agent-security.md           #   515 lines: Signing, redaction
-│       │   ├── ai-agent-patterns.md           #   467 lines: Common flows
-│       │   ├── ai-agent-error-handling.md     #   391 lines: Error patterns
-│       │   ├── ai-agent-testing.md            #   383 lines: Testing patterns
-│       │   ├── ai-agent-debug-webhooks.md     #   379 lines: Monitoring
-│       │   ├── ai-sidecar.md                  #   359 lines: Live agent coaching
-│       │   ├── swsh-cli.md                    #   125 lines: Account operations
-│       │   ├── ai-agent-turn-taking.md        #   123 lines: End-of-turn detection
-│       │   └── ai-agent-chat.md               #   142 lines: Text chat, JSON-RPC
+│       ├── workflows/                 # 24 workflow files
+│       │   ├── inbound-call-handling.md       # SWML, loops, IVR
+│       │   ├── video.md                       # WebRTC, Browser SDK v4
+│       │   ├── messaging.md                   # SMS, Messaging SWML
+│       │   ├── call-control.md                # Transfers, recording
+│       │   ├── fabric-relay.md                # Calling commands, subscribers
+│       │   ├── webhooks-events.md             # Signatures, analytics
+│       │   ├── number-management.md           # Compliance
+│       │   ├── ai-agent-functions.md          # SWAIG, MCP, includes
+│       │   ├── swml-methods.md                # Full method catalog
+│       │   ├── ai-agent-deployment.md         # Server/serverless
+│       │   ├── outbound-calling.md            # Dialer, CRM, reminders
+│       │   ├── ai-agent-prompting.md          # Prompting, inner dialog
+│       │   ├── authentication-setup.md        # Auth, MFA, security
+│       │   ├── ai-agent-sdk-basics.md         # Ten-language SDK
+│       │   ├── voice-ai.md                    # AI navigation hub
+│       │   ├── ai-agent-security.md           # Signing, redaction
+│       │   ├── ai-agent-patterns.md           # Common flows
+│       │   ├── ai-agent-error-handling.md     # Error patterns
+│       │   ├── ai-agent-testing.md            # Testing patterns
+│       │   ├── ai-agent-debug-webhooks.md     # Monitoring
+│       │   ├── ai-sidecar.md                  # Live agent coaching
+│       │   ├── swsh-cli.md                    # Account operations
+│       │   ├── ai-agent-turn-taking.md        # End-of-turn detection
+│       │   └── ai-agent-chat.md               # Text chat, JSON-RPC
 │       └── reference/                 # SDK API docs (loaded only when needed)
 │           ├── sdk/                   # 12 files: AgentBase, SWAIG, etc.
 │           ├── deployment/            # 3 files: Serverless, env vars

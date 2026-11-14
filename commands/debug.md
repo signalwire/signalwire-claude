@@ -9,12 +9,12 @@ If that is empty, ask for the symptom, the exact error text or HTTP status, and 
 
 Use the signalwire skill. Match the symptom to a workflow before guessing:
 
-- 401/403, or wrong credentials or Space URL: Authentication & Setup
-- Webhook or status callback never arrives or arrives malformed: Webhooks & Events
-- AI agent doesn't call a function, times out, or says the wrong thing: AI Agent Debug Webhooks, then AI Agent Functions
-- Agent interrupts callers or leaves dead air: AI Agent Turn Taking
-- Call drops, loops, or ends up in the wrong place: Inbound Call Handling and Call Control
-- Messages fail or get filtered: Messaging, including Campaign Registry status
+- 401/403, or wrong credentials or Space URL: `skills/signalwire/workflows/authentication-setup.md`
+- Webhook or status callback never arrives or arrives malformed: `skills/signalwire/workflows/webhooks-events.md`
+- AI agent doesn't call a function, times out, or says the wrong thing: `skills/signalwire/workflows/ai-agent-debug-webhooks.md`, then `skills/signalwire/workflows/ai-agent-functions.md`
+- Agent interrupts callers or leaves dead air: `skills/signalwire/workflows/ai-agent-turn-taking.md`
+- Call drops, loops, or ends up in the wrong place: `skills/signalwire/workflows/inbound-call-handling.md` and `skills/signalwire/workflows/call-control.md`
+- Messages fail or get filtered: `skills/signalwire/workflows/messaging.md`, including Campaign Registry status
 
 Check first for the problems the skill flags as common: a LAML/CXML endpoint where the modern REST API or SWML belongs, a webhook URL that isn't publicly reachable over HTTPS, and a SWAIG response in the wrong shape.
 
