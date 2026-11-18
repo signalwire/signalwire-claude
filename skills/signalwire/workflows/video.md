@@ -10,12 +10,10 @@ Build video conferencing applications with SignalWire's Video API, supporting ro
 - **Address**: What the page dials. Copy `channels.video` from the address list (for example `/public/team-standup?channel=video`). SignalWire names the address after the room's display name and adds a suffix when that name is already taken, so don't build it from the room name.
 - **Guest token**: Token the page signs in with. Issued for the room address. Never send the API token to the browser.
 - **Layout**: Visual arrangement of participant videos
-- **Moderator**: Participant with full control
-- **Member/Guest**: Regular participant with limited permissions
 
 ## Create a Video Room and join it
 
-The room is the Resource. The server lists its address and issues a guest token for that address. The page signs in with the token and dials the address. The API token needs the **Video** permission, and **Voice** when phone callers join over Relay.
+The room is the Resource. The server lists its address and issues a guest token for that address. The page signs in with the token and dials the address. These two REST calls accept a token with the **Voice**, **Messaging**, **Fax**, or **Video** permission. When phone callers join over Relay, the token also needs **Voice**.
 
 ### Create the room
 
@@ -42,7 +40,7 @@ response = requests.post(
 room_id = response.json()["id"]
 ```
 
-`name` is unique in the project; a second create with the same name fails. Allowed characters: letters, numbers, `_`, `-`. `enable_room_previews` is required. The response's top-level `id` is the Resource id.
+`name` is required and unique in the project; a second create with the same name fails. Allowed characters: letters, numbers, `_`, `-`. `enable_room_previews` is optional and defaults to `false`. The response's top-level `id` is the Resource id.
 
 In the Dashboard: **Resources** → **Add** → **Video Room**, enter a room name, choose **Build From Scratch**, then **Create**.
 
@@ -50,6 +48,16 @@ In the Dashboard: **Resources** → **Add** → **Video Room**, enter a room nam
 
 ```
 GET https://{space}.signalwire.com/api/fabric/resources/{id}/addresses
+```
+
+```python
+addresses = requests.get(
+    f"{space_url}/api/fabric/resources/{room_id}/addresses",
+    auth=HTTPBasicAuth(project_id, api_token),
+).json()
+
+address_id = addresses["data"][0]["id"]
+room_address = addresses["data"][0]["channels"]["video"]
 ```
 
 A new room has one address. `data[0].id` is the address id. Dial `data[0].channels.video`. Copy that value rather than building it from the room name.
@@ -71,7 +79,7 @@ response = requests.post(
 guest_token = response.json()["token"]
 ```
 
-`allowed_addresses` takes up to 10 address ids. The token lasts two hours by default and places calls only.
+Always pass `allowed_addresses` (up to 10 address ids). `expire_at` is optional; the token lasts two hours by default and places calls only.
 
 ### Join from the page
 
@@ -442,7 +450,7 @@ response = requests.delete(
 
 1. **Token Security**: Never expose API tokens to browsers. A room page signs in with a guest token.
 2. **Token Generation**: Generate tokens server-side on-demand
-3. **Permissions**: Scope a guest token with `allowed_addresses` (up to 10). A guest token places calls only.
+3. **Permissions**: Always pass `allowed_addresses` (up to 10). A guest token places calls only.
 4. **Quality**: Match video quality to user bandwidth
 5. **Layout**: Start with responsive layouts for flexibility
 6. **Recording**: Inform participants when recording is active
