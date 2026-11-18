@@ -2,7 +2,7 @@
 
 ## Overview
 
-SignalWire Fabric is a unified communication framework. Relay is the SDK for building applications that connect to it.
+SignalWire Fabric is a unified communication framework. Relay is SignalWire's JSON-RPC 2.0 protocol over one persistent WebSocket, and the Relay SDKs wrap it.
 
 **Relay call control does not require a WebSocket.** There are two ways to reach it:
 
@@ -12,6 +12,8 @@ SignalWire Fabric is a unified communication framework. Relay is the SDK for bui
 | **Persistent WebSocket** — the Relay SDK | You want to *receive* real-time events (`call.received`, state changes) and hold session state. |
 
 The WebSocket path is for consuming events. If all you need is to tell a live call to do something, use the HTTP endpoint — see [Calling Commands over HTTP](#calling-commands-over-http) below.
+
+**No SDK for your language.** Use an SDK by default. Open one WebSocket to `wss://relay.signalwire.com`. The first message must be `signalwire.connect`. Otherwise, or if it is not sent within about 5 seconds, the socket closes with no response. Backend code uses version 2.0.0, the version the Server SDKs use, with a project ID and an API token. Calling events, messaging, provisioning, and `signalwire.receive` need a major version below 4. Version 4.0.0 is the Client protocol for Call Fabric and the browser, and it authenticates with a short-lived JWT. Never ship the API token to a browser. Docs: `/docs/apis/relay/server` (backend) and `/docs/apis/relay/client` (Call Fabric and WebRTC).
 
 ## Calling Commands over HTTP
 
