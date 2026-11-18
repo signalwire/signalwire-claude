@@ -73,15 +73,26 @@ curl -X POST "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/fabric/resourc
   }'
 ```
 
+With no `display_name` in the request, the Resource name is the email local part and `subscriber.display_name` is `null`. The sample below includes the fields the API always returns.
+
 ```json
 {
     "id": "d369a402-7b43-4512-8735-9d5e1f387814",
-    "display_name": "John Doe",
+    "project_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "display_name": "john.doe",
     "type": "subscriber",
+    "created_at": "2024-05-06T12:20:00Z",
+    "updated_at": "2024-05-06T12:20:00Z",
     "subscriber": {
         "id": "d369a402-7b43-4512-8735-9d5e1f387814",
         "email": "john.doe@example.com",
-        "display_name": "John Doe"
+        "first_name": null,
+        "last_name": null,
+        "display_name": null,
+        "job_title": null,
+        "time_zone": "GMT",
+        "country": null,
+        "company_name": null
     }
 }
 ```
@@ -143,7 +154,7 @@ Use the SignalWire JavaScript SDK to connect:
 
     <script>
         const GUEST_TOKEN = 'YOUR_GUEST_TOKEN';
-        const AGENT_ADDRESS = '/public/support'; // a public alias you add on the Resource you want the guest to dial
+        const AGENT_ADDRESS = '/public/support'; // a public alias of the Resource you want the guest to dial. An external SWML handler already has a public alias when it is created
 
         let client = null;
         let call = null;

@@ -89,7 +89,7 @@ Subscribers are internal account-holders in your SignalWire application - progra
 2. Click **+ Add**
 3. Select **Subscriber**
 4. Fill in:
-   - **Name**: Unique identifier (e.g., `alice`)
+   - **Email**: Required (e.g., `alice@example.com`)
    - **Display Name**: Human-readable name
    - **Password**: Authentication password
    - **Timezone**: User's timezone
@@ -375,9 +375,9 @@ async function makeCall() {
 ```python
 # Create subscribers for employees
 employees = {
-    'alice': {'extension': '101', 'phone': '+15551111111'},
-    'bob': {'extension': '102', 'phone': '+15552222222'},
-    'charlie': {'extension': '103', 'phone': '+15553333333'}
+    'alice': {'extension': '101', 'phone': '+15551111111', 'alias': '/private/alice'},
+    'bob': {'extension': '102', 'phone': '+15552222222', 'alias': '/private/bob'},
+    'charlie': {'extension': '103', 'phone': '+15553333333', 'alias': '/private/charlie'}
 }
 
 class OfficePhone(Consumer):
@@ -403,9 +403,9 @@ class OfficePhone(Consumer):
             if info['extension'] == extension:
                 await call.play_tts(text=f"Connecting you to {name}")
 
-                # Call subscriber
-                subscriber_address = f"/private/{name}"
-                await call.connect([[subscriber_address]])
+                # Connect to the Subscriber by its alias, not a constructed /private/{name}
+                subscriber_alias = info["alias"]  # e.g. /private/alice
+                await call.connect([[{"type": "fabric", "params": {"to": subscriber_alias}}]])
                 return
 
         await call.play_tts(text="Extension not found")
@@ -428,7 +428,7 @@ class CallQueue(Consumer):
     def __init__(self):
         super().__init__()
         self.queue = deque()
-        self.available_agents = set(['agent1', 'agent2', 'agent3'])
+        self.available_agents = set(['/private/agent1', '/private/agent2', '/private/agent3'])  # Subscriber aliases
 
     async def on_incoming_call(self, call):
         await call.answer()
@@ -445,11 +445,9 @@ class CallQueue(Consumer):
             call = self.queue.popleft()
             agent = self.available_agents.pop()
 
-            # Connect to agent
-            agent_address = f"/private/{agent}"
-
+            # Connect to the agent by its Subscriber alias
             try:
-                await call.connect([[agent_address]])
+                await call.connect([[{"type": "fabric", "params": {"to": agent}}]])
             finally:
                 # Agent becomes available again when call ends
                 call.on('ended', lambda: self.available_agents.add(agent))
