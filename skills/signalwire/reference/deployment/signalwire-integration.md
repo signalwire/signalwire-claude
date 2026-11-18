@@ -36,27 +36,29 @@ The Fabric API lets you create "addresses" that route calls to your agent.
 
 ### Creating an External SWML Handler
 
-An external SWML handler tells SignalWire where to fetch your agent's SWML:
+An external SWML handler tells SignalWire where to fetch your agent's SWML. The path is `swml_webhooks`. The older `external_swml_handlers` (plural) still works; `external_swml_handler` (singular) is not a route. The Resource gets a first alias in the `public` context when it is created. Read it with `GET /api/fabric/resources/{id}/addresses`; each entry in `data` has an `id` and, under `channels.audio`, the path to dial.
+
+Create one:
 
 ```bash
 # Create handler via API
-curl -X POST "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/fabric/resources/external_swml_handler" \
+curl -X POST "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/fabric/resources/swml_webhooks" \
   -u "${SIGNALWIRE_PROJECT_ID}:${SIGNALWIRE_TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "My AI Agent",
-    "request_url": "https://your-agent.com/agent",
-    "request_method": "POST"
+    "primary_request_url": "https://your-agent.com/agent",
+    "primary_request_method": "POST"
   }'
 ```
 
-Response:
+Response (abbreviated):
 ```json
 {
     "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
     "name": "My AI Agent",
-    "request_url": "https://your-agent.com/agent",
-    "request_method": "POST"
+    "primary_request_url": "https://your-agent.com/agent",
+    "primary_request_method": "POST"
 }
 ```
 
@@ -90,13 +92,13 @@ Response includes your agent's address:
 If your agent requires authentication, include credentials in the URL:
 
 ```bash
-curl -X POST "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/fabric/resources/external_swml_handler" \
+curl -X POST "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/fabric/resources/swml_webhooks" \
   -u "${SIGNALWIRE_PROJECT_ID}:${SIGNALWIRE_TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Secure Agent",
-    "request_url": "https://username:password@your-agent.com/agent",
-    "request_method": "POST"
+    "primary_request_url": "https://username:password@your-agent.com/agent",
+    "primary_request_method": "POST"
   }'
 ```
 
@@ -104,24 +106,25 @@ curl -X POST "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/fabric/resourc
 
 ### Guest Tokens
 
-Guest tokens allow browser clients to connect without full SignalWire credentials:
+Guest tokens allow browser clients to connect without full SignalWire credentials. Always pass `allowed_addresses` (up to 10 address ids): a token created without it is not limited to your agent's address.
 
 ```bash
 # Create guest token
-curl -X POST "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/fabric/subscribers/tokens" \
+curl -X POST "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/fabric/guests/tokens" \
   -u "${SIGNALWIRE_PROJECT_ID}:${SIGNALWIRE_TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{
-    "reference_id": "guest-user-123",
-    "ttl": 3600
+    "allowed_addresses": ["ADDRESS_ID_OF_YOUR_AGENT"]
   }'
 ```
 
-Response:
+The token lasts two hours by default. To change that, pass `expire_at` as a Unix timestamp.
+
+Response (abbreviated):
 ```json
 {
     "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...",
-    "expires_at": "2024-01-15T12:00:00Z"
+    "expires_at": "2026-01-15T12:00:00Z"
 }
 ```
 
@@ -381,39 +384,36 @@ def setup_signalwire():
 
     # Create external SWML handler
     handler_resp = requests.post(
-        f"{base}/resources/external_swml_handler",
+        f"{base}/resources/swml_webhooks",
         auth=auth,
         json={
             "name": "Customer Service Agent",
-            "request_url": request_url,
-            "request_method": "POST"
+            "primary_request_url": request_url,
+            "primary_request_method": "POST"
         }
     )
     handler = handler_resp.json()
     print(f"Created handler: {handler['id']}")
 
-    # Create subscriber/address
-    sub_resp = requests.post(
-        f"{base}/subscribers",
-        auth=auth,
-        json={
-            "name": "customer-agent",
-            "external_swml_handler": {"id": handler["id"]}
-        }
+    # The handler gets a public alias when it is created. Read it back.
+    addr_resp = requests.get(
+        f"{base}/resources/{handler['id']}/addresses",
+        auth=auth
     )
-    subscriber = sub_resp.json()
-    print(f"Agent address: {subscriber['address']}")
+    address = addr_resp.json()["data"][0]
+    agent_address = address["channels"]["audio"]
+    print(f"Agent address: {agent_address}")
 
-    # Create guest token for WebRTC
+    # Create a guest token for WebRTC, limited to the agent's address
     token_resp = requests.post(
-        f"{base}/subscribers/tokens",
+        f"{base}/guests/tokens",
         auth=auth,
-        json={"reference_id": "web-guest", "ttl": 86400}
+        json={"allowed_addresses": [address["id"]]}
     )
     guest_token = token_resp.json()
     print(f"Guest token: {guest_token['token'][:50]}...")
 
-    return subscriber["address"], guest_token["token"]
+    return agent_address, guest_token["token"]
 
 
 if __name__ == "__main__":

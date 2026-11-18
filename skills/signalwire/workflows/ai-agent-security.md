@@ -207,7 +207,7 @@ class BankingAgent(AgentBase):
     )
     def verify_pin(self, args, raw_data):
         pin = args.get("pin")
-        caller = raw_data.get("call", {}).get("from")
+        caller = raw_data.get("caller_id_num")
 
         # Implement rate limiting
         attempts = raw_data.get("vars", {}).get("pin_attempts", 0)
@@ -261,7 +261,7 @@ Verify with personal information:
     }
 )
 def verify_identity(self, args, raw_data):
-    caller = raw_data.get("call", {}).get("from")
+    caller = raw_data.get("caller_id_num")
     ssn_last4 = args.get("last_four_ssn")
     zip_code = args.get("zip_code")
 
@@ -532,7 +532,7 @@ class RateLimitedAgent(AgentBase):
         parameters={}
     )
     def expensive_operation(self, args, raw_data):
-        caller = raw_data.get("call", {}).get("from", "unknown")
+        caller = raw_data.get("caller_id_num", "unknown")
 
         if not self._check_rate_limit(caller):
             return FunctionResult(
