@@ -873,6 +873,8 @@ sections:
 
 `direction` is required. Events are HTTP POSTs to that `webhook`, told apart by `channel_data.content_disposition`. Payload fields: [live_transcribe](swml-methods.md#live_transcribe). Guide: https://signalwire.com/docs/platform/voice/transcribe-calls
 
+`live_translate` posts to its `webhook` the same way. Payload fields: [live_translate](swml-methods.md#live_translate). Guide: https://signalwire.com/docs/platform/voice/translate-calls
+
 ### Transcription Webhook Handler
 
 ```javascript
