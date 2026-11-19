@@ -266,7 +266,7 @@ Enable or disable functions dynamically.
 ])
 ```
 
-`settings` replaces the whole model-settings map and needs `params.swaig_allow_settings` (default `true`). `unset_global_data` and `unset_meta_data` take a string or an array of keys. `user_event` sends an object to the connected client. `transfer` accepts an object, or a string shorthand for `transfer.dest`.
+`settings` replaces the whole model-settings map and needs `params.swaig_allow_settings` (default `true`). `unset_global_data` and `unset_meta_data` take a string or an array of keys. `user_event` sends an object to the connected client, which the Browser SDK receives on the call with `call.subscribe("user_event")`. `transfer` accepts an object, or a string shorthand for `transfer.dest`.
 
 ### playback_bg
 

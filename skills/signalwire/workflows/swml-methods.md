@@ -667,7 +667,13 @@ Docs: https://signalwire.com/docs/swml/reference/calling/send-digits
 
 ### user_event
 
-Send custom events to the connected client on the call (commonly consumed by the Browser SDK, which receives them as `user_event` and listens via its `on` method). Useful for triggering client-side UI actions.
+Send custom events to the connected client on the call (commonly consumed by the Browser SDK). Useful for triggering client-side UI actions. The `WebRTCCall` receives them with `call.subscribe("user_event")`. Your data arrives in `event.params`. Call details such as `call_id`, `node_id`, and `segment_id` are added at the top level of `params`, so put your own fields under a key of your own to avoid collisions. The YAML example below arrives shaped like `{ "event_type": "user_event", "params": { "orderStatus": { "count": 42, "active": true }, "call_id": "<CALL_ID>", "node_id": "<NODE_ID>", "segment_id": "<SEGMENT_ID>" } }` (other call fields may also appear).
+
+```js
+call.subscribe("user_event").subscribe((event) => {
+  const { count, active } = event.params.orderStatus;
+});
+```
 
 Docs: https://signalwire.com/docs/swml/reference/calling/user-event
 
