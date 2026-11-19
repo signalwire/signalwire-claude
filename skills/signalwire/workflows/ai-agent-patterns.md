@@ -10,7 +10,7 @@ Four layers of control. Only the first one depends on the model cooperating:
 |-------|-----------|
 | Guidance | Prompts and tool descriptions. Probabilistic. |
 | Tool scope | Each step lists its own tools. A tool that is not offered cannot be called. |
-| Transition scope | `set_valid_steps([])` removes `next_step`. Leave `set_valid_contexts` unset so `change_context` is not offered; an empty list still offers it. |
+| Transition scope | `valid_steps` has three states: unset or null still offers `next_step` as `["next"]`; a non-empty list offers only those names; `[]` is deny-all and removes `next_step`. Leave `set_valid_contexts` unset so `change_context` is not offered; an empty list still offers it. These lists only constrain what the model is offered. A `change_step` or `change_context` action from a function can still jump to any existing step or context, and a gather `completion_action` can still move to any step. |
 | Execution authority | The handler checks real state, then commits. The model can ask. Code decides. |
 
 ```python
