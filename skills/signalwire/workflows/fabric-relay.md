@@ -414,7 +414,7 @@ class OfficePhone(Consumer):
 
 ### Subscriber Registration (SIP)
 
-To reach a Subscriber, dial the alias (`/private/<name>`), not a `*.sip.signalwire.com` URI. That host is the SIP Credential domain.
+To reach a Subscriber, use its alias (`/private/<name>`), not a `*.sip.signalwire.com` URI; that host is the SIP Credential domain. From a Relay call, pass the alias to `call.connect` as a `fabric` device.
 
 ## Advanced Patterns
 

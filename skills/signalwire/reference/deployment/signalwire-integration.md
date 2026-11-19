@@ -73,7 +73,7 @@ curl -X POST "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/fabric/resourc
   }'
 ```
 
-With no `display_name` in the request, the Resource name is the email local part and `subscriber.display_name` is `null`. The sample below includes the fields the API always returns.
+With no `display_name` in the request, the Resource name is the email local part and `subscriber.display_name` is `null`. The sample below shows the documented response fields.
 
 ```json
 {
@@ -84,7 +84,7 @@ With no `display_name` in the request, the Resource name is the email local part
     "created_at": "2024-05-06T12:20:00Z",
     "updated_at": "2024-05-06T12:20:00Z",
     "subscriber": {
-        "id": "d369a402-7b43-4512-8735-9d5e1f387814",
+        "id": "7c2e91af-3b14-4d6a-9e08-21f4c8a95b70",
         "email": "john.doe@example.com",
         "first_name": null,
         "last_name": null,
@@ -96,6 +96,8 @@ With no `display_name` in the request, the Resource name is the email local part
     }
 }
 ```
+
+Use the top-level `id` for follow-up calls.
 
 ### Using Basic Auth with Fabric
 
