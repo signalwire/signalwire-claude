@@ -10,6 +10,7 @@ SignalWire sends HTTP POST requests to your server when events occur (call state
 2. **Message Webhooks**: Incoming SMS/MMS
 3. **Video Events**: Room joined, member left, recording complete
 4. **Call Events**: SWML fetch, call progress updates
+5. **Low Balance**: Space balance falls below the low-balance threshold
 
 ## Call Status Webhooks
 
@@ -394,6 +395,29 @@ def handle_recording_ready():
     return jsonify({"status": "ok"}), 200
 ```
 
+## Low Balance Webhook
+
+SignalWire can send an email, a webhook, or both when the Space balance falls below the low-balance threshold. Both fire on the same low-balance event as Auto Top-Up: at most once every six hours. Changing the threshold resets that window. Notifications are sent whether or not Auto Top-Up is on. Email goes to the Space owner and every administrator.
+
+Configure this in the Dashboard under **Billing → Low Balance Settings**. **Send an Email** is on by default. Turn on **Send a Webhook Request** and set **Webhook URL** and **Method** (`POST` by default, or `GET`).
+
+The same settings are available over REST: [Retrieve low balance settings](https://signalwire.com/docs/apis/rest/space/balance/get-low-balance-setting) and [Update low balance settings](https://signalwire.com/docs/apis/rest/space/balance/update-low-balance-setting). Notification fields are `send_email`, `send_webhook`, `webhook_url`, and `webhook_method`. An update replaces the whole setting, so send the threshold and Auto Top-Up fields along with the notification fields.
+
+The webhook request carries exactly two form-encoded parameters. They are query parameters on `GET` and the body on `POST`.
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `threshold` | Low-balance threshold, in US dollars | `5.0` |
+| `balance` | Balance that triggered the notification, in US dollars | `4.253117` |
+
+The `User-Agent` header is `SignalwireCallback/1.0`.
+
+SignalWire allows 3 seconds to connect and 5 seconds for the whole request. It follows up to 3 redirects, but a redirect drops the parameters unless it's a `307` or `308` response to a `POST`, so use the final URL.
+
+SignalWire does not retry a failed delivery. If the endpoint is down, times out, or returns an error, that notification is lost. The next one comes with the next low-balance event. After an outage, use [Retrieve the balance](https://signalwire.com/docs/apis/rest/space/balance/get-balance).
+
+Guide: https://signalwire.com/docs/platform/auto-top-up
+
 ## Webhook Security
 
 ### Verify Webhook Source
@@ -487,6 +511,8 @@ If your server returns an error (5xx) or times out, SignalWire will retry:
 - **Retry attempts**: 3-5 times
 - **Backoff**: Exponential (1s, 2s, 4s, 8s)
 - **Timeout**: 10 seconds per attempt
+
+The low balance webhook is not retried: if the endpoint is down, times out, or returns an error, that notification is lost and the next one comes with the next low-balance event.
 
 ### Handling Retries (Idempotency)
 
