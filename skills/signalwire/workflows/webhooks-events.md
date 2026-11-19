@@ -412,7 +412,7 @@ The webhook request carries exactly two form-encoded parameters. They are query 
 
 The `User-Agent` header is `SignalwireCallback/1.0`.
 
-SignalWire allows 3 seconds to connect and 5 seconds for the whole request. It follows up to 3 redirects, but a redirect drops the parameters unless it is a `307` or `308` to a `POST`, so use the final URL.
+SignalWire allows 3 seconds to connect and 5 seconds for the whole request. It follows up to 3 redirects, but a redirect drops the parameters unless it's a `307` or `308` response to a `POST`, so use the final URL.
 
 SignalWire does not retry a failed delivery. If the endpoint is down, times out, or returns an error, that notification is lost. The next one comes with the next low-balance event. After an outage, use [Retrieve the balance](https://signalwire.com/docs/apis/rest/space/balance/get-balance).
 
