@@ -183,7 +183,7 @@ Define which steps the model is offered a move to from this step. `valid_steps` 
 
 - Unset or null: the model can still advance to the next step in sequence. That is the same enum as `["next"]`, not every step.
 - A non-empty list: only those step names.
-- An empty list `[]`: deny-all. No step is valid, and `next_step` is removed.
+- An empty list `[]`: deny-all. No step is valid, and `next_step` is removed. This takes effect when the step's tool list is rebuilt, so also set `functions` on that step.
 
 These lists only constrain what the model is offered. A `change_step` action from a function, or a gather `completion_action`, can still jump to any existing step.
 
@@ -206,7 +206,7 @@ Define which contexts the model is offered a switch to from this step. This is n
 - A non-empty list: only those context names.
 - An empty list `[]`: `change_context` is still offered.
 
-These lists only constrain what the model is offered. A `change_context` action from a function, or a gather `completion_action`, can still jump to any existing context.
+These lists only constrain what the model is offered. A `change_context` action from a function can still switch to any existing context.
 
 ```python
 step.set_valid_contexts(["billing", "technical"])
@@ -235,7 +235,7 @@ step = context.add_step("step_name")
 
 ### set_valid_contexts()
 
-Define which contexts the model is offered a switch to from this context. The same states as step-level `set_valid_contexts()` apply: unset or null does not offer `change_context`; a non-empty list offers those names; an empty list `[]` still offers the tool. A `change_context` action from a function, or a gather `completion_action`, can still jump to any existing context.
+Define which contexts the model is offered when it switches into this context, until the current step's own `valid_contexts` apply. Each step's `valid_contexts` replaces this value when the step loads, so set `valid_contexts` on every step that should offer `change_context`. A `change_context` action from a function can still switch to any existing context.
 
 ```python
 context.set_valid_contexts(["support", "sales", "main"])
