@@ -148,7 +148,7 @@ Load as an ES module from a CDN that rewrites Node built-ins — `esm.sh`, `jspm
 
 ```html
 <script type="module">
-  import { SignalWire, StaticCredentialProvider } from "https://esm.sh/@signalwire/js@4";
+  import { SignalWire, StaticCredentialProvider } from "https://esm.sh/@signalwire/js@latest";
 </script>
 ```
 
