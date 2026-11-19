@@ -268,7 +268,7 @@ SignalWire is a trademark of SignalWire, Inc.
 ## Support
 
 For SignalWire API questions:
-- Documentation: https://developer.signalwire.com/
+- Documentation: https://signalwire.com/docs
 - Support: https://signalwire.com/support
 
 For plugin issues:
