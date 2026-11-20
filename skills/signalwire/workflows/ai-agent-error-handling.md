@@ -346,7 +346,7 @@ class LoggingAgent(AgentBase):
     )
     def sensitive_operation(self, args, raw_data):
         call_id = raw_data.get("call_id")
-        caller = raw_data.get("call", {}).get("from", "unknown")
+        caller = raw_data.get("caller_id_num", "unknown")
 
         try:
             result = self.do_sensitive_thing()

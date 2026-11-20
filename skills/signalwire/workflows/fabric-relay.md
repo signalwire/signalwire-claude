@@ -185,9 +185,9 @@ class MyRelayApp(Consumer):
 
         # Route based on input
         if result.digits == '1':
-            await call.connect([['+15551111111']])
+            await call.connect([[{"type": "phone", "params": {"to_number": "+15551111111", "from_number": "+15559876543"}}]])
         elif result.digits == '2':
-            await call.connect([['+15552222222']])
+            await call.connect([[{"type": "phone", "params": {"to_number": "+15552222222", "from_number": "+15559876543"}}]])
         else:
             await call.play_tts(text="Invalid selection")
             await call.hangup()
@@ -270,7 +270,7 @@ async def on_incoming_call(self, call):
     print(f"Recording URL: {recording.url}")
 
     # Connect to number
-    await call.connect([['+15551234567']])
+    await call.connect([[{"type": "phone", "params": {"to_number": "+15551234567", "from_number": "+15559876543"}}]])
 
     # Hangup
     await call.hangup()
@@ -501,7 +501,7 @@ class IVRSystem(Consumer):
 
     async def transfer_to_agent(self, call):
         await call.play_tts(text="Connecting you to an agent")
-        await call.connect([['+15551234567']])
+        await call.connect([[{"type": "phone", "params": {"to_number": "+15551234567", "from_number": "+15559876543"}}]])
 
     async def make_payment(self, call):
         # Collect payment info...
@@ -1070,11 +1070,11 @@ class SubscriberQueue(Consumer):
             # Mark agent busy
             self.available_agents[agent] = False
 
-            # Connect to subscriber
-            subscriber_address = f"sip:{agent}@{space_id}.sip.signalwire.com"
+            # Connect to the Subscriber by its alias, such as /private/alice
+            subscriber_address = f"/private/{agent}"
 
             try:
-                await call.connect([[subscriber_address]])
+                await call.connect([[{"type": "fabric", "params": {"to": subscriber_address}}]])
 
                 # Monitor call end
                 call.on('ended', lambda: self.mark_agent_available(agent))

@@ -249,7 +249,7 @@ class CallController(Consumer):
 
         if result.digits == '1':
             # Transfer to agent
-            await call.connect([['+15551234567']])
+            await call.connect([[{"type": "phone", "params": {"to_number": "+15551234567", "from_number": "+15559876543"}}]])
         else:
             # Play voicemail message
             await call.play_audio('https://example.com/voicemail.mp3')

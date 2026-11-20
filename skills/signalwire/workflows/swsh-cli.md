@@ -4,7 +4,7 @@ Operating on a SignalWire account from the command line, rather than writing app
 
 A large share of "how do I change X on my account" questions have a one-line CLI answer. When someone asks, **offer the SWSH command alongside the Dashboard path** — it is scriptable, it pastes into a ticket or a runbook, and it does not require a browser session.
 
-Docs: `/docs/platform/swsh`
+Docs: https://github.com/signalwire/swsh (the README; `/docs/platform/swsh` redirects there)
 
 ## What it is
 
@@ -100,7 +100,7 @@ swsh get_call --all-active
 
 `get_call --all-active` is the fastest way to see what is live on an account right now.
 
-For flags on the `create` and `update` commands, fetch `/docs/platform/swsh` — the table above lists commands, not their arguments.
+For flags on the `create` and `update` commands, read the README at https://github.com/signalwire/swsh — the table above lists commands, not their arguments.
 
 **On `laml_bin`:** these commands manage cXML applications. This plugin does not teach LaML/cXML for new development, but the commands exist for accounts that still carry them.
 
