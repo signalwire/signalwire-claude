@@ -1,0 +1,47 @@
+{
+  "https://signalwire.com/docs/apis/rest/queues/create-queue.md": {
+    "fetched": "2026-11-13",
+    "path": "apis/rest/queues/create-queue.md",
+    "sha256": "aa6738c0e316d36c037c540cac1bd1193c0f764d3bc3f40c684a32b7f76fd486"
+  },
+  "https://signalwire.com/docs/apis/rest/queues/delete-queue.md": {
+    "fetched": "2026-11-13",
+    "path": "apis/rest/queues/delete-queue.md",
+    "sha256": "e112a503100d7f6c6032d4eb83e00efb976698385ca14a11b23cb80bd9474299"
+  },
+  "https://signalwire.com/docs/apis/rest/queues/get-queue.md": {
+    "fetched": "2026-11-13",
+    "path": "apis/rest/queues/get-queue.md",
+    "sha256": "131b1f7e09e0ed2c0a5944eee9e87e184a5ccddb4138a7ce455ac1f2eabdeaa3"
+  },
+  "https://signalwire.com/docs/apis/rest/queues/list-queues.md": {
+    "fetched": "2026-11-13",
+    "path": "apis/rest/queues/list-queues.md",
+    "sha256": "4f2fefc75d45b41a773c5f3a80c42bb820c8d86f1f79ef4d5f97b19665b291d3"
+  },
+  "https://signalwire.com/docs/apis/rest/queues/update-queue.md": {
+    "fetched": "2026-11-13",
+    "path": "apis/rest/queues/update-queue.md",
+    "sha256": "bb9d6d466ec9cb5b64fb6fdd8b64db1943b53f0ddea4a433e165e674de301a81"
+  },
+  "https://signalwire.com/docs/apis/rest/webhooks/call-state-status-callback.md": {
+    "fetched": "2026-11-13",
+    "path": "apis/rest/webhooks/call-state-status-callback.md",
+    "sha256": "a342aaa6f2ef53096699cb4ee079e90c133737b4a9d011b18e988a7bad41f66a"
+  },
+  "https://signalwire.com/docs/swml/guides/deployment.md": {
+    "fetched": "2026-11-13",
+    "path": "swml/guides/deployment.md",
+    "sha256": "250178ad03e42fe2a8df174907949a2d089582b98a55637f43f0ee35d1e6c620"
+  },
+  "https://signalwire.com/docs/swml/reference/calling/ai/params.md": {
+    "fetched": "2026-11-13",
+    "path": "swml/reference/calling/ai/params.md",
+    "sha256": "5c0554b420c93a6c03b515428cd77100119ce59c4b952a9859f7a176fc62a29b"
+  },
+  "https://signalwire.com/docs/swml/reference/calling/connect.md": {
+    "fetched": "2026-11-13",
+    "path": "swml/reference/calling/connect.md",
+    "sha256": "8375971527cb7edf1e15de57437f2dd37cef695074dab4c6a274f06c54b7a25d"
+  }
+}
