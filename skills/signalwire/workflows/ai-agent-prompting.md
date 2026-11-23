@@ -533,7 +533,7 @@ Do NOT: Make promises about timelines or refunds
 ```python
 @AgentBase.tool(
     name="check_inventory",
-    description="Check product inventory levels",
+    description="Call when the caller asks whether a product is in stock or how many are on hand. For the price, call check_price.",
     parameters={
         "product_id": {
             "type": "string",
@@ -542,6 +542,7 @@ Do NOT: Make promises about timelines or refunds
         "location": {
             "type": "string",
             "description": "Storage location to check (default: 'warehouse')",
+            "enum": ["warehouse", "store", "returns"],
             "required": False
         }
     }
@@ -559,8 +560,6 @@ def check_inventory(self, args, raw_data):
     """
     # Implementation...
 ```
-
-The SDK uses docstrings to help the AI understand when to call functions.
 
 ### Conversational Responses
 
