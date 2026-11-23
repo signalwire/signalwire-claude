@@ -177,6 +177,19 @@ Per-language ElevenLabs parameters can be set in the `languages` block — worke
 | `deepgram` | `deepgram.aura-asteria-en` |
 | `openai` | `openai.nova`, `openai.alloy` |
 
+### Where a Voice String Works
+
+One voice string, such as `grok.eve`, works in four places: an AI agent's `languages`, the `say_voice` of SWML `play`, and a `tts` media item (`{"type":"tts","params":{"text":...,"voice":...}}`) sent with Relay `play` or the REST Calling API `calling.play` command.
+
+Outside an AI agent's `languages`, SWML `play`, Relay, and REST reject a voice string that contains spaces, parentheses, or `/`. Relay rejects that play as a bad request. REST `calling.play` returns once SignalWire accepts the command and can return success even when the voice string is rejected; the call then hears nothing. A voice string SignalWire can't use is played in a fallback voice.
+
+- **Groq.** A model name with `/` (for example `canopylabs/orpheus-v1-english`) works only in an AI agent. Elsewhere use a shorthand (`groq-tts.troy:english`, `groq-tts.daniel:arabic`) or leave the model off for English. The shorthand `english` selects `canopylabs/orpheus-v1-english`.
+- **MiniMax.** Voice IDs with spaces or parentheses (for example `Cantonese_ProfessionalHost (F)`) work only in an AI agent, where the whole voice string must be quoted: `"minimax.Cantonese_ProfessionalHost (F):speech-2.6-turbo"`.
+- **Mistral** has no default voice. Always set a valid Mistral voice ID. If SignalWire can't use it, the call switches to a fallback voice or skips that speech.
+- **ElevenLabs.** Use the voice ID (for example `elevenlabs.EXAVITQu4vr4xnSDxMaL`, the Sarah voice) to get the same voice everywhere. In an AI agent, many voice names select a different voice than the ID listed beside them. IDs are on `/docs/platform/voice/tts/elevenlabs`.
+
+Source: `/docs/platform/voice/tts/` (`grok`, `groq-tts`, `minimax`, `mistral`, `elevenlabs`).
+
 ### Rime Voices
 
 ```python

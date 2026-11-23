@@ -133,6 +133,8 @@ That history is the argument for being explicit: an application relying on the d
 
 Set a voice via `voice` strings in SWML (`/docs/swml/reference/calling/ai/languages#use-voice-strings`) or `add_language()` in the SDKs (`/docs/server-sdks/guides/voice-language`). Audition voices at `/docs/platform/voice/tts`.
 
+A string that works in `languages` can still be rejected by SWML `play`, Relay, and REST — see [Where a Voice String Works](../reference/sdk/voice-configuration.md#where-a-voice-string-works).
+
 ### utility_model
 
 One parameter that changes the cost and latency profile of several background features at once.
