@@ -102,26 +102,26 @@ curl -X POST "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/fabric/resourc
 
 ## WebRTC Integration
 
-### Guest Tokens
+### Subscriber Tokens
 
-Guest tokens allow browser clients to connect without full SignalWire credentials:
+Create Subscriber token (`POST /api/fabric/subscribers/tokens`) returns a Subscriber Access Token for the Subscriber whose email matches `reference`, ignoring case — pass the email, because neither the Subscriber resource `id` nor the inner `subscriber.id` matches. If no Subscriber has that email, SignalWire creates one with `reference` as its email and returns a token for it; any string is accepted, so a typo creates an extra Subscriber. Tokens expire after two hours by default. For temporary access limited to selected resource addresses, use Create Subscriber guest token (`POST /api/fabric/guests/tokens`).
 
 ```bash
-# Create guest token
+# Create Subscriber token
 curl -X POST "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/fabric/subscribers/tokens" \
   -u "${SIGNALWIRE_PROJECT_ID}:${SIGNALWIRE_TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{
-    "reference_id": "guest-user-123",
-    "ttl": 3600
+    "reference": "user@example.com"
   }'
 ```
 
 Response:
 ```json
 {
+    "subscriber_id": "32d94154-9297-418c-9a85-4a69e0c67c30",
     "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...",
-    "expires_at": "2024-01-15T12:00:00Z"
+    "refresh_token": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIiwidHlwIjoiUmVmcmVzaC..."
 }
 ```
 
@@ -141,7 +141,7 @@ Use the SignalWire JavaScript SDK to connect:
     <button id="hangup" disabled>Hang Up</button>
 
     <script>
-        const GUEST_TOKEN = 'YOUR_GUEST_TOKEN';
+        const SUBSCRIBER_TOKEN = 'YOUR_SUBSCRIBER_TOKEN';
         const AGENT_ADDRESS = '/public/my-agent';
 
         let client = null;
@@ -150,7 +150,7 @@ Use the SignalWire JavaScript SDK to connect:
         document.getElementById('call').onclick = async () => {
             // Connect to SignalWire
             client = await SignalWire.SignalWire({
-                token: GUEST_TOKEN
+                token: SUBSCRIBER_TOKEN
             });
 
             // Dial the agent
@@ -404,16 +404,18 @@ def setup_signalwire():
     subscriber = sub_resp.json()
     print(f"Agent address: {subscriber['address']}")
 
-    # Create guest token for WebRTC
+    # Subscriber token for the browser client. reference is the subscriber's
+    # email; an unknown email creates a Subscriber, and the token expires
+    # after two hours by default.
     token_resp = requests.post(
         f"{base}/subscribers/tokens",
         auth=auth,
-        json={"reference_id": "web-guest", "ttl": 86400}
+        json={"reference": "user@example.com"}
     )
-    guest_token = token_resp.json()
-    print(f"Guest token: {guest_token['token'][:50]}...")
+    subscriber_token = token_resp.json()
+    print(f"Subscriber token: {subscriber_token['token'][:50]}...")
 
-    return subscriber["address"], guest_token["token"]
+    return subscriber["address"], subscriber_token["token"]
 
 
 if __name__ == "__main__":
@@ -453,7 +455,7 @@ if __name__ == "__main__":
 
 ### WebRTC Not Connecting
 
-1. Verify guest token is valid and not expired
+1. Verify the Subscriber token is valid and not expired
 2. Check browser console for errors
 3. Ensure HTTPS is used (required for WebRTC)
 4. Verify agent address is correct
@@ -470,5 +472,5 @@ if __name__ == "__main__":
 2. **Enable Basic Auth** for production agents
 3. **Rotate tokens** regularly
 4. **Use environment variables** for credentials
-5. **Limit guest token TTL** to minimum needed
+5. **Subscriber tokens expire after two hours by default**; set `expire_at` (unix time) for a different expiry
 6. **Monitor debug webhooks** for suspicious activity
