@@ -194,7 +194,7 @@ class SecureAgent(AgentBase):
     )
     def verify_identity(self, args, raw_data):
         pin = args.get("pin")
-        caller = raw_data.get("call", {}).get("from")
+        caller = raw_data.get("caller_id_num")
 
         if self.validate_pin(caller, pin):
             return (FunctionResult(
@@ -285,7 +285,7 @@ def explain_bill_increase(self, args, raw_data):
     # self.billing and ask_reasoning_model are your helpers.
     # ask_reasoning_model raises TimeoutError when it exceeds timeout.
     invoices = self.billing.recent_invoices(
-        raw_data.get("call", {}).get("from")
+        raw_data.get("caller_id_num")
     )
 
     question = args.get("question", "why the bill changed")
@@ -356,7 +356,7 @@ Send confirmation via SMS:
 def book_appointment(self, args, raw_data):
     date = args.get("date")
     time = args.get("time")
-    caller = raw_data.get("call", {}).get("from")
+    caller = raw_data.get("caller_id_num")
 
     # Book the appointment
     confirmation = self.calendar.book(date, time)
@@ -564,7 +564,7 @@ def check_availability(self, args, raw_data):
 def book_slot(self, args, raw_data):
     time = args.get("time")
     date = raw_data.get("vars", {}).get("requested_date")
-    caller = raw_data.get("call", {}).get("from")
+    caller = raw_data.get("caller_id_num")
 
     confirmation = self.calendar.book(date, time, caller)
 

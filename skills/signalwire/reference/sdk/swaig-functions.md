@@ -119,11 +119,8 @@ Contains the full request context:
 ```python
 {
     "call_id": "unique-call-identifier",
-    "call": {
-        "from": "+15551234567",
-        "to": "+15559876543",
-        "direction": "inbound"
-    },
+    "caller_id_num": "+15551234567",  # only present when caller ID is set
+    "caller_id_name": "Jane Doe",  # only present when caller ID is set
     "vars": {
         # Global data and conversation state
     },
@@ -141,7 +138,7 @@ Contains the full request context:
 ```python
 def handle_function(self, args, raw_data):
     call_id = raw_data.get("call_id")
-    caller = raw_data.get("call", {}).get("from", "unknown")
+    caller = raw_data.get("caller_id_num", "unknown")
     global_vars = raw_data.get("vars", {})
 ```
 
@@ -415,7 +412,7 @@ def transfer_to_agent(self, args, raw_data):
 )
 def verify_identity(self, args, raw_data):
     pin = args.get("pin")
-    caller = raw_data.get("call", {}).get("from")
+    caller = raw_data.get("caller_id_num")
 
     if self.verify_pin(caller, pin):
         # Enable secure functions after verification
