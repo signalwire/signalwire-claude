@@ -340,7 +340,7 @@ TypeScript: `setMultilingual(config: Record<string, unknown>): this`
 
 Add speech recognition hints.
 
-When speech recognition runs in code-switching mode (`set_multilingual()` / `setMultilingual()` with its default recognizer, or a `languages` entry whose `code` is `multi`), string hints and `hint` values are not passed to speech recognition, and no error is returned. That covers `add_hint()`/`addHint()`, `add_hints()`/`addHints()`, and string or `hint` values from `FunctionResult.add_dynamic_hints()`/`addDynamicHints()`. For a `languages` entry, hints are dropped only while that entry is active, and only when `multi` is the first code. `code: ["en-US", "multi"]` keeps hints. `add_pattern_hint()`/`addPatternHint()` still emits a `hint` field; that field is dropped in this mode, and only its `pattern` and `replace` apply.
+When speech recognition runs in code-switching mode (`set_multilingual()` / `setMultilingual()`, or a `languages` entry whose `code` is `multi` on a recognizer that code-switches on `multi`), string hints and `hint` values are not passed to speech recognition, and no error is returned. That covers `add_hint()`/`addHint()`, `add_hints()`/`addHints()`, and string or `hint` values from `FunctionResult.add_dynamic_hints()`/`addDynamicHints()`. For a `languages` entry, hints are dropped only while that entry is active, and only when `multi` is the first code. `code: ["en-US", "multi"]` keeps hints. Outside code-switching mode, every engine receives hints. `add_pattern_hint()`/`addPatternHint()` still emits a `hint` field; that field is dropped in this mode, and only its `pattern` and `replace` apply.
 
 ```python
 def add_hints(self, hints: List[str]) -> 'AgentBase'
@@ -367,10 +367,10 @@ def set_params(self, params: dict) -> 'AgentBase'
 |-----------|------|---------|-------------|
 | `end_of_speech_timeout` | int | 700 | ms of audio silence to end turn — see [turn taking](../../workflows/ai-agent-turn-taking.md) |
 | `enable_turn_detection` | str \| bool | `both` | `both`, `punct_only`, `acoustic_only`, `off`. `true` is `both`; `false` is `off`. Also accepted as `turn_detection` |
-| `attention_timeout` | int | 5000 | ms before attention prompt. `0` disables; otherwise `1000`–`600000` |
+| `attention_timeout` | int | 5000 | ms before attention prompt. `0` disables; otherwise `1000`–`600000`. A nonzero value below `end_of_speech_timeout` is raised to that plus 1000 ms |
 | `inactivity_timeout` | int | 600000 | ms before disconnect |
-| `barge_match_string` | str | None | Regex for interruption triggers |
-| `barge_min_words` | int | 1 | Min words to trigger barge |
+| `barge_match_string` | str | None | Regex for interruption triggers. Setting it turns `transparent_barge` off, even when that param is `true` |
+| `barge_min_words` | int | 0 | Words required before barge. `0` turns the count off. Allowed `0` or `1`–`99`; any other value is ignored |
 | `ai_volume` | int | 0 | Volume adjustment (-50 to 50 dB) |
 | `local_tz` | str | None | Timezone for datetime |
 | `energy_threshold` | float | 0.05 | Speech detection sensitivity |
