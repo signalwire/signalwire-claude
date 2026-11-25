@@ -257,6 +257,7 @@ To update or improve this plugin:
 5. Add to Best Practices, Common Patterns, or Anti-Patterns sections
 6. Update this README if adding new workflows
 7. Run `claude plugin validate .` and try your change with `claude --plugin-dir .`
+   Leave `version` in `.claude-plugin/` alone. After a merge, the release workflow bumps it in a release PR. Label your PR `release:minor` or `release:major` for a bigger bump than a patch.
 8. Submit a pull request
 
 ## License

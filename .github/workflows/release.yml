@@ -1,0 +1,132 @@
+# Releases the plugin after merges to main.
+#
+# PRs don't touch "version". After a merge, this waits so that merges landing
+# close together share one release: each new push cancels the run still
+# waiting. Then, if anything an install receives has changed since the last
+# release tag, it opens a "Release vX.Y.Z" PR that bumps the version fields and
+# merges it, because main only takes changes through PRs. A merge with the
+# release:minor or release:major label picks a bigger bump than the default
+# patch. When the release PR lands, the tag job tags it and publishes a GitHub
+# release, which is when installs see the new version.
+#
+# A commit whose message starts with "Release v" is treated as a release, so
+# don't give other PRs a title like that.
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  RELEASE_BRANCH: release/next
+
+jobs:
+  release:
+    if: github.event_name == 'workflow_dispatch' || !startsWith(github.event.head_commit.message, 'Release v')
+    runs-on: ubuntu-latest
+    concurrency:
+      group: release
+      cancel-in-progress: true
+    steps:
+      - name: Wait for merges that land close together
+        if: github.event_name == 'push'
+        run: sleep "${DELAY:-300}"
+        env:
+          DELAY: ${{ vars.RELEASE_DELAY_SECONDS }}
+
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Find the last release
+        id: last
+        run: |
+          current=$(.github/scripts/release.py current)
+          tag="v${current}"
+          if ! git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+            # Not tagged yet: the last release is the commit that set this version.
+            sha=$(git log -1 --format=%H -G'"version"' -- .claude-plugin/plugin.json)
+            git tag "${tag}" "${sha}"
+            git push origin "${tag}"
+          fi
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Check for changes that ship
+        id: changes
+        run: |
+          if git diff --name-only "${{ steps.last.outputs.tag }}" HEAD | .github/scripts/release.py releasable; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Nothing an install receives has changed since ${{ steps.last.outputs.tag }}."
+          fi
+
+      - name: Collect the merged PRs
+        if: steps.changes.outputs.release == 'true'
+        run: |
+          for sha in $(git log --format=%H "${{ steps.last.outputs.tag }}..HEAD"); do
+            gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}/pulls" \
+              --jq '.[] | select(.merged_at != null) | {number, title, labels: [.labels[].name]}'
+          done | jq -s 'unique_by(.number) | sort_by(.number)' > prs.json
+          jq '[.[].labels]' prs.json | .github/scripts/release.py level > level.txt
+          jq -r '.[] | "- \(.title) (#\(.number))"' prs.json > notes.md
+          echo "Bump: $(cat level.txt)"; cat notes.md
+
+      - name: Open or update the release PR, then merge it
+        if: steps.changes.outputs.release == 'true'
+        run: |
+          version=$(.github/scripts/release.py next "$(cat level.txt)")
+          .github/scripts/release.py set "${version}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C "${RELEASE_BRANCH}"
+          git commit -am "Release v${version}"
+          git push --force origin "${RELEASE_BRANCH}"
+
+          { echo "Releases v${version}, with these merges:"; echo; cat notes.md; } > body.md
+          pr=$(gh pr list --head "${RELEASE_BRANCH}" --state open --json number --jq '.[0].number')
+          if [ -n "${pr}" ]; then
+            gh pr edit "${pr}" --title "Release v${version}" --body-file body.md
+          else
+            gh pr create --base main --head "${RELEASE_BRANCH}" --title "Release v${version}" --body-file body.md
+            pr=$(gh pr list --head "${RELEASE_BRANCH}" --state open --json number --jq '.[0].number')
+          fi
+
+          if ! gh pr merge "${pr}" --squash --delete-branch --subject "Release v${version} (#${pr})"; then
+            echo "::warning::Release PR #${pr} couldn't be merged automatically. Merge it by hand."
+          fi
+
+  tag:
+    if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Release v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Tag the release and publish it
+        run: |
+          tag="v$(.github/scripts/release.py current)"
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+            echo "${tag} already exists."
+            exit 0
+          fi
+          git tag "${tag}" "${GITHUB_SHA}"
+          git push origin "${tag}"
+          pr=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" --jq '.[0].number // empty')
+          if [ -n "${pr}" ]; then
+            gh pr view "${pr}" --json body --jq .body > notes.md
+          else
+            echo "Release ${tag}" > notes.md
+          fi
+          gh release create "${tag}" --title "${tag}" --notes-file notes.md --verify-tag
