@@ -13,6 +13,8 @@ Four layers of control. Only the first one depends on the model cooperating:
 | Transition scope | `valid_steps` has three states: unset or null still offers `next_step` as `["next"]`; a non-empty list offers only those names; `[]` is deny-all and removes `next_step`. Leave `set_valid_contexts` unset so `change_context` is not offered; an empty list still offers it. These lists only constrain what the model is offered. A `change_step` or `change_context` action from a function can still jump to any existing step or context, and a gather `completion_action` can still move to any step. |
 | Execution authority | The handler checks real state, then commits. The model can ask. Code decides. |
 
+When wording differs by mode, register a copy of the tool for each mode with `define_tool`, reusing the original's description and parameters, and list each copy only in its own step's `set_functions`. Don't have a tool read a mode flag in `global_data` (a mode flag can drift from the real context).
+
 ```python
 def scoped(step, text, tools):
     """Task and tools. The model cannot change step on its own."""
@@ -373,6 +375,8 @@ def book_appointment(self, args, raw_data):
 ```
 
 ## Multi-Step Flow Pattern
+
+Return one step per call and keep the position in `global_data` (a model given the whole plan rushes it or loses its place). This is the flow's own progress, written by its handlers; it is not a stand-in for the agent's current step.
 
 Guide user through a process:
 
