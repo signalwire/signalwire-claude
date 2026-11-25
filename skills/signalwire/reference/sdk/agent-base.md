@@ -340,7 +340,7 @@ TypeScript: `setMultilingual(config: Record<string, unknown>): this`
 
 Add speech recognition hints.
 
-When speech recognition runs in code-switching mode (`set_multilingual()` / `setMultilingual()`, or a `languages` entry whose `code` is `multi` on Deepgram), string hints and `hint` values are not passed to speech recognition, and no error is returned. That covers `add_hint()`/`addHint()`, `add_hints()`/`addHints()`, and string or `hint` values from `FunctionResult.add_dynamic_hints()`/`addDynamicHints()`. For a `languages` entry, hints are dropped only while that entry is active, and only when `multi` is the first code. `code: ["en-US", "multi"]` keeps hints. Outside code-switching mode, every engine receives hints. `add_pattern_hint()`/`addPatternHint()` still emits a `hint` field; that field is dropped in this mode, and only its `pattern` and `replace` apply.
+When speech recognition runs in code-switching mode (`set_multilingual()` / `setMultilingual()`, or a `languages` entry whose `code` is `multi` on a recognizer that code-switches on `multi`), string hints and `hint` values are not passed to speech recognition, and no error is returned. That covers `add_hint()`/`addHint()`, `add_hints()`/`addHints()`, and string or `hint` values from `FunctionResult.add_dynamic_hints()`/`addDynamicHints()`. For a `languages` entry, hints are dropped only while that entry is active, and only when `multi` is the first code. `code: ["en-US", "multi"]` keeps hints. Outside code-switching mode, every engine receives hints. `add_pattern_hint()`/`addPatternHint()` still emits a `hint` field; that field is dropped in this mode, and only its `pattern` and `replace` apply.
 
 ```python
 def add_hints(self, hints: List[str]) -> 'AgentBase'
