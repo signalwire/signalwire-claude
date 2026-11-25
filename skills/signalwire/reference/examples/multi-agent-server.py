@@ -199,7 +199,7 @@ class BillingAgent(AgentBase):
     )
     def get_balance(self, args, raw_data):
         account = args.get("account_number")
-        verified = raw_data.get("vars", {}).get("verified", False)
+        verified = raw_data.get("global_data", {}).get("verified", False)
 
         if not verified:
             return FunctionResult(

@@ -210,7 +210,7 @@ class BankingAgent(AgentBase):
         caller = raw_data.get("caller_id_num")
 
         # Implement rate limiting
-        attempts = raw_data.get("vars", {}).get("pin_attempts", 0)
+        attempts = raw_data.get("global_data", {}).get("pin_attempts", 0)
         if attempts >= 3:
             return (FunctionResult(
                 "Too many incorrect attempts. For your security, "
@@ -240,7 +240,7 @@ class BankingAgent(AgentBase):
     )
     def get_balance(self, args, raw_data):
         # Double-check verification status
-        if not raw_data.get("vars", {}).get("verified"):
+        if not raw_data.get("global_data", {}).get("verified"):
             return FunctionResult(
                 "I need to verify your identity first. What's your PIN?"
             )

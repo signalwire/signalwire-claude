@@ -217,7 +217,7 @@ class SecureAgent(AgentBase):
         parameters={}
     )
     def get_balance(self, args, raw_data):
-        verified = raw_data.get("vars", {}).get("verified", False)
+        verified = raw_data.get("global_data", {}).get("verified", False)
         if not verified:
             return FunctionResult(
                 "I need to verify your identity first. "
@@ -414,7 +414,7 @@ def collect_email(self, args, raw_data):
 )
 def collect_username(self, args, raw_data):
     username = args.get("username")
-    email = raw_data.get("vars", {}).get("email")
+    email = raw_data.get("global_data", {}).get("email")
 
     # Check availability and create account
     if self.is_username_available(username):
@@ -563,7 +563,7 @@ def check_availability(self, args, raw_data):
 )
 def book_slot(self, args, raw_data):
     time = args.get("time")
-    date = raw_data.get("vars", {}).get("requested_date")
+    date = raw_data.get("global_data", {}).get("requested_date")
     caller = raw_data.get("caller_id_num")
 
     confirmation = self.calendar.book(date, time, caller)

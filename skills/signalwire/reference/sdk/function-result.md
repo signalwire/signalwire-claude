@@ -448,7 +448,7 @@ def verify_pin(self, args, raw_data):
             {"function": "view_transactions", "active": True},
         ]))
     else:
-        attempts = raw_data.get("vars", {}).get("pin_attempts", 0) + 1
+        attempts = raw_data.get("global_data", {}).get("pin_attempts", 0) + 1
 
         if attempts >= 3:
             return (FunctionResult(
