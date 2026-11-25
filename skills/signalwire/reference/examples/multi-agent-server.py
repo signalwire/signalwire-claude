@@ -145,7 +145,7 @@ class SalesAgent(AgentBase):
     def schedule_demo(self, args, raw_data):
         product = args.get("product", "our products")
         time = args.get("preferred_time", "a convenient time")
-        caller = raw_data.get("call", {}).get("from", "unknown")
+        caller = raw_data.get("caller_id_num", "unknown")
 
         return (FunctionResult(
             f"I've scheduled a demo of {product} for {time}. "
@@ -199,7 +199,7 @@ class BillingAgent(AgentBase):
     )
     def get_balance(self, args, raw_data):
         account = args.get("account_number")
-        verified = raw_data.get("vars", {}).get("verified", False)
+        verified = raw_data.get("global_data", {}).get("verified", False)
 
         if not verified:
             return FunctionResult(
@@ -239,7 +239,7 @@ class BillingAgent(AgentBase):
             "Is there anything else I can help you with?"
         )
         .add_action("send_sms", {
-            "to": raw_data.get("call", {}).get("from"),
+            "to": raw_data.get("caller_id_num"),
             "body": f"Acme Corp: Payment of ${amount:.2f} confirmed. Thank you!"
         }))
 
