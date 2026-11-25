@@ -20,7 +20,7 @@ See [INSTALL.md](INSTALL.md) for updating, upgrading from `signalwire-builder`, 
 - **Broad API Coverage**: SignalWire REST APIs, the calling commands endpoint, SWML (calling *and* messaging), the AI chat API, Relay, Server SDKs, Browser SDK v4, and the Video API — excludes deprecated LAML/CXML
 - **Reads the Live Docs**: The skill knows SignalWire's docs are machine-readable (`.md` suffix, per-product `llms.txt` indexes) and fetches the current page when an exact parameter, default, or endpoint path matters
 - **Ahead of the Docs Where It Counts**: Turn-taking behavior, `ai_sidecar` constraints, and SWAIG traps are documented from verified platform behavior in places the published docs are incomplete or wrong — and marked as such
-- **Practical Production Knowledge**: Best practices, patterns, and anti-patterns from production deployments
+- **Practical Production Knowledge**: Best practices, patterns, and anti-patterns from SignalWire training sessions
 - **Ten-Language SDK**: One unified package per language covering AI Agents + Relay + REST; Python and TypeScript examples throughout
 - **Account Operations, Not Just Code**: SWSH CLI coverage, so "how do I change X on my account" has a one-line answer
 - **Workflow-Organized**: Find what you need by developer workflow (calling, messaging, video, AI, etc.)
@@ -35,7 +35,7 @@ Each workflow combines technical API documentation with practical implementation
 
 **Telephony Core:**
 - `workflows/authentication-setup.md` - Credentials, MFA patterns, metadata for security, token management
-- `workflows/outbound-calling.md` - REST API, CRM integration, appointment reminders, healthcare workflows
+- `workflows/outbound-calling.md` - REST API, CRM dialer patterns, appointment reminders, click-to-call
 - `workflows/inbound-call-handling.md` - Core SWML methods, loop protection, variable management, IVR patterns
 - `workflows/call-control.md` - Context-aware transfers, screen pop, recording best practices, conference management
 - `workflows/swml-methods.md` - Full method catalog: queuing, conferencing, AMD, fax, transcription, streaming, taps, payment, control flow, and Messaging SWML
@@ -80,7 +80,7 @@ Each workflow combines technical API documentation with practical implementation
 ### Knowledge Sources
 
 - **Technical Documentation**: Official SignalWire REST APIs, SWML, SDKs
-- **Practical Wisdom**: Patterns from SignalWire training and production deployments, including:
+- **Practical Wisdom**: Patterns from SignalWire training sessions, including:
   - LiveWire sessions
   - SignalWire in Seconds tutorials
   - ClueCon 2025 workshops
