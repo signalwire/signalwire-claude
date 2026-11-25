@@ -258,12 +258,8 @@ An endpoint that names more than one scope accepts a token with any one of those
 ## Common Authentication Errors
 
 ### 401 Unauthorized
-- **Cause**: Invalid Project ID or API Token
-- **Fix**: Verify credentials in Dashboard, check for typos
-
-### 403 Forbidden
-- **Cause**: Token doesn't have required scope
-- **Fix**: Create token with appropriate permissions
+- **Cause**: Invalid Project ID or API Token, or a token missing the required scope. The body is plain text `Unauthorized`, not JSON.
+- **Fix**: Verify credentials in Dashboard, check for typos, or create a token with the needed scope
 
 ### Invalid Space URL
 - **Cause**: Using wrong space name in URL
