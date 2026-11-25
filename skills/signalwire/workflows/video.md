@@ -152,7 +152,7 @@ Load as an ES module from a CDN that rewrites Node built-ins — `esm.sh`, `jspm
 </script>
 ```
 
-`@latest` resolves to the current release. For production script-tag setups, replace `@latest` with the exact version it resolves to, so a CDN update cannot change your page's behavior without a deploy. A major-only range such as `@4` does not resolve while v4 is a prerelease.
+`@latest` resolves to the current release. For production script-tag setups, replace `@latest` with the exact version it resolves to, so a CDN update cannot change your page's behavior without a deploy.
 
 ## Managing Rooms
 
