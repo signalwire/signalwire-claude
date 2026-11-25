@@ -121,8 +121,8 @@ Contains the full request context:
     "call_id": "unique-call-identifier",
     "caller_id_num": "+15551234567",  # only present when caller ID is set
     "caller_id_name": "Jane Doe",  # only present when caller ID is set
-    "vars": {
-        # Global data and conversation state
+    "global_data": {  # only present when global data is set
+        # Global data set by the agent and SWAIG actions
     },
     "conversation_id": "conv-123",
     "function": "function_name",
@@ -139,7 +139,7 @@ Contains the full request context:
 def handle_function(self, args, raw_data):
     call_id = raw_data.get("call_id")
     caller = raw_data.get("caller_id_num", "unknown")
-    global_vars = raw_data.get("vars", {})
+    global_vars = raw_data.get("global_data", {})
 ```
 
 ## Parameter Schema
