@@ -70,6 +70,7 @@ curl -X POST "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/fabric/subscri
   -H "Content-Type: application/json" \
   -d '{
     "name": "my-agent",
+    "email": "my-agent@example.com",
     "external_swml_handler": {
         "id": "HANDLER_ID_FROM_ABOVE"
     }
@@ -104,7 +105,7 @@ curl -X POST "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/fabric/resourc
 
 ### Subscriber Tokens
 
-Create Subscriber token (`POST /api/fabric/subscribers/tokens`) returns a Subscriber Access Token for the Subscriber whose email matches `reference`, ignoring case — pass the email, because neither the Subscriber resource `id` nor the inner `subscriber.id` matches. If no Subscriber has that email, SignalWire creates one with `reference` as its email and returns a token for it; any string is accepted, so a typo creates an extra Subscriber. Tokens expire after two hours by default. For temporary access limited to selected resource addresses, use Create Subscriber guest token (`POST /api/fabric/guests/tokens`).
+Create Subscriber token (`POST /api/fabric/subscribers/tokens`) returns a Subscriber Access Token for the Subscriber whose email matches `reference`, ignoring case — pass the email, because neither the Subscriber resource `id` nor the inner `subscriber.id` matches. If no Subscriber has that email, SignalWire creates one with `reference` as its email and returns a token for it; any string is accepted, so a typo creates an extra Subscriber, and each new Subscriber carries a monthly charge. Tokens expire after two hours by default. For temporary access limited to selected resource addresses, use Create Subscriber guest token (`POST /api/fabric/guests/tokens`).
 
 ```bash
 # Create Subscriber token
@@ -398,6 +399,7 @@ def setup_signalwire():
         auth=auth,
         json={
             "name": "customer-agent",
+            "email": "customer-agent@example.com",
             "external_swml_handler": {"id": handler["id"]}
         }
     )
