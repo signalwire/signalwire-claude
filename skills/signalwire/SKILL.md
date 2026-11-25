@@ -101,7 +101,7 @@ These insights come from analysis of 89 SignalWire training videos, LiveWire ses
 
 **Webhooks:** HTTP POST with JSON (`call_id`, `call_state`, `from`, `to`, `direction`)
 
-**Errors:** REST returns HTTP status + JSON with `error`/`message`. SWML logs to Dashboard.
+**Errors:** A failed REST call returns an HTTP status and an `errors` array. Iterate every item. Most `/api/*` routes use `{type, code, message, attribute, url}`, and `code` is the error name. Most `/api/relay/rest` routes use `{detail, status, title, code}`, and `code` repeats the HTTP status as a string, such as `"422"`. Read `detail` for the cause. Campaign Registry uses the first shape. A bad credential or a token missing the required scope gets `401` with a plain-text `Unauthorized` body, not JSON. The Compatibility API (`/api/laml/2010-04-01`) returns one object, `{code, message, more_info, status}`. SWML logs to Dashboard.
 
 ## Key Concepts
 
