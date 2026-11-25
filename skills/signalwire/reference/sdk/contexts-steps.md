@@ -105,10 +105,12 @@ class SupportAgent(AgentBase):
         tech_gather.set_text("Gather technical details about the issue.")
         tech_gather.set_functions(["run_diagnostic", "check_system_status"])
         tech_gather.set_valid_steps(["next"])
+        tech_gather.set_valid_contexts(["main"])
 
         tech_resolve = tech.add_step("resolve")
         tech_resolve.set_text("Provide technical resolution steps.")
         tech_resolve.set_functions(["create_ticket", "transfer_to_engineer"])
+        tech_resolve.set_valid_contexts(["main"])
 
         # Billing context
         billing = self.contexts.add_context("billing")
@@ -119,10 +121,12 @@ class SupportAgent(AgentBase):
         bill_verify.set_text("Verify the customer's account information.")
         bill_verify.set_functions(["lookup_account"])
         bill_verify.set_valid_steps(["next"])
+        bill_verify.set_valid_contexts(["main"])
 
         bill_assist = billing.add_step("assist")
         bill_assist.set_text("Assist with billing inquiries.")
         bill_assist.set_functions(["get_balance", "process_payment", "issue_refund"])
+        bill_assist.set_valid_contexts(["main"])
 
         # General inquiries context
         general = self.contexts.add_context("general")
@@ -130,6 +134,7 @@ class SupportAgent(AgentBase):
 
         gen_help = general.add_step("help")
         gen_help.set_text("Answer general questions about our products and services.")
+        gen_help.set_valid_contexts(["main"])
 ```
 
 ## Step Class Reference
