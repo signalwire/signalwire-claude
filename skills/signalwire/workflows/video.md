@@ -40,7 +40,7 @@ response = requests.post(
 room_id = response.json()["id"]
 ```
 
-`name` is unique in the project; a second create with the same name fails. Pass one: SWML `join_room` finds the room by `name`. Allowed characters: letters, numbers, `_`, `-`. `enable_room_previews` is optional and defaults to `false`. The response's top-level `id` is the Resource id.
+`name` is unique in the project; a second create with the same name fails. Pass one: SWML `join_room` finds the room by `name`. Allowed characters: letters, numbers, `_`, `-`. `enable_room_previews` is optional and defaults to `false`. The response's top-level `id` is the Resource id; the address listing and `/api/fabric/resources/conference_rooms/{id}` take it. `conference_room.id` is the Video Room id, which the older `/api/video/rooms/{id}` endpoints take.
 
 In the Dashboard: **Resources** → **Add** → **Video Room**, enter a room name, choose **Build From Scratch**, then **Create**.
 
@@ -152,7 +152,7 @@ Load as an ES module from a CDN that rewrites Node built-ins — `esm.sh`, `jspm
 </script>
 ```
 
-**Pin a version rather than `@latest`** for script-tag setups, so a CDN update cannot change your page's behavior without a deploy.
+`@latest` resolves to the current release. For production script-tag setups, replace `@latest` with the exact version it resolves to, so a CDN update cannot change your page's behavior without a deploy. A major-only range such as `@4` does not resolve while v4 is a prerelease.
 
 ## Managing Rooms
 
@@ -173,10 +173,10 @@ for room in rooms:
 
 ```python
 response = requests.put(
-    f"{space_url}/api/video/rooms/{room_id}",
+    f"{space_url}/api/fabric/resources/conference_rooms/{room_id}",
     auth=HTTPBasicAuth(project_id, api_token),
     json={
-        "max_participants": 100,
+        "max_members": 100,
         "layout": "highlight-1-responsive"
     }
 )
@@ -186,7 +186,7 @@ response = requests.put(
 
 ```python
 response = requests.delete(
-    f"{space_url}/api/video/rooms/{room_id}",
+    f"{space_url}/api/fabric/resources/conference_rooms/{room_id}",
     auth=HTTPBasicAuth(project_id, api_token)
 )
 ```
@@ -365,82 +365,6 @@ class RoomAnalytics {
    - **Enable chat**: Yes/no
    - **Room previews**: Show/hide video before joining
 
-### Embed in Website
-
-```html
-<!-- Simple iframe embed -->
-<iframe
-  src="https://YOURSPACE.signalwire.com/pvr/ROOM_TOKEN"
-  width="100%"
-  height="600px"
-  allow="camera;microphone"
-  style="border: none;"
-></iframe>
-```
-
-### Token Management
-
-```python
-from flask import Flask, request, jsonify
-import os
-import requests
-from requests.auth import HTTPBasicAuth
-import hashlib
-import time
-
-app = Flask(__name__)
-
-# Token cache to reduce API calls
-token_cache = {}
-
-@app.route('/api/get-video-token', methods=['POST'])
-def get_video_token():
-    data = request.json
-    room_name = data.get('room_name')
-    user_name = data.get('user_name')
-    is_moderator = data.get('is_moderator', False)
-
-    # Check cache (tokens valid for ~1 hour)
-    cache_key = f"{room_name}:{user_name}:{is_moderator}"
-    cached = token_cache.get(cache_key)
-
-    if cached and cached['expires'] > time.time():
-        return jsonify({"token": cached['token']})
-
-    # Generate new token
-    token_response = requests.post(
-        f"{os.getenv('SIGNALWIRE_SPACE_URL')}/api/video/room_tokens",
-        auth=HTTPBasicAuth(
-            os.getenv('SIGNALWIRE_PROJECT_ID'),
-            os.getenv('SIGNALWIRE_API_TOKEN')
-        ),
-        json={
-            "room_name": room_name,
-            "user_name": user_name,
-            "mod_permissions": is_moderator,
-            "permissions": [] if is_moderator else [
-                "room.self.audio_mute",
-                "room.self.video_mute",
-                "room.self.audio_unmute",
-                "room.self.video_unmute"
-            ]
-        }
-    )
-
-    if token_response.status_code == 200:
-        token = token_response.json()['token']
-
-        # Cache token
-        token_cache[cache_key] = {
-            'token': token,
-            'expires': time.time() + 3600  # 1 hour
-        }
-
-        return jsonify({"token": token})
-    else:
-        return jsonify({"error": "Failed to generate token"}), 500
-```
-
 ## Click-to-Call Widget Patterns
 
 ### Browser-Based Calling
@@ -535,20 +459,6 @@ response = requests.post(
         "enable_simulcast": True  # Adaptive quality
     }
 )
-```
-
-### Bandwidth Management
-
-```javascript
-// Client-side quality adaptation
-roomSession.on('network.quality', (quality) => {
-  if (quality === 'poor') {
-    // Reduce quality
-    roomSession.setVideoQuality('low');
-  } else if (quality === 'good') {
-    roomSession.setVideoQuality('high');
-  }
-});
 ```
 
 ### Recording Management
