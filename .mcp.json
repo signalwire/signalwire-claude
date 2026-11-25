@@ -1,0 +1,6 @@
+{
+  "signalwire": {
+    "type": "http",
+    "url": "https://mcp.signalwire.com/mcp"
+  }
+}

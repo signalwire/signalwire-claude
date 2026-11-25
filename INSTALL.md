@@ -42,6 +42,12 @@ The plugin also adds three commands. In Claude Code and Cowork, type them direct
 | `/signalwire:call-flow` | Writes a SWML call flow (IVR, routing, voicemail) |
 | `/signalwire:debug` | Diagnoses failed calls, missing webhooks, auth errors, and SWAIG problems |
 
+## The SignalWire MCP server
+
+The plugin bundles the [SignalWire MCP server](https://signalwire.com/docs/platform/mcp-server), which lets Claude search the docs, recommend a product, scaffold SWML and cXML, and troubleshoot errors. It needs no account or token. Claude Code connects it automatically. claude.ai and Cowork offer it as a connector that you turn on.
+
+To check it, ask Claude to run the SignalWire MCP server's `health` tool. A working connection returns a status of `ok`. To use the server in Cursor, VS Code, Codex, or another client without the plugin, follow the [docs page](https://signalwire.com/docs/platform/mcp-server).
+
 ## Updating
 
 In Claude Code, a marketplace install updates itself. Once a day the plugin checks its marketplace and installs a newer version if one has been published, which takes effect the next time you start Claude Code. It tells you the first time it runs and again whenever it updates itself.
