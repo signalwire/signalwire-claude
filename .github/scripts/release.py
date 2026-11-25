@@ -38,8 +38,8 @@ def bump(version: str, level: str) -> str:
 
 def level_from_labels(label_sets: list[list[str]]) -> str:
     """The biggest release:minor / release:major label across the merged PRs, else patch."""
-    found = {label.removeprefix("release:") for labels in label_sets for label in labels}
-    return max((lvl for lvl in LEVELS if lvl in found), key=LEVELS.index, default="patch")
+    found = {label for labels in label_sets for label in labels}
+    return max((lvl for lvl in LEVELS if f"release:{lvl}" in found), key=LEVELS.index, default="patch")
 
 
 def releasable(paths: list[str]) -> bool:

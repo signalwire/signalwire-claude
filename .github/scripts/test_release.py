@@ -34,6 +34,8 @@ def test_bump_rejects_non_semver():
     ([["type/bug"], []], "patch"),
     ([["release:minor"], ["type/bug"]], "minor"),
     ([["release:minor"], ["release:major"]], "major"),
+    ([["major"], ["minor"]], "patch"),
+    ([["severity:major"]], "patch"),
 ])
 def test_level_from_labels(label_sets, expected):
     assert release.level_from_labels(label_sets) == expected

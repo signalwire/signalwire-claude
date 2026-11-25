@@ -6,11 +6,12 @@
 # release tag, it opens a "Release vX.Y.Z" PR that bumps the version fields and
 # merges it, because main only takes changes through PRs. A merge with the
 # release:minor or release:major label picks a bigger bump than the default
-# patch. When the release PR lands, the tag job tags it and publishes a GitHub
-# release, which is when installs see the new version.
+# patch. Installs see the new version once the release PR lands on main. The
+# same run then tags that commit and publishes a GitHub release. It has to:
+# pushes made with GITHUB_TOKEN, like this merge, don't start workflow runs.
 #
-# A commit whose message starts with "Release v" is treated as a release, so
-# don't give other PRs a title like that.
+# If the release PR can't be merged, the run fails and the PR stays open for a
+# person to merge. The next run then tags that release when it finds it untagged.
 name: Release
 
 on:
@@ -28,7 +29,6 @@ env:
 
 jobs:
   release:
-    if: github.event_name == 'workflow_dispatch' || !startsWith(github.event.head_commit.message, 'Release v')
     runs-on: ubuntu-latest
     concurrency:
       group: release
@@ -57,6 +57,7 @@ jobs:
             sha=$(git log -1 --format=%H -G'"version"' -- .claude-plugin/plugin.json)
             git tag "${tag}" "${sha}"
             git push origin "${tag}"
+            gh release create "${tag}" --title "${tag}" --notes "Release ${tag}" --verify-tag
           fi
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
 
@@ -101,32 +102,13 @@ jobs:
           fi
 
           if ! gh pr merge "${pr}" --squash --delete-branch --subject "Release v${version} (#${pr})"; then
-            echo "::warning::Release PR #${pr} couldn't be merged automatically. Merge it by hand."
+            echo "::error::Release PR #${pr} couldn't be merged automatically. Merge it by hand."
+            exit 1
           fi
 
-  tag:
-    if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Release v')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: astral-sh/setup-uv@v6
-
-      - name: Tag the release and publish it
-        run: |
-          tag="v$(.github/scripts/release.py current)"
-          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
-            echo "${tag} already exists."
-            exit 0
-          fi
-          git tag "${tag}" "${GITHUB_SHA}"
-          git push origin "${tag}"
-          pr=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" --jq '.[0].number // empty')
-          if [ -n "${pr}" ]; then
-            gh pr view "${pr}" --json body --jq .body > notes.md
-          else
-            echo "Release ${tag}" > notes.md
-          fi
-          gh release create "${tag}" --title "${tag}" --notes-file notes.md --verify-tag
+          # Tag the merge commit and publish the release.
+          merged=$(gh pr view "${pr}" --json mergeCommit --jq .mergeCommit.oid)
+          git fetch -q origin "${merged}"
+          git tag "v${version}" "${merged}"
+          git push origin "v${version}"
+          gh release create "v${version}" --title "v${version}" --notes-file notes.md --verify-tag
