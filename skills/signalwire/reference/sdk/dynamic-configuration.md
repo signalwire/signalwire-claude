@@ -179,11 +179,11 @@ def on_swml_request(
 ```
 
 **Parameters:**
-- `request_data` - Request body data
+- `request_data` - Request body. Call details are under `call` (`call.from`, `call.call_id`).
 - `callback_path` - The callback path being processed
 - `request` - FastAPI Request object
 
-**Returns:** Dictionary with modifications or None
+**Returns:** Dictionary with modifications or None. In TypeScript, `onSwmlRequest` and `renderSwml` merge `global_data` keys into the agent's global data, replacing the value at each key. Other keys override AI config fields.
 
 **Example:**
 
