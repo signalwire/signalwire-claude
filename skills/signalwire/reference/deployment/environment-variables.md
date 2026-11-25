@@ -59,7 +59,7 @@ URLs with embedded credentials:
 https://admin:secretpassword@abc123.ngrok.io/agent
 ```
 
-If these are unset, the Python SDK generates a username (`signalwire`) and a new password on every startup. In TypeScript, when the password is generated, the user falls back to the agent's `name`. That pair is for development only. A restart changes the password, and calls already in progress fail their next function call and their post-prompt summary. Set a fixed pair in production.
+If `SWML_BASIC_AUTH_PASSWORD` is unset, the SDK generates a random password on each startup and keeps it only in memory. The startup log names the username and marks the credentials as generated. It does not include the password. The username is `SWML_BASIC_AUTH_USER` when set. Otherwise Python uses `signalwire` and TypeScript uses the agent's `name`. That pair is for development only. A restart changes the password, and calls already in progress fail their next function call and their post-prompt summary. Set both variables when you need the password, including in production.
 
 ### Request signatures and function tokens
 

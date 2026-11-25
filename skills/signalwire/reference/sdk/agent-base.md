@@ -32,7 +32,7 @@ class AgentBase(
 | `route` | str | `"/"` | HTTP endpoint path for this agent |
 | `host` | str | `"0.0.0.0"` | Host address to bind server |
 | `port` | int | `3000` | Port number for HTTP server |
-| `basic_auth` | tuple | `None` | `(username, password)` for HTTP basic auth. Leave unset and the SDK generates a development-only pair (username `signalwire`, new password each startup). A restart then fails the next function call and the post-prompt summary on calls already in progress. Set a fixed pair in production. |
+| `basic_auth` | tuple | `None` | `(username, password)` for HTTP basic auth. Leave the password unset and the SDK generates a random one each startup and keeps it in memory. The startup log names the username and marks the credentials as generated. It does not include the password. The default username is `signalwire` in Python and the agent's `name` in TypeScript, unless `SWML_BASIC_AUTH_USER` is set. A restart then fails the next function call and the post-prompt summary on calls already in progress. Set a fixed pair in production. |
 | `signing_key` | str | `None` | Project signing key. TypeScript: `signingKey`. Or set `SIGNALWIRE_SIGNING_KEY`. With a key, unsigned or mis-signed POSTs to the SWML, SWAIG, and post-prompt endpoints get 403. Without one, the agent logs a startup warning and accepts unsigned requests. |
 | `use_pom` | bool | `True` | Enable Prompt Object Model for structured prompts |
 | `swaig_secret` | str | `None` | Secret for function tokens (the `__token` query parameter on a secure function `web_hook_url`) and the post-prompt token. TypeScript: `swaigSecret`. Or set `SIGNALWIRE_SWAIG_SECRET`. Without a fixed secret, each process generates its own and tokens break across restarts and replicas. |
@@ -548,6 +548,8 @@ def on_swml_request(self, request_data=None, callback_path=None, request=None):
     if caller in self.vip_numbers:
         self.prompt_add_section("VIP", "This is a VIP customer.")
 ```
+
+In TypeScript, `onSwmlRequest` and `renderSwml` merge `global_data` keys into the agent's global data, replacing the value at each key. Other keys override AI config fields. Read the caller from `call.from` (`call.call_id` is the call id).
 
 ### on_summary()
 
