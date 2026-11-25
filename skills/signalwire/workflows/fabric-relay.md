@@ -551,7 +551,9 @@ for addr in response.json()["data"]:
     print(f"{addr['name']}: {addr['type']}")
 ```
 
-A Subscriber client lists the addresses it can reach at `GET /api/fabric/subscriber/addresses` and fetches one at `GET /api/fabric/subscriber/addresses/{id}`, with a Subscriber Access Token. Those operations were previously served at `/api/fabric/addresses` and `/api/fabric/addresses/{id}`. The old paths still answer SAT requests with the same response. Pagination links on the list keep the old path. Both add `Deprecation: true` and a `Link` header naming `/api/fabric/subscriber/addresses` as the successor. No removal date is set.
+A Subscriber client lists the addresses it can reach at `GET /api/fabric/subscriber/addresses` and fetches one at `GET /api/fabric/subscriber/addresses/{id}`, with a Subscriber Access Token sent as a Bearer token. These routes reject a project API token. Those operations were previously served at `/api/fabric/addresses` and `/api/fabric/addresses/{id}`. The old paths still answer SAT requests with the same response. Pagination links on the list keep the old path. Both add `Deprecation: true` and a `Link` header naming `/api/fabric/subscriber/addresses` as the successor. No removal date is set.
+
+A SIP address's SIP domain is the Space name, a hyphen (two hyphens in some Spaces), and the Domain's name, or `public` or `private` for the built-in Domains. That label can be at most 63 characters. `POST /api/fabric/sip_addresses` and `PATCH /api/fabric/sip_addresses/{id}` return `422` with code `domain_too_long` on `context_id` when the Domain's name makes the label longer, unless this Space already uses that SIP domain. Another Space already using it returns `domain_not_available` on `context_id`.
 
 ### RELAY event fields
 

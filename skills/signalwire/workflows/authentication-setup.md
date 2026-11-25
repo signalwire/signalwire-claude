@@ -243,6 +243,8 @@ When creating API tokens in the Dashboard, you can limit scopes:
 - **fax**: Fax APIs
 - **chat**: Chat APIs
 
+An endpoint that names more than one scope accepts a token with any one of those scopes. Phone number lookup requires Numbers. Domain applications require Voice. Campaign Registry requires Messaging. WhatsApp message templates require Messaging. SignalWire's multi-factor authentication endpoints accept Voice, Messaging, or Fax.
+
 ## Security Best Practices
 
 1. **Never expose API tokens in client-side code** - Only Project ID and Room Tokens are safe for browsers

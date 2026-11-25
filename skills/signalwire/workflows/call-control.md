@@ -457,7 +457,7 @@ GET https://{space}.signalwire.com/api/voice/logs
 
 Each log entry includes the call's `status` (e.g. `in-progress`, `completed`) and an `id` — that `id` is the call ID accepted by the Send Call Commands API (`POST /api/calling/calls`), including `calling.end`.
 
-The endpoint supports only date filters, pagination, and an `include_deleted` flag — no server-side status filter — so filter on `status` client-side.
+There is no server-side status filter, so filter on `status` client-side. Voice, message, fax, video, and conference log lists share one date-filter and paging contract, and results are newest first. `created_before`, `created_on`, and `created_after` accept a date (`YYYY-MM-DD`), an ISO 8601 timestamp, or Unix time in seconds. A date is midnight UTC. `created_before` leaves that day out, and `created_after` includes it. `created_on` selects that whole UTC day; a timestamp selects the UTC day that contains it. A timestamp with no `Z` or offset is read as UTC. `page_size` defaults to 50 and the maximum is 1000. A `page_number` above 0 also requires `page_token`. Follow `links.next` or `links.prev`; each link carries the filters and the token. Logs created before the start of the UTC day one year ago are never returned. A `created_before`, `created_on`, or `created_after` earlier than that returns `422` with code `exceeds_history_logs_limit`. Voice and message logs ignore `include_deleted`. Fax, video, and conference logs honor it, defaulting to false.
 
 ```python
 import requests
@@ -468,8 +468,8 @@ auth = HTTPBasicAuth(project_id, api_token)
 space_url = "https://your-space.signalwire.com"
 
 # List voice logs; filter client-side (no server-side status filter).
-# NOTE: results are paginated (page_size defaults to 50) —
-# iterate pages for a complete sweep
+# NOTE: results are paginated (page_size defaults to 50, max 1000) —
+# follow links.next; a page_number above 0 also requires page_token
 logs = requests.get(f"{space_url}/api/voice/logs", auth=auth).json()['data']
 
 # Live = any non-terminal status; stale = live AND older than the
