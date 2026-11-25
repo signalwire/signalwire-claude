@@ -8,7 +8,7 @@ Send and receive SMS, MMS, and RCS messages using SignalWire REST APIs, Realtime
 
 ## RCS
 
-RCS is how a branded agent (name, logo, color, and description) sends plain text or rich content on the same `POST /api/messaging/messages` endpoint as SMS and MMS. The message is RCS when `from` is the agent's ID, a UUID shown on the agent's page in the Dashboard. The Relay client in the Server SDKs sends plain-text RCS: pass that ID as the sender and the text as `body`. Rich content and media need the REST API with `content`. The rules below apply to Relay sends too.
+RCS is how a branded agent (name, logo, color, and description) sends plain text or rich content on the same `POST /api/messaging/messages` endpoint as SMS and MMS. The message is RCS when `from` is the agent's ID, a UUID shown on the agent's page in the Dashboard. The Relay client in the Server SDKs sends plain-text RCS: pass that ID as the sender and the text as `body`. Rich content and media need the REST API with `content`. The agent-status, US-recipient, and no-`media` rules below apply to Relay sends too, but a rejected Relay send fails with `400` `Bad request` and per-field messages in `data.user_errors`, not a `422` with the `code` values in the table.
 
 Register the agent under **Messaging Campaigns → RCS Agents → Add New**. That menu appears only after Support enables RCS agent registration for the Space.
 
