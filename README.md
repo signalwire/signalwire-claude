@@ -29,7 +29,7 @@ See [INSTALL.md](INSTALL.md) for updating, upgrading from `signalwire-builder`, 
 
 ## What's Included
 
-### Core Workflows (24 files)
+### Core Workflows
 
 Each workflow combines technical API documentation with practical implementation guidance:
 
@@ -185,35 +185,35 @@ signalwire-claude/
 ├── skills/
 │   └── signalwire/                    # SignalWire skill
 │       ├── SKILL.md                   # Main entry point
-│       ├── workflows/                 # 24 workflow files
-│       │   ├── inbound-call-handling.md       # SWML, loops, IVR
-│       │   ├── video.md                       # WebRTC, Browser SDK v4
-│       │   ├── messaging.md                   # SMS, Messaging SWML
+│       ├── workflows/                 # Workflow guides
+│       │   ├── ai-agent-chat.md               # Text chat, JSON-RPC
+│       │   ├── ai-agent-debug-webhooks.md     # Monitoring
+│       │   ├── ai-agent-deployment.md         # Server/serverless
+│       │   ├── ai-agent-error-handling.md     # Error patterns
+│       │   ├── ai-agent-functions.md          # SWAIG, MCP, includes
+│       │   ├── ai-agent-patterns.md           # Common flows
+│       │   ├── ai-agent-prompting.md          # Prompting, inner dialog
+│       │   ├── ai-agent-sdk-basics.md         # Ten-language SDK
+│       │   ├── ai-agent-security.md           # Signing, redaction
+│       │   ├── ai-agent-testing.md            # Testing patterns
+│       │   ├── ai-agent-turn-taking.md        # End-of-turn detection
+│       │   ├── ai-sidecar.md                  # Live agent coaching
+│       │   ├── authentication-setup.md        # Auth, MFA, security
 │       │   ├── call-control.md                # Transfers, recording
 │       │   ├── fabric-relay.md                # Calling commands, subscribers
-│       │   ├── webhooks-events.md             # Signatures, analytics
+│       │   ├── inbound-call-handling.md       # SWML, loops, IVR
+│       │   ├── messaging.md                   # SMS, Messaging SWML
 │       │   ├── number-management.md           # Compliance
-│       │   ├── ai-agent-functions.md          # SWAIG, MCP, includes
-│       │   ├── swml-methods.md                # Full method catalog
-│       │   ├── ai-agent-deployment.md         # Server/serverless
 │       │   ├── outbound-calling.md            # Dialer, CRM, reminders
-│       │   ├── ai-agent-prompting.md          # Prompting, inner dialog
-│       │   ├── authentication-setup.md        # Auth, MFA, security
-│       │   ├── ai-agent-sdk-basics.md         # Ten-language SDK
-│       │   ├── voice-ai.md                    # AI navigation hub
-│       │   ├── ai-agent-security.md           # Signing, redaction
-│       │   ├── ai-agent-patterns.md           # Common flows
-│       │   ├── ai-agent-error-handling.md     # Error patterns
-│       │   ├── ai-agent-testing.md            # Testing patterns
-│       │   ├── ai-agent-debug-webhooks.md     # Monitoring
-│       │   ├── ai-sidecar.md                  # Live agent coaching
+│       │   ├── swml-methods.md                # Full method catalog
 │       │   ├── swsh-cli.md                    # Account operations
-│       │   ├── ai-agent-turn-taking.md        # End-of-turn detection
-│       │   └── ai-agent-chat.md               # Text chat, JSON-RPC
+│       │   ├── video.md                       # WebRTC, Browser SDK v4
+│       │   ├── voice-ai.md                    # AI navigation hub
+│       │   └── webhooks-events.md             # Signatures, analytics
 │       └── reference/                 # SDK API docs (loaded only when needed)
-│           ├── sdk/                   # 12 files: AgentBase, SWAIG, etc.
-│           ├── deployment/            # 3 files: Serverless, env vars
-│           └── examples/              # 6 complete agent examples
+│           ├── sdk/                   # AgentBase, SWAIG, etc.
+│           ├── deployment/            # Serverless, env vars
+│           └── examples/              # Complete agent examples
 ├── README.md                          # This file
 ├── INSTALL.md                         # Installation guide
 └── LICENSE

@@ -14,7 +14,7 @@ Use the signalwire skill. The workflow files named below are in that skill's `wo
 - AI agent doesn't call a function, times out, or says the wrong thing: `workflows/ai-agent-debug-webhooks.md`, then `workflows/ai-agent-functions.md`
 - Agent interrupts callers or leaves dead air: `workflows/ai-agent-turn-taking.md`
 - Call drops, loops, or ends up in the wrong place: `workflows/inbound-call-handling.md` and `workflows/call-control.md`
-- Messages fail or get filtered: `workflows/messaging.md`, including Campaign Registry status
+- Messages fail or get filtered: `workflows/messaging.md` (it covers Campaign Registry status)
 
 Check first for the problems the skill flags as common: a LAML/CXML endpoint where the modern REST API or SWML belongs, a webhook URL that isn't publicly reachable over HTTPS, and a SWAIG response in the wrong shape.
 
