@@ -261,11 +261,12 @@ async def handle_call(call):
     # Collect input
     result = await call.prompt_tts(
         'Press 1 to continue',
-        {'digits': {'max': 1, 'digit_timeout': 10}},
+        {'digits': {'max': 1, 'digit_timeout': 5}, 'initial_timeout': 10},
     )
     collected = await result.wait()
+    digits = collected.params.get('result', {}).get('params', {}).get('digits', '')
 
-    if collected.params.get('result', {}).get('digits') == '1':
+    if digits == '1':
         # Transfer to agent
         caller = call.device.get('params', {}).get('from_number')
         await call.connect(devices=[[{
@@ -292,7 +293,7 @@ async def handle_call(call):
         if event.params.get("state") == "finished":
             print(f"Voicemail recorded: {event.params['url']}")
 
-    await call.hangup()
+        await call.hangup()
 
 client.run()
 ```
