@@ -309,10 +309,7 @@ def configure_business_number(number_sid):
         # Messaging configuration
         "sms_url": "https://api.example.com/webhooks/incoming-sms",
         "sms_method": "POST",
-        "sms_fallback_url": "https://api.example.com/webhooks/sms-fallback",
-
-        # Emergency settings (E911)
-        "emergency_address_sid": "AD1234567890abcdef1234567890abcdef"
+        "sms_fallback_url": "https://api.example.com/webhooks/sms-fallback"
     }
 
     response = requests.put(
@@ -360,50 +357,51 @@ else:
 Required for voice-capable numbers in the US.
 
 ```python
-# Create emergency address
+# Create an emergency address. `label` is the caller name the dispatcher sees.
 address_response = requests.post(
     f"{space_url}/api/relay/rest/addresses",
     auth=HTTPBasicAuth(project_id, api_token),
     json={
-        "friendly_name": "Office Address",
-        "customer_name": "Acme Corp",
-        "street": "123 Main St",
+        "label": "Office Address",
+        "first_name": "Acme",
+        "last_name": "Corp",
+        "street_number": "123",
+        "street_name": "Main St",
         "city": "New York",
-        "region": "NY",
+        "state": "NY",
         "postal_code": "10001",
-        "iso_country": "US"
+        "country": "US",
+        "emergency_enabled": True
     }
 )
 
-address_sid = address_response.json()['sid']
+address_id = address_response.json()["id"]
 
-# Associate with number
-requests.put(
-    f"{space_url}/api/relay/rest/phone_numbers/{number_sid}",
+# Assign it to the number
+requests.post(
+    f"{space_url}/api/relay/rest/phone_numbers/{number_sid}/e911_address",
     auth=HTTPBasicAuth(project_id, api_token),
-    json={
-        "emergency_address_sid": address_sid
-    }
+    json={"e911_address_id": address_id}
 )
 ```
 
-**IMPORTANT**: E911 registration may take 24-48 hours to activate.
+**IMPORTANT**: `e911_status` starts as `pending` and becomes `active` once the carrier confirms, typically within a few minutes. Poll the number. Status changes do not send a webhook.
 
 ## Caller ID
 
 ### Setting Caller ID Name (CNAM)
 
 ```python
-response = requests.put(
-    f"{space_url}/api/relay/rest/phone_numbers/{number_sid}",
+response = requests.post(
+    f"{space_url}/api/relay/rest/phone_numbers/{number_sid}/cnam",
     auth=HTTPBasicAuth(project_id, api_token),
     json={
-        "friendly_name": "Acme Corp Support"  # This becomes the CNAM
+        "name": "Acme Support"
     }
 )
 ```
 
-**Note**: CNAM updates may take 24-72 hours to propagate across carriers.
+**Note**: A new name is reviewed before callers see it. After approval it is the number's `cnam`. Propagation takes up to 48 hours. The normalized name is at most 15 characters. Updating the phone number's `name` only renames it in your project.
 
 ### STIR/SHAKEN attestation
 
@@ -650,9 +648,9 @@ def get_number_usage(number_sid):
 - Check for carrier blocks
 
 **E911 not registered**:
-- Verify address is validated
-- Wait 24-48 hours for activation
-- Check address format matches requirements
+- Verify the address was created with `emergency_enabled` and validated
+- Poll the number until `e911_status` is `active` (typically a few minutes)
+- Check the address fields match the create-address request
 
 ## Campaign Registry for Messaging (A2P 10DLC)
 
@@ -902,27 +900,30 @@ def setup_business_number(phone_number, campaign_id=None):
         json=config
     )
 
-    # Register E911 address
+    # Register an E911 address and assign it to the number
     address_response = requests.post(
         f"{space_url}/api/relay/rest/addresses",
         auth=HTTPBasicAuth(project_id, api_token),
         json={
-            "friendly_name": "Office Address",
-            "customer_name": "Acme Corp",
-            "street": "123 Main St",
+            "label": "Office Address",
+            "first_name": "Acme",
+            "last_name": "Corp",
+            "street_number": "123",
+            "street_name": "Main St",
             "city": "Anytown",
-            "region": "CA",
+            "state": "CA",
             "postal_code": "90210",
-            "iso_country": "US"
+            "country": "US",
+            "emergency_enabled": True
         }
     )
 
-    address_sid = address_response.json()['sid']
+    address_id = address_response.json()["id"]
 
-    requests.put(
-        f"{space_url}/api/relay/rest/phone_numbers/{number_sid}",
+    requests.post(
+        f"{space_url}/api/relay/rest/phone_numbers/{number_sid}/e911_address",
         auth=HTTPBasicAuth(project_id, api_token),
-        json={"emergency_address_sid": address_sid}
+        json={"e911_address_id": address_id}
     )
 
     print(f"Number {phone_number} fully configured")

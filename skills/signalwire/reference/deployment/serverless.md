@@ -561,6 +561,8 @@ def main(req):
 DataMap enables SWAIG functions that execute on SignalWire servers without requiring webhook callbacks - ideal for reducing serverless complexity:
 
 ```python
+import os
+
 from signalwire import AgentBase
 from signalwire import DataMap
 from signalwire import FunctionResult
@@ -593,7 +595,7 @@ class APIAgent(AgentBase):
             .webhook(
                 "GET",
                 "https://api.orders.com/status/${enc:args.order_id}",
-                headers={"Authorization": "Bearer ${env.API_KEY}"}
+                headers={"Authorization": f"Bearer {os.environ['API_KEY']}"}
             )
             .output(FunctionResult(
                 "Order ${input.args.order_id}: ${status}. "
@@ -638,8 +640,9 @@ ${field}                   # Webhook response field at the root (webhook output,
 ${arr[0]}                  # Array element in the webhook response (webhook output, webhook expressions, foreach)
 ${global_data.key}         # Global session data
 ${meta_data.key}           # Call metadata
-${env.VAR_NAME}            # Environment variable
 ```
+
+DataMap has no `env` namespace. A header is sent as the text you put in it, so read the secret in code and put that value in the header.
 
 ---
 
