@@ -331,7 +331,7 @@ SignalWire's barge handling:
 - Provides more pertinent answers
 - Two logs available: raw and processed
 
-This holds while transparent barge is on, which is the default. Setting `barge_match_string` turns it off.
+This holds while transparent barge is on, which is the default. Setting `barge_match_string` turns it off, even when `transparent_barge` is set to `true`.
 
 See [Interruptions (barge-in)](ai-agent-turn-taking.md#interruptions-barge-in).
 
