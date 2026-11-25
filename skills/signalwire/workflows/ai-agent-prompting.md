@@ -533,7 +533,7 @@ Do NOT: Make promises about timelines or refunds
 ```python
 @AgentBase.tool(
     name="check_inventory",
-    description="Call when the caller asks whether a product is in stock or how many are on hand. For the price, call check_price.",
+    description="Call when the caller asks whether a product is in stock or how many are on hand. For the price, call check_price (a separate tool).",
     parameters={
         "product_id": {
             "type": "string",

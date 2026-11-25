@@ -376,7 +376,7 @@ def book_appointment(self, args, raw_data):
 
 ## Multi-Step Flow Pattern
 
-Return one step per call and keep the position in `global_data` (a model given the whole plan rushes it or loses its place).
+Return one step per call and keep the position in `global_data` (a model given the whole plan rushes it or loses its place). This is the flow's own progress, written by its handlers; it is not a stand-in for the agent's current step.
 
 Guide user through a process:
 
