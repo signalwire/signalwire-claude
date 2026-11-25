@@ -238,12 +238,13 @@ await roomSession.join();
 
 When creating API tokens in the Dashboard, you can limit scopes:
 - **calling**: Voice/telephony APIs
+- **numbers**: Phone number APIs
 - **messaging**: SMS/MMS APIs
 - **video**: Video room APIs
 - **fax**: Fax APIs
 - **chat**: Chat APIs
 
-An endpoint that names more than one scope accepts a token with any one of those scopes. Phone number lookup requires Numbers. Domain applications require Voice. Campaign Registry requires Messaging. WhatsApp message templates require Messaging. SignalWire's multi-factor authentication endpoints accept Voice, Messaging, or Fax.
+An endpoint that names more than one scope accepts a token with any one of those scopes. The Dashboard labels `calling` as Voice. Phone number lookup requires `numbers`. Domain applications require `calling`. Campaign Registry requires `messaging`. WhatsApp message templates require `messaging`. SignalWire's multi-factor authentication endpoints accept `calling`, `messaging`, or `fax`. A token without a required scope gets `401` with a plain-text `Unauthorized` body.
 
 ## Security Best Practices
 
