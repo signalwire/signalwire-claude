@@ -7,7 +7,7 @@ Build a SignalWire voice AI agent. The user described it as: $ARGUMENTS
 
 If that description is empty, ask what the agent is for, what it needs to look up or change (these become SWAIG functions), and how a call should end or be transferred. Ask only for what you can't reasonably default.
 
-Use the signalwire skill. Start from `workflows/voice-ai.md` and pick the architecture from its decision tree: plain SWML `ai` when the agent only talks, SWAIG functions or DataMap when it needs data, the Server SDK when it needs real logic. Say which one you picked and why in one sentence.
+Use the signalwire skill. The workflow files named below are in that skill's `workflows/` folder. Start from `workflows/voice-ai.md` and pick the architecture from its decision tree: plain SWML `ai` when the agent only talks, SWAIG functions or DataMap when it needs data, the Server SDK when it needs real logic. Say which one you picked and why in one sentence.
 
 Then produce:
 

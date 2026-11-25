@@ -7,7 +7,7 @@ Diagnose a SignalWire problem. The user reported: $ARGUMENTS
 
 If that is empty, ask for the symptom, the exact error text or HTTP status, and a call or message ID if they have one.
 
-Use the signalwire skill. Match the symptom to a workflow before guessing:
+Use the signalwire skill. The workflow files named below are in that skill's `workflows/` folder. Match the symptom to a workflow before guessing:
 
 - 401/403, or wrong credentials or Space URL: `workflows/authentication-setup.md`
 - Webhook or status callback never arrives or arrives malformed: `workflows/webhooks-events.md`
