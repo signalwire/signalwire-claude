@@ -60,31 +60,44 @@ Response:
 }
 ```
 
-### Creating a Subscriber (Address)
+### Creating a Subscriber
 
-A subscriber creates a callable address for your agent:
+Create a Subscriber with `POST /api/fabric/resources/subscribers`. `email` is required. The response has no `address` field; the first alias is private and comes from the display name, or from the email local part when there is none, so `john.doe@example.com` is reachable at `/private/john-doe`.
 
 ```bash
-curl -X POST "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/fabric/subscribers" \
+curl -X POST "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/fabric/resources/subscribers" \
   -u "${SIGNALWIRE_PROJECT_ID}:${SIGNALWIRE_TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "my-agent",
-    "email": "my-agent@example.com",
-    "external_swml_handler": {
-        "id": "HANDLER_ID_FROM_ABOVE"
-    }
+    "email": "john.doe@example.com"
   }'
 ```
 
-Response includes your agent's address:
+With no `display_name` in the request, the Resource name is the email local part and `subscriber.display_name` is `null`. The sample below shows the documented response fields.
+
 ```json
 {
-    "id": "subscriber-id",
-    "name": "my-agent",
-    "address": "/public/my-agent"
+    "id": "d369a402-7b43-4512-8735-9d5e1f387814",
+    "project_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "display_name": "john.doe",
+    "type": "subscriber",
+    "created_at": "2024-05-06T12:20:00Z",
+    "updated_at": "2024-05-06T12:20:00Z",
+    "subscriber": {
+        "id": "7c2e91af-3b14-4d6a-9e08-21f4c8a95b70",
+        "email": "john.doe@example.com",
+        "first_name": null,
+        "last_name": null,
+        "display_name": null,
+        "job_title": null,
+        "time_zone": "GMT",
+        "country": null,
+        "company_name": null
+    }
 }
 ```
+
+Use the top-level `id` for follow-up calls.
 
 ### Using Basic Auth with Fabric
 
@@ -143,7 +156,7 @@ Use the SignalWire JavaScript SDK to connect:
 
     <script>
         const SUBSCRIBER_TOKEN = 'YOUR_SUBSCRIBER_TOKEN';
-        const AGENT_ADDRESS = '/public/my-agent';
+        const AGENT_ADDRESS = '/public/support'; // a public alias of the Resource you want the guest to dial. An external SWML handler already has a public alias when it is created
 
         let client = null;
         let call = null;
