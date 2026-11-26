@@ -7,14 +7,14 @@ Diagnose a SignalWire problem. The user reported: $ARGUMENTS
 
 If that is empty, ask for the symptom, the exact error text or HTTP status, and a call or message ID if they have one.
 
-Use the signalwire skill. Match the symptom to a workflow before guessing:
+Use the signalwire skill. The workflow files named below are in that skill's `workflows/` folder. Match the symptom to a workflow before guessing:
 
-- 401/403, or wrong credentials or Space URL: Authentication & Setup
-- Webhook or status callback never arrives or arrives malformed: Webhooks & Events
-- AI agent doesn't call a function, times out, or says the wrong thing: AI Agent Debug Webhooks, then AI Agent Functions
-- Agent interrupts callers or leaves dead air: AI Agent Turn Taking
-- Call drops, loops, or ends up in the wrong place: Inbound Call Handling and Call Control
-- Messages fail or get filtered: Messaging, including Campaign Registry status
+- 401/403, or wrong credentials or Space URL: `workflows/authentication-setup.md`
+- Webhook or status callback never arrives or arrives malformed: `workflows/webhooks-events.md`
+- AI agent doesn't call a function, times out, or says the wrong thing: `workflows/ai-agent-debug-webhooks.md`, then `workflows/ai-agent-functions.md`
+- Agent interrupts callers or leaves dead air: `workflows/ai-agent-turn-taking.md`
+- Call drops, loops, or ends up in the wrong place: `workflows/inbound-call-handling.md` and `workflows/call-control.md`
+- Messages fail or get filtered: `workflows/messaging.md` (it covers Campaign Registry status)
 
 Check first for the problems the skill flags as common: a LAML/CXML endpoint where the modern REST API or SWML belongs, a webhook URL that isn't publicly reachable over HTTPS, and a SWAIG response in the wrong shape.
 
