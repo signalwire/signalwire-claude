@@ -97,7 +97,7 @@ Barge-in is decided by the platform from the speech events, before the model see
 
 `static_greeting_no_barge: true` stops speech from interrupting the static greeting; DTMF still does. Without it, any speech over a static greeting interrupts it, ignoring `barge_min_words` and `barge_match_string`. A greeting the model generates follows the normal barge filters.
 
-## Latency Is a Sum
+## Tool Turns and Turn Settings
 
 Tool turns are the ones that feel slow, because the agent goes quiet while the tool runs. Per-function `fillers` are a per-language dict. They play when the tool is called and cover only that moment. For a long call use a wait script or a looped `wait_file`. Neither makes the tool faster.
 
@@ -108,7 +108,7 @@ Turn settings belong in code. `end_of_speech_timeout` is how much silence closes
 ## Gotchas
 
 - **A veto can silently never hold.** The neural vetoes depend on model bundles on the node handling the call. When a bundle is missing, that veto never holds and nothing reports an error. Describe holds as what the platform does, not as a guarantee: an agent that collects a phone number correctly only because the digit hold caught the pause between groups will sometimes fail. Validate the collected value in code and ask again.
-- **The vetoes run only with turn detection on.** With `turn_detection: off`, the silence timer alone ends the turn, so the digit and spelling holds don't apply.
+- **The vetoes run only with turn detection on.** With `turn_detection: off`, the silence timer alone ends the turn, and none of the holds above apply.
 
 ## Related
 

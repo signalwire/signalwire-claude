@@ -45,6 +45,7 @@ HTTP Basic Auth with Project ID and API Token (see [Authentication](authenticati
 - **params.status_url**: Webhook URL for status updates
 - **params.fallback_url**: Fallback SWML if primary URL fails
 - **params.timeout**: Ring timeout in seconds
+- **Call length**: `max_duration` is not a dial parameter. See [Gotchas](#gotchas).
 
 ### Response
 
@@ -822,9 +823,9 @@ def run_outbound_campaign(campaign_id):
 
 ## Gotchas
 
-- **Cap call length in the SWML, not the `dial` request.** `max_duration` is not a `dial` parameter. Set `answer.max_duration` on long-running and AI calls, because the Space has no duration or spend cap of its own: see [Voice AI: Cost Guardrails](voice-ai.md#cost-guardrails).
+- **`answer.max_duration` doesn't cap an outbound call.** `answer` ignores its parameters on an outbound leg, and `max_duration` is not a `dial` parameter, so an outbound call runs until the 4-hour platform limit unless something ends it. On an AI call, set `params.hard_stop_time` on the `ai` method to a whole number of seconds (for example `1200`) and put a `hangup` after `ai`. The Space has no duration or spend cap of its own: see [Voice AI: Cost Guardrails](voice-ai.md#cost-guardrails).
 - **1 CPS covers SIP and every project.** Outbound calls are dialed at 1 call per second across the whole Space, for PSTN and SIP alike. Calls past that are queued, and a call placed while the queue is full gets a failed response, so pace locally and treat that failure as retryable. There is no per-number limit and no inbound rate limit. Contact SignalWire to raise the limit.
-- **Relay device cap.** Relay `dial` and `call.connect` share the 20-destination cap: see [SWML Methods: Gotchas](swml-methods.md#gotchas).
+- **Relay device cap.** Relay `dial` and `call.connect` have the same 20-device cap as SWML `connect`: see [SWML Methods: Gotchas](swml-methods.md#gotchas).
 
 ## Next Steps
 
