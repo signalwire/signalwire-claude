@@ -20,8 +20,8 @@ See [INSTALL.md](INSTALL.md) for updating, upgrading from `signalwire-builder`, 
 - **Broad API Coverage**: SignalWire REST APIs, the calling commands endpoint, SWML (calling *and* messaging), the AI chat API, Relay, Server SDKs, Browser SDK v4, and the Video API — excludes deprecated LAML/CXML
 - **Reads the Live Docs**: The skill knows SignalWire's docs are machine-readable (`.md` suffix, per-product `llms.txt` indexes) and fetches the current page when an exact parameter, default, or endpoint path matters
 - **Ahead of the Docs Where It Counts**: Turn-taking behavior, `ai_sidecar` constraints, and SWAIG traps are documented from verified platform behavior in places the published docs are incomplete or wrong — and marked as such
-- **Practical Production Knowledge**: Best practices, patterns, and anti-patterns from 89 SignalWire training videos
-- **Ten-Language SDK**: One unified package per language covering AI Agents + Relay + REST; Python and TypeScript examples throughout
+- **Practical Production Knowledge**: Best practices, patterns, and anti-patterns from SignalWire training sessions
+- **One SDK Per Language**: One unified package per language covering AI Agents + Relay + REST; Python and TypeScript examples throughout
 - **Account Operations, Not Just Code**: SWSH CLI coverage, so "how do I change X on my account" has a one-line answer
 - **Workflow-Organized**: Find what you need by developer workflow (calling, messaging, video, AI, etc.)
 - **Production-Ready Code**: Complete working examples with error handling and security best practices
@@ -29,37 +29,37 @@ See [INSTALL.md](INSTALL.md) for updating, upgrading from `signalwire-builder`, 
 
 ## What's Included
 
-### Core Workflows (24 files, 17,100+ lines of documentation)
+### Core Workflows
 
 Each workflow combines technical API documentation with practical implementation guidance:
 
 **Telephony Core:**
-1. **Authentication & Setup** - Credentials, MFA patterns, metadata for security, token management
-2. **Outbound Calling** - REST API, CRM integration, appointment reminders, healthcare workflows
-3. **Inbound Call Handling** - SWML verb reference, loop protection, variable management, IVR patterns
-4. **Call Control** - Context-aware transfers, screen pop, recording best practices, conference management
-5. **SWML Method Reference** - Full method catalog: queuing, conferencing, AMD, fax, transcription, streaming, taps, payment, control flow, and Messaging SWML
-6. **Messaging** - SMS/MMS, Messaging SWML (`reply`), Campaign Registry, templates, opt-in/opt-out
-7. **Video** - WebRTC integration, room management, Browser SDK v4, click-to-call widgets
-8. **Fabric & Relay** - Calling commands over HTTP, subscribers, resource architecture, context routing
-9. **Webhooks & Events** - Signature verification, post-prompt analytics, webhook testing, transcription
-10. **Number Management** - Campaign Registry compliance, number association, bulk management
-11. **SWSH CLI** - Operating on an account from the command line; WireStarter for local development
+- `workflows/authentication-setup.md` - Credentials, MFA patterns, metadata for security, token management
+- `workflows/outbound-calling.md` - REST API, CRM dialer patterns, appointment reminders, click-to-call
+- `workflows/inbound-call-handling.md` - Core SWML methods, loop protection, variable management, IVR patterns
+- `workflows/call-control.md` - Context-aware transfers, screen pop, recording best practices, conference management
+- `workflows/swml-methods.md` - Full method catalog: queuing, conferencing, AMD, fax, transcription, streaming, taps, payment, control flow, and Messaging SWML
+- `workflows/messaging.md` - SMS/MMS/RCS, Messaging SWML (`reply`), Campaign Registry, templates, opt-in/opt-out
+- `workflows/video.md` - WebRTC integration, room management, Browser SDK v4, click-to-call widgets
+- `workflows/fabric-relay.md` - Calling commands over HTTP, subscribers, resource architecture, context routing
+- `workflows/webhooks-events.md` - Signature verification, post-prompt analytics, webhook testing, transcription
+- `workflows/number-management.md` - Campaign Registry compliance, number association, bulk management
+- `workflows/swsh-cli.md` - Operating on an account from the command line; WireStarter for local development
 
 **AI Voice Agents (Voice AI):**
-- **Voice AI Overview** - Navigation hub and decision guide for AI agents
-- **AI Agent SDK Basics** - Server SDK across ten languages, installation, tool decorator
-- **AI Agent Prompting** - Best practices, RISE-M framework, inner dialog, anti-patterns
-- **AI Agent Functions** - SWAIG patterns, MCP tool servers, remote includes, DataMap
-- **AI Agent Turn Taking** - How end-of-turn is decided, and the one knob worth tuning
-- **AI Agent Chat** - Reaching the same agents by text over JSON-RPC
-- **AI Sidecar** - Real-time coaching for a human agent; observes without ever speaking
-- **AI Agent Deployment** - Traditional server, Docker, serverless (Lambda/GCF/Azure)
-- **AI Agent Patterns** - Common reusable flows (data lookup, confirmation, MFA)
-- **AI Agent Error Handling** - Robust error handling patterns
-- **AI Agent Security** - Request signing, content redaction, input validation, secrets management
-- **AI Agent Testing** - swaig-test CLI, pytest patterns, integration testing
-- **AI Agent Debug Webhooks** - Real-time monitoring and debugging
+- `workflows/voice-ai.md` - Navigation hub and decision guide for AI agents
+- `workflows/ai-agent-sdk-basics.md` - One SDK per language, installation, tool decorator
+- `workflows/ai-agent-prompting.md` - Best practices, RISE-M framework, inner dialog, anti-patterns
+- `workflows/ai-agent-functions.md` - SWAIG patterns, MCP tool servers, remote includes, DataMap
+- `workflows/ai-agent-turn-taking.md` - How end-of-turn is decided, and the one knob worth tuning
+- `workflows/ai-agent-chat.md` - Reaching the same agents by text over JSON-RPC
+- `workflows/ai-sidecar.md` - Real-time coaching for a human agent; observes without ever speaking
+- `workflows/ai-agent-deployment.md` - Traditional server, Docker, serverless (Lambda/GCF/Azure)
+- `workflows/ai-agent-patterns.md` - Reusable flows: data lookup, confirmation, transfer with context
+- `workflows/ai-agent-error-handling.md` - Timeout handling, validation errors, rate limits, escalation, logging
+- `workflows/ai-agent-security.md` - Request signing, content redaction, input validation, secrets management
+- `workflows/ai-agent-testing.md` - swaig-test CLI, pytest patterns, integration testing
+- `workflows/ai-agent-debug-webhooks.md` - Real-time monitoring and debugging
 
 ### What Makes This Skill Different
 
@@ -80,7 +80,7 @@ Each workflow combines technical API documentation with practical implementation
 ### Knowledge Sources
 
 - **Technical Documentation**: Official SignalWire REST APIs, SWML, SDKs
-- **Practical Wisdom**: Analysis of 89 SignalWire training videos including:
+- **Practical Wisdom**: Patterns from SignalWire training sessions, including:
   - LiveWire sessions
   - SignalWire in Seconds tutorials
   - ClueCon 2025 workshops
@@ -92,8 +92,8 @@ Each workflow combines technical API documentation with practical implementation
 1. **Treat AI Like a Person, Not a Program** - "How would you instruct your mother?" approach
 2. **Use Metadata for Security** - Keep sensitive data out of LLM context
 3. **Test Continuously** - AI behavior is probabilistic
-4. **Preserve Context Through Transfers** - 72% of customers expect it
-5. **Implement Loop Protection** - Always protect gather/prompt nodes
+4. **Preserve Context Through Transfers** - Pass what the caller already said to the next person
+5. **Implement Loop Protection** - Cap prompt retries so a menu cannot loop forever
 
 ## Usage
 
@@ -185,35 +185,11 @@ signalwire-claude/
 ├── skills/
 │   └── signalwire/                    # SignalWire skill
 │       ├── SKILL.md                   # Main entry point
-│       ├── workflows/                 # 24 workflow files, 17,100+ lines total
-│       │   ├── inbound-call-handling.md       # 1,350 lines: SWML, loops, IVR
-│       │   ├── video.md                       # 1,287 lines: WebRTC, Browser SDK v4
-│       │   ├── messaging.md                   # 1,233 lines: SMS, Messaging SWML
-│       │   ├── call-control.md                # 1,185 lines: Transfers, recording
-│       │   ├── fabric-relay.md                # 1,166 lines: Calling commands, subscribers
-│       │   ├── webhooks-events.md             # 1,162 lines: Signatures, analytics
-│       │   ├── number-management.md           #   960 lines: Compliance
-│       │   ├── ai-agent-functions.md          #   915 lines: SWAIG, MCP, includes
-│       │   ├── swml-methods.md                #   868 lines: Full method catalog
-│       │   ├── ai-agent-deployment.md         #   835 lines: Server/serverless
-│       │   ├── outbound-calling.md            #   824 lines: Dialer, CRM, reminders
-│       │   ├── ai-agent-prompting.md          #   750 lines: Prompting, inner dialog
-│       │   ├── authentication-setup.md        #   602 lines: Auth, MFA, security
-│       │   ├── ai-agent-sdk-basics.md         #   591 lines: Ten-language SDK
-│       │   ├── voice-ai.md                    #   571 lines: AI navigation hub
-│       │   ├── ai-agent-security.md           #   515 lines: Signing, redaction
-│       │   ├── ai-agent-patterns.md           #   467 lines: Common flows
-│       │   ├── ai-agent-error-handling.md     #   391 lines: Error patterns
-│       │   ├── ai-agent-testing.md            #   383 lines: Testing patterns
-│       │   ├── ai-agent-debug-webhooks.md     #   379 lines: Monitoring
-│       │   ├── ai-sidecar.md                  #   359 lines: Live agent coaching
-│       │   ├── swsh-cli.md                    #   125 lines: Account operations
-│       │   ├── ai-agent-turn-taking.md        #   123 lines: End-of-turn detection
-│       │   └── ai-agent-chat.md               #   142 lines: Text chat, JSON-RPC
+│       ├── workflows/                 # One guide per task, listed under What's Included
 │       └── reference/                 # SDK API docs (loaded only when needed)
-│           ├── sdk/                   # 12 files: AgentBase, SWAIG, etc.
-│           ├── deployment/            # 3 files: Serverless, env vars
-│           └── examples/              # 6 complete agent examples
+│           ├── sdk/                   # AgentBase, SWAIG, etc.
+│           ├── deployment/            # Serverless, env vars
+│           └── examples/              # Complete agent examples
 ├── README.md                          # This file
 ├── INSTALL.md                         # Installation guide
 └── LICENSE
