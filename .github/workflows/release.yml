@@ -1,0 +1,61 @@
+# Releases the plugin after merges to main. RELEASING.md explains the process;
+# the steps are in .github/scripts/release.sh.
+#
+# The wait job holds a run for RELEASE_DELAY_SECONDS so that merges landing
+# close together share one release: a newer push cancels a run that is still
+# waiting. The release job runs in its own group that doesn't cancel, so a push
+# during a release queues behind it instead of interrupting it.
+#
+# Pushes made with GITHUB_TOKEN, like the release PR's merge, don't start runs,
+# which is why the release job tags and publishes in the same run.
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Print what would be released without changing anything
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  wait:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: release-wait
+      cancel-in-progress: true
+    steps:
+      - name: Wait for merges that land close together
+        if: github.event_name == 'push'
+        run: sleep "${DELAY:-300}"
+        env:
+          DELAY: ${{ vars.RELEASE_DELAY_SECONDS }}
+
+  release:
+    needs: wait
+    runs-on: ubuntu-latest
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Tag and publish the last release if it has no tag
+        run: .github/scripts/release.sh tag-untagged
+
+      - name: Release what has changed since then
+        run: .github/scripts/release.sh release
