@@ -45,7 +45,7 @@ There is also a changelog at `/docs/platform/changelog` (append `.rss` for a fee
 
 The plugin bundles the SignalWire MCP server (`https://mcp.signalwire.com/mcp`) as `signalwire`. Claude Code connects it on its own; claude.ai and Cowork offer it as a connector for the user to turn on. When it's connected, use its tools to search and read the docs, pick a product for a goal, start from a verified SWML or cXML scaffold, and map an error to its likely causes. `search` runs over a recent snapshot of the docs, so for an exact parameter name or default, read the page itself with `reference` or as described in [Read the Live Docs](#read-the-live-docs).
 
-The server reads public docs only. It can't see or change the user's account, so it needs no API token. Don't ask the user for one.
+The server reads public docs only and can't see or change the user's account, so connecting it takes no API token.
 
 ## With or Without a Terminal
 
