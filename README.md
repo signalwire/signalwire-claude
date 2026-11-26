@@ -23,6 +23,7 @@ See [INSTALL.md](INSTALL.md) for updating, upgrading from `signalwire-builder`, 
 - **Practical Production Knowledge**: Best practices, patterns, and anti-patterns from 89 SignalWire training videos
 - **Ten-Language SDK**: One unified package per language covering AI Agents + Relay + REST; Python and TypeScript examples throughout
 - **Account Operations, Not Just Code**: SWSH CLI coverage, so "how do I change X on my account" has a one-line answer
+- **SignalWire MCP Server**: Connects the [SignalWire MCP server](https://signalwire.com/docs/platform/mcp-server) for docs search, product recommendations, verified scaffolds, and troubleshooting, with no account or token
 - **Workflow-Organized**: Find what you need by developer workflow (calling, messaging, video, AI, etc.)
 - **Production-Ready Code**: Complete working examples with error handling and security best practices
 - **Real-World Patterns**: IVR systems, AI agents, live agent coaching, video conferencing, context-aware transfers, MFA implementation
@@ -122,6 +123,7 @@ In Claude Code and Cowork you type these directly. In chat, describe what you wa
 |---|---|---|---|
 | SignalWire skill | Yes | Yes | Yes |
 | Commands | Applied when relevant | Yes | Yes |
+| SignalWire MCP server | Offered as a connector | Offered as a connector | Yes |
 | Automatic updates | No | No | Marketplace installs |
 
 In chat, Claude can't run the code it writes, so it gives you complete code and commands to run yourself and tells you what a working result looks like. In Claude Code and Cowork it can write the files and run the tests itself.
@@ -180,6 +182,7 @@ signalwire-claude/
 ├── .claude-plugin/
 │   ├── plugin.json                    # Plugin manifest
 │   └── marketplace.json               # Marketplace listing
+├── .mcp.json                          # SignalWire MCP server
 ├── commands/                          # new-agent, call-flow, debug
 ├── hooks/                             # Daily self-update check (Claude Code)
 ├── skills/
