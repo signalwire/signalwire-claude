@@ -105,10 +105,12 @@ class SupportAgent(AgentBase):
         tech_gather.set_text("Gather technical details about the issue.")
         tech_gather.set_functions(["run_diagnostic", "check_system_status"])
         tech_gather.set_valid_steps(["next"])
+        tech_gather.set_valid_contexts(["main"])
 
         tech_resolve = tech.add_step("resolve")
         tech_resolve.set_text("Provide technical resolution steps.")
         tech_resolve.set_functions(["create_ticket", "transfer_to_engineer"])
+        tech_resolve.set_valid_contexts(["main"])
 
         # Billing context
         billing = self.contexts.add_context("billing")
@@ -119,10 +121,12 @@ class SupportAgent(AgentBase):
         bill_verify.set_text("Verify the customer's account information.")
         bill_verify.set_functions(["lookup_account"])
         bill_verify.set_valid_steps(["next"])
+        bill_verify.set_valid_contexts(["main"])
 
         bill_assist = billing.add_step("assist")
         bill_assist.set_text("Assist with billing inquiries.")
         bill_assist.set_functions(["get_balance", "process_payment", "issue_refund"])
+        bill_assist.set_valid_contexts(["main"])
 
         # General inquiries context
         general = self.contexts.add_context("general")
@@ -130,6 +134,7 @@ class SupportAgent(AgentBase):
 
         gen_help = general.add_step("help")
         gen_help.set_text("Answer general questions about our products and services.")
+        gen_help.set_valid_contexts(["main"])
 ```
 
 ## Step Class Reference
@@ -179,7 +184,13 @@ step.set_functions([])
 
 ### set_valid_steps()
 
-Define which steps can be navigated to from this step.
+Define which steps the model is offered a move to from this step. `valid_steps` has three states:
+
+- Unset or null: the model can still advance to the next step in sequence. That is the same enum as `["next"]`, not every step.
+- A non-empty list: only those step names.
+- An empty list `[]`: deny-all. No step is valid, and `next_step` is removed. This takes effect when the step's tool list is rebuilt, so also set `functions` on that step.
+
+These lists only constrain what the model is offered. A `change_step` action from a function, or a gather `completion_action`, can still jump to any existing step.
 
 ```python
 # Only sequential navigation. Leaving set_valid_steps() unset is this same enum, ["next"], not every step.
@@ -188,13 +199,19 @@ step.set_valid_steps(["next"])
 # Specific steps
 step.set_valid_steps(["confirm", "retry", "cancel"])
 
-# No step change. An empty list removes next_step.
+# Deny-all. An empty list removes next_step.
 step.set_valid_steps([])
 ```
 
 ### set_valid_contexts()
 
-Define which contexts can be navigated to from this step.
+Define which contexts the model is offered a switch to from this step. This is not the same three-state model as `valid_steps`:
+
+- Unset or null: `change_context` is not offered.
+- A non-empty list: only those context names.
+- An empty list `[]`: `change_context` is still offered.
+
+These lists only constrain what the model is offered. A `change_context` action from a function can still switch to any existing context.
 
 ```python
 step.set_valid_contexts(["billing", "technical"])
@@ -223,7 +240,7 @@ step = context.add_step("step_name")
 
 ### set_valid_contexts()
 
-Define which contexts can be navigated to from this context.
+Define which contexts the model is offered when it switches into this context, until the current step's own `valid_contexts` apply. Each step's `valid_contexts` replaces this value when the step loads, so set `valid_contexts` on every step that should offer `change_context`. A `change_context` action from a function can still switch to any existing context.
 
 ```python
 context.set_valid_contexts(["support", "sales", "main"])
@@ -460,7 +477,7 @@ if __name__ == "__main__":
 1. **Use meaningful step names** - Names should describe the step's purpose
 2. **Define clear step criteria** - Be specific about what completes a step
 3. **Restrict functions appropriately** - Only expose functions needed at each step
-4. **Use valid_steps for flow control** - Prevent unexpected navigation
+4. **Use valid_steps for flow control** - Constrain which steps the model is offered. A function `change_step` action can still jump.
 5. **Consider using contexts for major mode changes** - Contexts are good for different "phases"
 6. **Use fillers for smooth transitions** - Enter/exit fillers make context switches feel natural
 

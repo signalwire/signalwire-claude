@@ -343,11 +343,15 @@ Use `%{variable_name}` or `${variable_name}` to access dynamic values. In Callin
     url: "say:You called from %{call.from} to %{call.to}"
 ```
 
-Available variables:
-- `%{call.from}` - Caller's number
-- `%{call.to}` - Destination number
-- `%{call.call_id}` - Unique call ID
-- `%{call.direction}` - `inbound` or `outbound`
+Available variables (this leg only):
+- `%{call.from}` - This leg's caller ID
+- `%{call.to}` - This leg's destination
+- `%{call.call_id}` - This leg's call ID
+- `%{call.direction}` - `inbound` or `outbound` on this leg
+- `%{call.parent.call_id}` - On a B-leg, the A-leg's call ID
+- `%{call.peer.call_id}` - On a dialed leg, including `confirm`, usually the A-leg's call ID
+
+`vars` and `call` do not cross legs. A document on the leg `connect` dialed starts with empty `vars` and that leg's own `call`. SignalWire clears `call.peer` when the document that issued `connect` resumes. Docs: https://signalwire.com/docs/platform/voice/call-legs
 
 ### Custom Parameters
 
@@ -835,7 +839,7 @@ sections:
 
 ### Accessing Caller Information
 
-**Built-in Call Variables:**
+**Built-in Call Variables** name the leg this document is running on. See [Call Variables](#call-variables).
 
 ```yaml
 # Access caller phone number

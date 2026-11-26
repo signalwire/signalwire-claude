@@ -266,7 +266,7 @@ Enable or disable functions dynamically.
 ])
 ```
 
-`settings` replaces the whole model-settings map and needs `params.swaig_allow_settings` (default `true`). `unset_global_data` and `unset_meta_data` take a string or an array of keys. `user_event` sends an object to the connected client. `transfer` accepts an object, or a string shorthand for `transfer.dest`.
+`settings` replaces the whole model-settings map and needs `params.swaig_allow_settings` (default `true`). `unset_global_data` and `unset_meta_data` take a string or an array of keys. `user_event` sends an object to the connected client, which the Browser SDK receives on the call with `call.subscribe("user_event")`. `transfer` accepts an object, or a string shorthand for `transfer.dest`.
 
 ### playback_bg
 
@@ -410,7 +410,7 @@ def process_request(self, args, raw_data):
     if request_type == "cancel":
         result.set_response("Your service has been cancelled.")
         result.add_action("send_sms", {
-            "to": raw_data.get("call", {}).get("from"),
+            "to": raw_data.get("caller_id_num"),
             "body": "Your cancellation has been confirmed."
         })
 
@@ -434,7 +434,7 @@ def process_request(self, args, raw_data):
 )
 def verify_pin(self, args, raw_data):
     pin = args.get("pin")
-    caller = raw_data.get("call", {}).get("from")
+    caller = raw_data.get("caller_id_num")
 
     if self.verify_customer_pin(caller, pin):
         return (FunctionResult(
@@ -448,7 +448,7 @@ def verify_pin(self, args, raw_data):
             {"function": "view_transactions", "active": True},
         ]))
     else:
-        attempts = raw_data.get("vars", {}).get("pin_attempts", 0) + 1
+        attempts = raw_data.get("global_data", {}).get("pin_attempts", 0) + 1
 
         if attempts >= 3:
             return (FunctionResult(

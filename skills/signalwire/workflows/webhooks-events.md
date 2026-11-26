@@ -10,6 +10,7 @@ SignalWire sends HTTP POST requests to your server when events occur (call state
 2. **Message Webhooks**: Incoming SMS/MMS
 3. **Video Events**: Room joined, member left, recording complete
 4. **Call Events**: SWML fetch, call progress updates
+5. **Low Balance**: Space balance falls below the low-balance threshold
 
 ## Call Status Webhooks
 
@@ -50,11 +51,15 @@ SignalWire sends POST requests with JSON body:
 
 ### Call States
 
-- **queued**: Call request received, not yet initiated
+`status_url` callbacks use `call_state` values `created`, `ringing`, `answered`, `ending`, and `ended`. `queued` is never sent. `status_events` defaults to `["ended"]`, so the other states arrive only when you list them.
+
 - **created**: Call has been created
 - **ringing**: Destination is ringing
 - **answered**: Call was answered
-- **ended**: Call has terminated
+- **ending**: The call is ending
+- **ended**: Placed call has ended, however it ended. The cause is `end_reason`, for example `busy` or `noAnswer`
+
+The `ended` callback is sent when the destination was busy, didn't answer, or declined, and when a ringing call is canceled. A call that is never placed sends no callback, whatever `status_events` lists: status `failed`, or a call canceled or completed with the `update` command while it is still `queued`.
 
 ### Handling Status Webhooks (Python/Flask)
 
@@ -77,8 +82,8 @@ def handle_call_status():
     logging.info(f"Call {call_id}: {status}")
 
     # Handle different states
-    if status == 'queued':
-        # Call queued, log or update UI
+    if status == 'created':
+        # Call has been created
         pass
 
     elif status == 'ringing':
@@ -90,6 +95,10 @@ def handle_call_status():
         # Call answered - start timer, analytics, etc.
         logging.info(f"Call answered at {timestamp}")
         start_call_timer(call_id)
+
+    elif status == 'ending':
+        # Call is ending
+        pass
 
     elif status == 'ended':
         # Call ended - calculate duration, billing, etc.
@@ -128,8 +137,8 @@ app.post('/call-status', (req, res) => {
   console.log(`Call ${call_id}: ${call_state}`);
 
   switch (call_state) {
-    case 'queued':
-      // Handle queued state
+    case 'created':
+      // Call has been created
       break;
 
     case 'ringing':
@@ -140,6 +149,10 @@ app.post('/call-status', (req, res) => {
     case 'answered':
       console.log(`Call answered at ${timestamp}`);
       startCallTimer(call_id);
+      break;
+
+    case 'ending':
+      // Call is ending
       break;
 
     case 'ended':
@@ -382,13 +395,36 @@ def handle_recording_ready():
     return jsonify({"status": "ok"}), 200
 ```
 
+## Low Balance Webhook
+
+SignalWire can send an email, a webhook, or both when the Space balance falls below the low-balance threshold. Both fire on the same low-balance event as Auto Top-Up: at most once every six hours. Changing the threshold resets that window. Notifications are sent whether or not Auto Top-Up is on. Email goes to the Space owner and every administrator.
+
+Configure this in the Dashboard under **Billing → Low Balance Settings**. **Send an Email** is on by default. Turn on **Send a Webhook Request** and set **Webhook URL** and **Method** (`POST` by default, or `GET`).
+
+The same settings are available over REST: [Retrieve low balance settings](https://signalwire.com/docs/apis/rest/space/balance/get-low-balance-setting) and [Update low balance settings](https://signalwire.com/docs/apis/rest/space/balance/update-low-balance-setting). Notification fields are `send_email`, `send_webhook`, `webhook_url`, and `webhook_method`. An update replaces the whole setting, so send the threshold and Auto Top-Up fields along with the notification fields.
+
+The webhook request carries exactly two form-encoded parameters. They are query parameters on `GET` and the body on `POST`.
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `threshold` | Low-balance threshold, in US dollars | `5.0` |
+| `balance` | Balance that triggered the notification, in US dollars | `4.253117` |
+
+The `User-Agent` header is `SignalwireCallback/1.0`.
+
+SignalWire allows 3 seconds to connect and 5 seconds for the whole request. It follows up to 3 redirects, but a redirect drops the parameters unless it's a `307` or `308` response to a `POST`, so use the final URL.
+
+SignalWire does not retry a failed delivery. If the endpoint is down, times out, or returns an error, that notification is lost. The next one comes with the next low-balance event. After an outage, use [Retrieve the balance](https://signalwire.com/docs/apis/rest/space/balance/get-balance).
+
+Guide: https://signalwire.com/docs/platform/auto-top-up
+
 ## Webhook Security
 
 ### Verify Webhook Source
 
 #### Option 0: Request signatures (preferred where available)
 
-Every POST SignalWire makes to **fetch a SWML document** from a URL you control is signed. That is the real mechanism — reach for it before IP allowlists or shared secrets.
+Every POST SignalWire makes to **fetch a SWML document** from a URL you control is signed. So are these AI agent requests during a call: each SWAIG function `web_hook_url` (including one set in `SWAIG.defaults`), `data_map` webhooks, the `SWAIG.includes` function-definition request, the `ai` method's `post_prompt_url` summary, and `ai_sidecar` SWAIG requests. There is no setting to enable signing. That is the real mechanism — reach for it before IP allowlists or shared secrets.
 
 ```
 signature = hex( HMAC( signing_key, url + raw_body ) )
@@ -475,6 +511,8 @@ If your server returns an error (5xx) or times out, SignalWire will retry:
 - **Retry attempts**: 3-5 times
 - **Backoff**: Exponential (1s, 2s, 4s, 8s)
 - **Timeout**: 10 seconds per attempt
+
+The low balance webhook is not retried: if the endpoint is down, times out, or returns an error, that notification is lost and the next one comes with the next low-balance event.
 
 ### Handling Retries (Idempotency)
 
@@ -845,7 +883,7 @@ def create_ticket():
 ### Real-Time Transcription Integration
 
 ```yaml
-# Enable live transcription
+# Enable live transcription. direction is required.
 sections:
   main:
     - live_transcribe:
@@ -854,40 +892,34 @@ sections:
             webhook: "https://yourserver.com/transcribe"
             lang: en
             live_events: true
+            direction: [remote-caller, local-caller]
     - ai:
         prompt: "Your agent instructions"
 ```
 
-### WebSocket Transcription Handler
+`direction` is required. Events are HTTP POSTs to that `webhook`, told apart by `channel_data.content_disposition`. Payload fields: [live_transcribe](swml-methods.md#live_transcribe). Guide: https://signalwire.com/docs/platform/voice/transcribe-calls
+
+### Transcription Webhook Handler
 
 ```javascript
-const WebSocket = require('ws');
+const express = require('express');
+const app = express();
 
-const wss = new WebSocket.Server({ port: 8080 });
+app.use(express.json({ type: ['application/json', 'text/json'] }));
 
-wss.on('connection', (ws) => {
-  console.log('Transcription connection established');
+app.post('/transcribe', (req, res) => {
+  const kind = req.body.channel_data.content_disposition;
 
-  ws.on('message', (data) => {
-    const message = JSON.parse(data);
+  if (kind === 'transcribe.utterance') {
+    const { role, content } = req.body.utterance;
+    console.log(`${role}: ${content}`);
+  } else if (kind === 'transcribe.live_summarize') {
+    console.log(req.body.conversation_summary);
+  } else if (kind === 'transcribe.conversation_log') {
+    console.log(req.body.conversation_log.length);
+  }
 
-    if (message.event === 'transcription') {
-      console.log('User said:', message.transcription.text);
-
-      // Real-time processing
-      analyzeIntent(message.transcription.text);
-
-      // Store for records
-      saveTranscript(message.transcription.text);
-
-      // Update live dashboard
-      broadcastToAgents({
-        type: 'live_transcript',
-        text: message.transcription.text,
-        timestamp: Date.now()
-      });
-    }
-  });
+  res.sendStatus(200);
 });
 ```
 
@@ -994,10 +1026,10 @@ from enum import Enum
 from datetime import datetime
 
 class CallState(Enum):
-    QUEUED = "queued"
     CREATED = "created"
     RINGING = "ringing"
     ANSWERED = "answered"
+    ENDING = "ending"
     ENDED = "ended"
 
 # Track all call states
@@ -1024,15 +1056,15 @@ def track_call_lifecycle():
     call_states[call_id]['states'][state] = timestamp
 
     # Handle specific states
-    if state == CallState.QUEUED.value:
-        log_call_queued(call_id)
+    if state == CallState.CREATED.value:
+        log_call_created(call_id)
 
     elif state == CallState.RINGING.value:
-        # Calculate queue time
-        queued_time = call_states[call_id]['states'].get('queued')
-        if queued_time:
+        # Time from created until ringing
+        created_time = call_states[call_id]['states'].get('created')
+        if created_time:
             queue_duration = (datetime.fromisoformat(timestamp) -
-                            datetime.fromisoformat(queued_time)).total_seconds()
+                            datetime.fromisoformat(created_time)).total_seconds()
             metrics.record('queue_time', queue_duration)
 
     elif state == CallState.ANSWERED.value:
@@ -1045,6 +1077,9 @@ def track_call_lifecycle():
 
         # Start billing
         start_billing(call_id)
+
+    elif state == CallState.ENDING.value:
+        pass
 
     elif state == CallState.ENDED.value:
         # Calculate call duration

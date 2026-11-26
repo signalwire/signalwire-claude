@@ -1,6 +1,6 @@
 # SWML Method Reference
 
-SWML (SignalWire Markup Language) is a YAML/JSON document format for scripting calls and messages. A document declares `version: 1.0.0` and a `sections` map whose `main` section runs first; each section is an array of method statements executed in order. SWML comes in two flavors: **Calling** documents (voice calls — the full method set below) and **Messaging** documents (inbound SMS/MMS handling — a smaller method set, see [Messaging SWML](#messaging-swml)). This file is a reference for the methods not covered in depth by other workflow docs; the index links each method to where it's documented.
+SWML (SignalWire Markup Language) is a YAML/JSON document format for scripting calls and messages. A document declares `version: 1.0.0` and a `sections` map whose `main` section runs first; each section is an array of method statements executed in order. SWML comes in two flavors: **Calling** documents (voice calls — the full method set below) and **Messaging** documents (inbound SMS, MMS, and RCS handling — a smaller method set, see [Messaging SWML](#messaging-swml)). This file is a reference for the methods not covered in depth by other workflow docs; the index links each method to where it's documented.
 
 ## Method Index (Calling)
 
@@ -140,6 +140,8 @@ A `queue:` or `call:` destination can't be combined with any other destination. 
 
 `ringback: false` turns off SignalWire's ringback and passes the destination's early media through. `stop_all_on_reject` (default `false`) stops the other ringing destinations when one rejects and, after the `result` block runs, hangs up the caller. `true` matches `busy` and `decline`; use a non-empty array of `busy`, `decline`, and `noAnswer` to include `noAnswer`.
 
+**Variables set** (on the leg that issued `connect`, which keeps its `vars` across the bridge): `connect_result` (`connected` \| `failed`), `connect_failed_reason`, `return_value` (same as `connect_result`). The issuing leg receives them when this document resumes (except queue bridges, above). A document on the dialed leg, including `confirm`, starts with empty `vars` and that leg's own `call`. `call.peer` is present on that leg and on `connect` status callbacks, including `disconnected`. SignalWire clears `call.peer` when this document resumes, so code after `connect` must not rely on it. See [Variables](#variables).
+
 Docs: https://signalwire.com/docs/swml/reference/calling/connect
 
 ## Conferencing
@@ -220,9 +222,9 @@ sections:
 
 ### live_transcribe
 
-Real-time transcription of the call, delivered to a webhook as it happens. Controlled by a single `action` property: a `start` object, the string `stop`, or a `summarize` object. `stop` and `summarize` are for active calls (via the Call Commands REST API, or SWML run by `transfer`/`execute` mid-call).
+Real-time transcription of the call, delivered to a webhook as it happens. Controlled by a single `action` property: a `start` object, the string `stop`, the string `summarize`, or a `summarize` object. `stop` and `summarize` are for active calls (via the Call Commands REST API, or SWML run by `transfer`/`execute` mid-call).
 
-Docs: https://signalwire.com/docs/swml/reference/calling/live-transcribe
+Docs: https://signalwire.com/docs/swml/reference/calling/live-transcribe. Guide: https://signalwire.com/docs/platform/voice/transcribe-calls
 
 `action.start` properties:
 
@@ -230,17 +232,20 @@ Docs: https://signalwire.com/docs/swml/reference/calling/live-transcribe
 |----------|----------------|-------------|
 | `webhook` | string | URL receiving transcription events via POST. Basic auth embeddable: `username:password@url` |
 | `lang` | string, required | Language to transcribe |
-| `live_events` | boolean, `false` | Send partial results as they occur |
+| `live_events` | boolean, `false` | When true, POST each utterance as soon as it's transcribed |
 | `ai_summary` | boolean, `false` | Send an AI summary to the webhook when the session ends |
 | `speech_timeout` | integer, `60000` | Speech recognition timeout (ms), min 1500 |
-| `vad_silence_ms` | integer, `300` (Deepgram) / `500` (Google) | VAD silence time (ms) |
+| `vad_silence_ms` | integer, `700` (Deepgram) / `500` (Google) | VAD silence time (ms). Omit or `0` uses the engine default |
 | `vad_thresh` | integer, `400` | VAD threshold, range 0–1800 |
 | `debug_level` | integer, `0` | Logging verbosity |
 | `direction` | array, required | Legs to transcribe: `remote-caller`, `local-caller` |
 | `speech_engine` | string, `deepgram` | `deepgram` or `google` |
-| `ai_summary_prompt` | string | Prompt guiding the end-of-session summary |
+| `ai_summary_prompt` | string | Prompt for the end-of-session summary only |
+| `hints` | array | Words or phrases that help recognition, such as product names or jargon. Empty strings are ignored |
 
-`action: stop` ends the session. `action.summarize` (`webhook`, `prompt`; both optional) requests an on-demand summary mid-session — versus `ai_summary: true`, which summarizes automatically at session end.
+`action: stop` ends the session. `summarize` is the string `summarize` (the start webhook and the default on-demand prompt) or an object with optional `webhook` and `prompt`. `ai_summary: true` summarizes at session end, and `ai_summary_prompt` applies only to that summary.
+
+Relay SDK: `call.live_transcribe` / `liveTranscribe` takes one action dict with exactly one key, `start`, `summarize`, or `stop`. In Python: `{"start": {"lang": "en-US", "direction": ["remote-caller", "local-caller"], "webhook": "https://example.com/transcription-events", "live_events": True}}`. JSON and TypeScript use `true`. `stop` is `{"stop": {}}`. An empty `summarize` object uses the start webhook and the default on-demand prompt.
 
 ```yaml
 version: 1.0.0
@@ -257,6 +262,16 @@ sections:
             speech_engine: deepgram
 ```
 
+Every event is an HTTP POST to the `webhook` URL. Tell them apart by `channel_data.content_disposition`. `call_info.content_disposition` is `post_data` on all three.
+
+| `content_disposition` | When | Payload |
+|---|---|---|
+| `transcribe.utterance` | One utterance, when `live_events` is true. Each direction listed in `direction` sends its own events. | `utterance.role`, `utterance.content`, `utterance.lang`, `utterance.timestamp` (Unix microseconds), `utterance.utterance_id`, and `confidence` |
+| `transcribe.live_summarize` | The summary from `summarize`. Posted to `summarize.webhook`, or to the start webhook when that is unset. | `conversation_summary`, `conversation_log` |
+| `transcribe.conversation_log` | Once when the session ends, whether you stopped it or the call ended. | Full `conversation_log`, `metrics` (session totals), and `conversation_summary` when `ai_summary` is true and a summary was produced |
+
+`role` is `remote-caller` or `local-caller`. `utterance.confidence` (0–1) is omitted when it is 0 or the engine reported none. The utterance event's top-level `confidence` is that score or `null`, and it is present when the score is 0. On `transcribe.live_summarize`, `conversation_summary` is `Error creating summary` when no summary could be produced. `conversation_log` entries are in spoken order: `role`, `content`, optional `confidence`, optional `language`. `metrics` is `total_utterances`, `remote_caller_turns`, `local_caller_turns`, `remote_caller_words`, `local_caller_words`, optional `remote_caller_avg_confidence` and `local_caller_avg_confidence`, and optional `first_utterance_ts` and `last_utterance_ts` (Unix microseconds). `channel_data` also includes `call_id` and `content_type` (`text/json`).
+
 `live_transcribe` and `ai_sidecar` can run on the same call. A call can have only one sidecar.
 
 ### live_translate
@@ -265,7 +280,7 @@ Real-time translation of the call, spoken back via TTS and delivered to a webhoo
 
 Docs: https://signalwire.com/docs/swml/reference/calling/live-translate
 
-`action.start` — everything in `live_transcribe`'s start table (minus `lang`), plus:
+`action.start` — everything in `live_transcribe`'s start table except `lang` and `hints` (`live_events` still sends partial results here), plus:
 
 | Property | Type / Default | Description |
 |----------|----------------|-------------|
@@ -297,7 +312,7 @@ sections:
 
 `transcribe` transcribes the entire call in the background: execution continues immediately, and the transcript is delivered when the call ends. Only one transcription can be active on a call at a time. For real-time delivery use `live_transcribe` instead.
 
-Docs: https://signalwire.com/docs/swml/reference/calling/transcribe and `/transcribe-stop`
+Docs: https://signalwire.com/docs/swml/reference/calling/transcribe and `/transcribe-stop`. Guide: https://signalwire.com/docs/platform/voice/transcribe-calls
 
 | Property | Type / Default | Description |
 |----------|----------------|-------------|
@@ -652,7 +667,13 @@ Docs: https://signalwire.com/docs/swml/reference/calling/send-digits
 
 ### user_event
 
-Send custom events to the connected client on the call (commonly consumed by the Browser SDK, which receives them as `user_event` and listens via its `on` method). Useful for triggering client-side UI actions.
+Send custom events to the connected client on the call (commonly consumed by the Browser SDK). Useful for triggering client-side UI actions. The `WebRTCCall` receives them with `call.subscribe("user_event")`. Your data arrives in `event.params`. Call details such as `call_id`, `node_id`, and `segment_id` are added at the top level of `params`, so put your own fields under a key of your own to avoid collisions. The YAML example below arrives shaped like `{ "event_type": "user_event", "params": { "orderStatus": { "count": 42, "active": true }, "call_id": "<CALL_ID>", "node_id": "<NODE_ID>", "segment_id": "<SEGMENT_ID>" } }` (other call fields may also appear).
+
+```js
+call.subscribe("user_event").subscribe((event) => {
+  const { count, active } = event.params.orderStatus;
+});
+```
 
 Docs: https://signalwire.com/docs/swml/reference/calling/user-event
 
@@ -803,7 +824,7 @@ Docs: https://signalwire.com/docs/swml/reference/calling/unset
 
 ### amazon_bedrock
 
-Create an Amazon Bedrock voice agent on the call — the Bedrock counterpart to the `ai` method, with the same overall shape: `prompt` (text or POM, plus tuning params like `temperature`/`top_p` and a Bedrock `voice_id` such as `tiffany`), `post_prompt` and `post_prompt_url` (end-of-session summary callback with the full call log, SWAIG log, and token counts), `SWAIG` (functions, includes, defaults), `params`, and `global_data`.
+Create an Amazon Bedrock voice agent on the call — the Bedrock counterpart to the `ai` method, with the same overall shape: `prompt` (text or POM, plus tuning params like `temperature`/`top_p` and a Bedrock `voice_id` such as `tiffany`), `post_prompt` and `post_prompt_url` (end-of-session summary callback with the full call log, SWAIG log, and token counts), `SWAIG` (functions, includes, defaults), `params`, and `global_data`. Function webhooks are signed with the project's signing key. The summary sent to `post_prompt_url`, and the `summarize_conversation` request, are not. Embed basic auth in those URLs.
 
 Docs: https://signalwire.com/docs/swml/reference/calling/amazon-bedrock — for building Bedrock agents with the Agents SDK, see [reference/sdk/bedrock-agent.md](../reference/sdk/bedrock-agent.md).
 
@@ -834,7 +855,7 @@ sections:
 
 ## Messaging SWML
 
-The Messaging flavor of SWML handles inbound SMS/MMS. Documents use the same `version`/`sections`/`main` shape, but variables use `%{...}` only, the inbound message is exposed on the `message` scope (`%{message.from}`, `%{message.body}`, `%{message.media[0].url}`), and the method set is:
+The Messaging flavor of SWML handles inbound SMS/MMS and RCS. For an RCS agent, `reply` takes `body` or `content` (not both) and sends files as `content` type `media`; see [RCS](messaging.md#rcs). Documents use the same `version`/`sections`/`main` shape, but variables use `%{...}` only, the inbound message is exposed on the `message` scope (`%{message.from}`, `%{message.body}`, `%{message.media[0].url}`), and the method set is:
 
 | Method | Purpose |
 |--------|---------|
@@ -858,10 +879,11 @@ Object form:
 
 | Property | Type / Default | Description |
 |----------|----------------|-------------|
-| `body` | string | Text body. Required when `media` is not set |
-| `media` | array | Media URLs to attach (converts to MMS, max 8). Required if no `body` |
-| `to` | string | Destination in E.164 format (default: inbound `from`) |
-| `from` | string | Sending number/short code — must be owned by your project with messaging capability (default: inbound `to`) |
+| `body` | string | Text body. Required when `media` is not set, and not used with RCS `content` |
+| `content` | object | RCS rich content. For an RCS agent, set `body` or `content`, not both. Send files as `content` with `type: media`; `media` is not supported |
+| `media` | array | Media URLs to attach (converts to MMS, max 8). Required if no `body`. Not supported for RCS |
+| `to` | string | Destination in E.164 format (default: inbound `from`). For RCS, a US number |
+| `from` | string | Sending number or short code, which must be owned by your project with messaging capability, or for RCS another agent in the same Project (default: inbound `to`) |
 | `status_url` | string | Delivery status callback URL for the **outbound reply** (fires independently after the document completes) |
 
 Inline `switch` form: `{switch: {variable, transform, case, default}}` — `variable` is a path without the `%{}` wrapper (e.g. `message.body`), `transform` is one of `lowercase`, `uppercase`, `trim`, `lowercase_trim`, `uppercase_trim`, and each `case`/`default` value is either a body string or a full reply object. Don't set `body`/`media`/`to`/`from`/`status_url` alongside an inline `switch` — put them inside the case values. If no case matches and no `default` exists, the step fails and execution stops.
@@ -898,6 +920,7 @@ Docs: https://signalwire.com/docs/swml/reference/variables
 
 - **Syntax:** wrap a variable path in `${...}` or `%{...}` inside any string value. In **Calling** documents the two are interchangeable; **Messaging** documents accept `%{...}` only. If the placeholder body isn't a plain path (operators, method calls), it's evaluated as a JavaScript expression. Unset-but-valid paths resolve to an empty string.
 - **Scopes:** `call` (Calling) / `message` (Messaging) hold the inbound webhook fields (`${call.from}`, `%{message.body}`); `params` holds subroutine/handoff parameters; `vars` holds values you `set` (and method output variables); `envs` (Calling only) holds environment values. Bare output variables like `prompt_value` or `detect_result` are also readable directly.
+- **Per leg:** Calling `vars` and `call` belong to the leg running the document. They persist across sections, `execute`, and `transfer` on that leg, and they do not cross to another leg. A document on the leg `connect` dialed, such as `confirm`, starts with empty `vars` and its own `call` (`call_id`, `from`, `to`, `direction`; a B-leg has `parent` and usually `peer` pointing at the A-leg). The leg that issued `connect` keeps its vars and, when the document resumes, receives that method's outputs (see [`connect`](#connect)). `call.peer` is present on the dialed leg and on `connect` status callbacks, including `disconnected`. SignalWire clears `call.peer` when the document resumes after `connect`. Docs: https://signalwire.com/docs/platform/voice/call-legs and https://signalwire.com/docs/swml/reference/calling
 - **Nested data:** dot notation for objects, zero-based brackets for arrays — `${user.address.city}`, `${employees[0].name}`, `%{message.media[0].url}`.
 - **Deployment:** serverless (Dashboard-hosted) documents are substituted at runtime by SignalWire; server-based documents can either return SWML containing placeholders (SignalWire substitutes) or read `call`/`vars`/`envs`/`params` from the webhook POST body and substitute server-side before responding.
 - **Not SWML:** mustache-style `{{variable}}` templating is **not** valid SWML syntax — always use `%{...}` or `${...}`.

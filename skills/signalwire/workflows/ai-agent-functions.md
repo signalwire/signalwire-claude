@@ -249,7 +249,7 @@ SWAIG:
 
 **`functions` is required, and it is a filter you write, not a discovery wildcard.** During initialization SWAIG sends a signature request listing exactly these names to your `url`, and your server returns the matching definitions. A name you leave out is not imported; there is no "give me everything" form.
 
-**The signature request** always carries `action: "get_signature"` and `content_type: "text/swaig"`, plus optional `project_id`, `space_id` and your `meta_data`. Your endpoint may reply with an array of definitions, a single definition, or an object of `{functions, defaults}` — and should return definitions matching the shape of `SWAIG.functions` whether or not they were specifically asked for. SignalWire may sign this request with an `X-SignalWire-Signature` header. Payload reference: `/docs/apis/rest/webhooks/swaig-signature-request`.
+**The signature request** always carries `action: "get_signature"` and `content_type: "text/swaig"`, plus optional `project_id`, `space_id` and your `meta_data`. Your endpoint may reply with an array of definitions, a single definition, or an object of `{functions, defaults}` — and should return definitions matching the shape of `SWAIG.functions` whether or not they were specifically asked for. A request sent during a call carries `X-Signalwire-Signature` and `X-Signalwire-SHA256-Signature`. Payload reference: `/docs/apis/rest/webhooks/swaig-signature-request`.
 
 The fetch happens **when the SWML document loads**, before any interaction with the caller. If your catalog endpoint is slow or down, that cost lands on call setup.
 
@@ -497,8 +497,8 @@ weather_func = (DataMap("get_weather")
     .parameter("city", "string", "City name", required=True)
     .webhook("GET", "https://api.weather.com/v1/current?q=${args.city}&key=API_KEY")
     .output(FunctionResult(
-        "The weather in ${args.city} is ${response.condition} "
-        "and ${response.temp_f}°F"
+        "The weather in ${input.args.city} is ${condition} "
+        "and ${temp_f}°F"
     ))
 )
 
@@ -887,6 +887,14 @@ functions:
           output:
             response: "%{chunks[0].text}"
 ```
+
+**Ingest.** [`POST /api/datasphere/documents`](https://signalwire.com/docs/apis/rest/documents/create-document) accepts PDF, plain text, and Markdown from a public `http` or `https` URL, up to 10 MB. DataSphere downloads the file from that URL.
+
+A PDF is recognized from its content. Word or Excel returns `422` even when served as `text/plain`. Text is identified by `Content-Type` (`text/plain`, `text/markdown`, `text/x-markdown`, or `text/x-web-markdown`), or by extension when that header is missing or `application/octet-stream`. An extension that names a more specific text type also overrides `text/plain`: `.md` served as `text/plain` is accepted as Markdown, while `.csv`, `.json`, or `.xml` served that way returns `422`. The filename, taken from `Content-Disposition` or the last segment of the URL path, must have a supported extension or none, so a PDF served from `/download.php` returns `422`.
+
+`chunking_strategy` defaults to `sentence`, which groups up to `max_sentences_per_chunk` sentences. `sliding` takes a word window with overlap. `paragraph` splits on blank lines. `page` makes one chunk per PDF page; plain text and Markdown have no pages, so they fall back to a blank-line split, like `paragraph`. Markdown is chunked as written, so chunks keep their markup. `split_newlines` applies only to `sentence`: when `true`, a line break also ends a sentence; the default `false` ends sentences on punctuation only.
+
+Status moves from `submitted` to `in_progress`, then to `completed`, or to `failed` when a chunk can't be indexed (for example, because it is too long). A file with no extractable text, such as a scanned PDF with no text layer, stays `in_progress`.
 
 **Use Cases:**
 - Medical information lookup (HIPAA-compliant)

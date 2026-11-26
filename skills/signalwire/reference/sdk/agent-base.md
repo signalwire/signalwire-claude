@@ -32,9 +32,11 @@ class AgentBase(
 | `route` | str | `"/"` | HTTP endpoint path for this agent |
 | `host` | str | `"0.0.0.0"` | Host address to bind server |
 | `port` | int | `3000` | Port number for HTTP server |
-| `basic_auth` | tuple | `None` | `(username, password)` for HTTP basic auth |
+| `basic_auth` | tuple | `None` | `(username, password)` for HTTP basic auth. Leave `basic_auth` and `SWML_BASIC_AUTH_PASSWORD` unset and the SDK generates a random password each startup and keeps it in memory. The startup log names the username and marks the credentials as generated. It does not include the password. A generated pair uses `SWML_BASIC_AUTH_USER` when set, otherwise `signalwire` in Python and the agent's `name` in TypeScript. With only `SWML_BASIC_AUTH_PASSWORD` set, both SDKs use `signalwire`. A restart then fails the next function call and the post-prompt summary on calls already in progress. Set a fixed pair in production. |
+| `signing_key` | str | `None` | Project signing key. TypeScript: `signingKey`. Or set `SIGNALWIRE_SIGNING_KEY`. With a key, unsigned or mis-signed POSTs to the SWML, SWAIG, and post-prompt endpoints get 403. Without one, the agent logs a startup warning and accepts unsigned requests. |
 | `use_pom` | bool | `True` | Enable Prompt Object Model for structured prompts |
-| `token_expiry_secs` | int | `3600` | Session token lifetime in seconds |
+| `swaig_secret` | str | `None` | Secret for function tokens (the `__token` query parameter on a secure function `web_hook_url`) and the post-prompt token. TypeScript: `swaigSecret`. Or set `SIGNALWIRE_SWAIG_SECRET`. Without a fixed secret, each process generates its own and tokens break across restarts and replicas. |
+| `token_expiry_secs` | int | `3600` | Token lifetime in seconds. TypeScript: `tokenExpirySecs`. One hour by default; set it longer than your longest call. |
 | `auto_answer` | bool | `True` | Automatically answer incoming calls |
 | `record_call` | bool | `False` | Enable call recording |
 | `record_format` | str | `"mp4"` | Recording format (mp4, wav, mp3) |
@@ -338,7 +340,7 @@ TypeScript: `setMultilingual(config: Record<string, unknown>): this`
 
 Add speech recognition hints.
 
-When speech recognition runs in code-switching mode (`set_multilingual()` / `setMultilingual()` with its default recognizer, or a `languages` entry whose `code` is `multi`), string hints and `hint` values are not passed to speech recognition, and no error is returned. That covers `add_hint()`/`addHint()`, `add_hints()`/`addHints()`, and string or `hint` values from `FunctionResult.add_dynamic_hints()`/`addDynamicHints()`. For a `languages` entry, hints are dropped only while that entry is active, and only when `multi` is the first code. `code: ["en-US", "multi"]` keeps hints. `add_pattern_hint()`/`addPatternHint()` still emits a `hint` field; that field is dropped in this mode, and only its `pattern` and `replace` apply.
+When speech recognition runs in code-switching mode (`set_multilingual()` / `setMultilingual()`, or a `languages` entry whose `code` is `multi` on a recognizer that code-switches on `multi`), string hints and `hint` values are not passed to speech recognition, and no error is returned. That covers `add_hint()`/`addHint()`, `add_hints()`/`addHints()`, and string or `hint` values from `FunctionResult.add_dynamic_hints()`/`addDynamicHints()`. For a `languages` entry, hints are dropped only while that entry is active, and only when `multi` is the first code. `code: ["en-US", "multi"]` keeps hints. Outside code-switching mode, every engine receives hints. `add_pattern_hint()`/`addPatternHint()` still emits a `hint` field; that field is dropped in this mode, and only its `pattern` and `replace` apply.
 
 ```python
 def add_hints(self, hints: List[str]) -> 'AgentBase'
@@ -365,10 +367,10 @@ def set_params(self, params: dict) -> 'AgentBase'
 |-----------|------|---------|-------------|
 | `end_of_speech_timeout` | int | 700 | ms of audio silence to end turn — see [turn taking](../../workflows/ai-agent-turn-taking.md) |
 | `enable_turn_detection` | str \| bool | `both` | `both`, `punct_only`, `acoustic_only`, `off`. `true` is `both`; `false` is `off`. Also accepted as `turn_detection` |
-| `attention_timeout` | int | 5000 | ms before attention prompt. `0` disables; otherwise `1000`–`600000` |
+| `attention_timeout` | int | 5000 | ms before attention prompt. `0` disables; otherwise `1000`–`600000`. A nonzero value below `end_of_speech_timeout` is raised to that plus 1000 ms |
 | `inactivity_timeout` | int | 600000 | ms before disconnect |
-| `barge_match_string` | str | None | Regex for interruption triggers |
-| `barge_min_words` | int | 1 | Min words to trigger barge |
+| `barge_match_string` | str | None | Regex for interruption triggers. Setting it turns `transparent_barge` off, even when that param is `true` |
+| `barge_min_words` | int | 0 | Words required before barge. `0` turns the count off. Allowed `0` or `1`–`99`; any other value is ignored |
 | `ai_volume` | int | 0 | Volume adjustment (-50 to 50 dB) |
 | `local_tz` | str | None | Timezone for datetime |
 | `energy_threshold` | float | 0.05 | Speech detection sensitivity |
@@ -546,6 +548,8 @@ def on_swml_request(self, request_data=None, callback_path=None, request=None):
     if caller in self.vip_numbers:
         self.prompt_add_section("VIP", "This is a VIP customer.")
 ```
+
+In TypeScript, `onSwmlRequest` and `renderSwml` merge `global_data` keys into the agent's global data, replacing the value at each key. Other keys override AI config fields. Read the caller from `call.from` (`call.call_id` is the call id).
 
 ### on_summary()
 

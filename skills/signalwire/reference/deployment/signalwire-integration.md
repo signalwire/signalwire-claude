@@ -116,26 +116,26 @@ curl -X POST "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/fabric/resourc
 
 ## WebRTC Integration
 
-### Guest Tokens
+### Subscriber Tokens
 
-Guest tokens allow browser clients to connect without full SignalWire credentials:
+Create Subscriber token (`POST /api/fabric/subscribers/tokens`) returns a Subscriber Access Token for the Subscriber whose email matches `reference`, ignoring case — pass the email, because neither the Subscriber resource `id` nor the inner `subscriber.id` matches. If no Subscriber has that email, SignalWire creates one with `reference` as its email and returns a token for it; any string is accepted, so a typo creates an extra Subscriber, and each new Subscriber carries a monthly charge. Tokens expire after two hours by default. For temporary access limited to selected resource addresses, use Create Subscriber guest token (`POST /api/fabric/guests/tokens`).
 
 ```bash
-# Create guest token
+# Create Subscriber token
 curl -X POST "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/fabric/subscribers/tokens" \
   -u "${SIGNALWIRE_PROJECT_ID}:${SIGNALWIRE_TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{
-    "reference_id": "guest-user-123",
-    "ttl": 3600
+    "reference": "user@example.com"
   }'
 ```
 
 Response:
 ```json
 {
+    "subscriber_id": "32d94154-9297-418c-9a85-4a69e0c67c30",
     "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...",
-    "expires_at": "2024-01-15T12:00:00Z"
+    "refresh_token": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIiwidHlwIjoiUmVmcmVzaC..."
 }
 ```
 
@@ -155,7 +155,7 @@ Use the SignalWire JavaScript SDK to connect:
     <button id="hangup" disabled>Hang Up</button>
 
     <script>
-        const GUEST_TOKEN = 'YOUR_GUEST_TOKEN';
+        const SUBSCRIBER_TOKEN = 'YOUR_SUBSCRIBER_TOKEN';
         const AGENT_ADDRESS = '/public/support'; // a public alias of the Resource you want the guest to dial. An external SWML handler already has a public alias when it is created
 
         let client = null;
@@ -164,7 +164,7 @@ Use the SignalWire JavaScript SDK to connect:
         document.getElementById('call').onclick = async () => {
             // Connect to SignalWire
             client = await SignalWire.SignalWire({
-                token: GUEST_TOKEN
+                token: SUBSCRIBER_TOKEN
             });
 
             // Dial the agent
@@ -301,6 +301,18 @@ curl -X POST "https://${SIGNALWIRE_SPACE_NAME}.signalwire.com/api/relay/rest/end
 
 Route the SIP endpoint to your agent similarly to phone numbers.
 
+### From header on outbound calls
+
+A softphone, phone, or PBX must place outbound calls from your SIP Credential's (SIP endpoint) address, `username@your-space.sip.signalwire.com`, in the `From` header. SignalWire identifies the credential from that header, so any other `From` fails before the call starts and no call log is created.
+
+| `From` header sent | Result | Fix |
+|--------------------|--------|-----|
+| Your device's IP address or hostname | `404 Domain unavailable` | Set the device's From domain to your SIP Credential domain. |
+| `anonymous@anonymous.invalid` | `404 Domain unavailable` | Turn off caller ID blocking (anonymous calling) on the device. |
+| A phone number instead of your username | `407 Proxy Authentication Required` on every attempt | Set the device's From user to your SIP Credential username. |
+
+The `From` header doesn't set caller ID on calls to phone numbers. On those calls, set **Send As** (`send_as`) on the SIP credential, and leave caller ID blocking off. **Caller ID** (`caller_id`) is for CNAM or SIP-to-SIP From.
+
 ## Complete Integration Example
 
 This example creates a full deployment with phone + WebRTC:
@@ -400,22 +412,25 @@ def setup_signalwire():
         auth=auth,
         json={
             "name": "customer-agent",
+            "email": "customer-agent@example.com",
             "external_swml_handler": {"id": handler["id"]}
         }
     )
     subscriber = sub_resp.json()
     print(f"Agent address: {subscriber['address']}")
 
-    # Create guest token for WebRTC
+    # Subscriber token for the browser client. reference is the subscriber's
+    # email; an unknown email creates a Subscriber, and the token expires
+    # after two hours by default.
     token_resp = requests.post(
         f"{base}/subscribers/tokens",
         auth=auth,
-        json={"reference_id": "web-guest", "ttl": 86400}
+        json={"reference": "user@example.com"}
     )
-    guest_token = token_resp.json()
-    print(f"Guest token: {guest_token['token'][:50]}...")
+    subscriber_token = token_resp.json()
+    print(f"Subscriber token: {subscriber_token['token'][:50]}...")
 
-    return subscriber["address"], guest_token["token"]
+    return subscriber["address"], subscriber_token["token"]
 
 
 if __name__ == "__main__":
@@ -455,7 +470,7 @@ if __name__ == "__main__":
 
 ### WebRTC Not Connecting
 
-1. Verify guest token is valid and not expired
+1. Verify the Subscriber token is valid and not expired
 2. Check browser console for errors
 3. Ensure HTTPS is used (required for WebRTC)
 4. Verify agent address is correct
@@ -472,5 +487,5 @@ if __name__ == "__main__":
 2. **Enable Basic Auth** for production agents
 3. **Rotate tokens** regularly
 4. **Use environment variables** for credentials
-5. **Limit guest token TTL** to minimum needed
+5. **Subscriber tokens expire after two hours by default**; set `expire_at` (unix time) for a different expiry
 6. **Monitor debug webhooks** for suspicious activity

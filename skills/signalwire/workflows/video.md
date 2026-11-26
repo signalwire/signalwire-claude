@@ -256,7 +256,7 @@ This is the right answer for marketing sites and click-to-call buttons. Do not h
 
 A **Subscriber Access Token (SAT)**, minted from the Dashboard's Subscribers section.
 
-For public widgets — chatbots, click-to-call — an **embed token** works with no backend at all. Guide: `/docs/browser-sdk/v4/guides/authentication`.
+For public widgets — chatbots, click-to-call — an **embed token** works with no backend at all. Creating a guest embed token needs no credentials beyond the public Click-to-Call token in the request body. Guide: `/docs/browser-sdk/v4/guides/authentication`.
 
 For a mobile or long-lived browser client, use device-bound tokens refreshed by proof of possession (DPoP):
 

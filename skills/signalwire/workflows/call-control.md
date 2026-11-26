@@ -457,7 +457,7 @@ GET https://{space}.signalwire.com/api/voice/logs
 
 Each log entry includes the call's `status` (e.g. `in-progress`, `completed`) and an `id` — that `id` is the call ID accepted by the Send Call Commands API (`POST /api/calling/calls`), including `calling.end`.
 
-The endpoint supports only date filters, pagination, and an `include_deleted` flag — no server-side status filter — so filter on `status` client-side.
+There is no server-side status filter, so filter on `status` client-side. Voice, message, fax, video, and conference log lists share one date-filter and paging contract, and results are newest first. `created_before`, `created_on`, and `created_after` accept a date (`YYYY-MM-DD`), an ISO 8601 timestamp, or Unix time in seconds. A date is midnight UTC. `created_before` leaves that day out, and `created_after` includes it. `created_on` selects that whole UTC day; a timestamp selects the UTC day that contains it. A timestamp with no `Z` or offset is read as UTC. `page_size` defaults to 50 and the maximum is 1000. A `page_number` above 0 also requires `page_token`. Follow `links.next` or `links.prev`; each link carries the filters and the token. Logs created before the start of the UTC day one year ago are never returned. A `created_before`, `created_on`, or `created_after` earlier than that returns `422` with code `exceeds_history_logs_limit`. Voice and message logs ignore `include_deleted`. Fax, video, and conference logs honor it, defaulting to false.
 
 ```python
 import requests
@@ -468,8 +468,8 @@ auth = HTTPBasicAuth(project_id, api_token)
 space_url = "https://your-space.signalwire.com"
 
 # List voice logs; filter client-side (no server-side status filter).
-# NOTE: results are paginated (page_size defaults to 50) —
-# iterate pages for a complete sweep
+# NOTE: results are paginated (page_size defaults to 50, max 1000) —
+# follow links.next; a page_number above 0 also requires page_token
 logs = requests.get(f"{space_url}/api/voice/logs", auth=auth).json()['data']
 
 # Live = any non-terminal status; stale = live AND older than the
@@ -500,13 +500,22 @@ Relay entries (`relay_pstn_call`, `relay_sip_call`, `relay_webrtc_call`) carry a
 
 ## Common Call States
 
-- **created**: Call has been created
-- **ringing**: Destination is ringing
-- **answered**: Call was answered
-- **ended**: Call has terminated
-- **busy**: Destination is busy
-- **failed**: Call failed to connect
-- **no-answer**: Destination didn't answer
+A placed call moves through `queued`, `initiated`, `created`, `ringing`, `answered`, `ending`, and `ended`. It can skip some, such as `answered`. `ended` is the final status of every call that was placed, however it ended. The cause is `end_reason` on the `ended` call state callback, for example `busy` or `noAnswer`.
+
+`failed`, `canceled`, and `completed` are outcomes for a call that was never placed. No call state callback is sent for them, whatever `status_events` lists.
+
+- **queued**: Accepted and waiting to be placed
+- **initiated**: SignalWire has started placing the call
+- **created**: Set up and being placed
+- **ringing**: Ringing at the destination
+- **answered**: Answered and in progress
+- **ending**: Hanging up, on the way to `ended`
+- **ended**: Ended, however it ended. Read `end_reason` on the `ended` callback
+- **failed**: Could not be placed (destination blocked, call flagged as spam, no registered SIP endpoint, or a temporary error)
+- **canceled**: Canceled with the `update` command while still `queued`
+- **completed**: Ended with the `update` command while still `queued`
+
+`status: canceled` is valid only while the call is `queued` or `ringing`. Canceling a `ringing` call, or completing a call that has been placed, hangs it up and the status becomes `ended`. A `url` or `swml` redirect is valid only while `answered`. A call whose status is `failed`, `canceled`, or `completed` cannot be updated.
 
 ### Disconnect vs. End
 
@@ -546,12 +555,14 @@ async def warm_transfer(call, agent_number):
 
 ### Call Whisper (Agent Hears Announcement, Caller Doesn't)
 
+`confirm` runs on the leg `connect` dialed. That document starts with empty `vars` and its own `call` (`call_id`, `from`, `to`, and `direction` for that leg; a B-leg has `parent` and usually `peer` pointing at the A-leg). A-leg `vars` such as `%{vars.caller_name}` are empty there. Use `%{call.from}`, embed the values when you build the A-leg document, or set `confirm` to a URL that looks the caller up by `call.parent` or `call.peer`. The leg that issued `connect` keeps its vars across the bridge. SignalWire clears `call.peer` when that document resumes, so code after `connect` must not rely on it. Docs: https://signalwire.com/docs/platform/voice/call-legs
+
 ```yaml
 - connect:
     to: "+15551234567"
     from: "%{call.from}"
     answer_on_bridge: true
-    confirm:  # Runs on the agent leg before bridging - caller doesn't hear it
+    confirm:  # Runs on the dialed leg before bridging — caller doesn't hear it
       - play:
           url: "say:This is a sales call from %{call.from}"
 ```
@@ -704,7 +715,7 @@ ws.on('message', (data) => {
 
 ### Call Variables for Context
 
-**Pass data through the call:**
+**Pass data through this leg.** `%{vars.*}` below expands on the leg that issues `connect`. `confirm` on the dialed leg starts with empty `vars`.
 
 ```yaml
 - ai:
@@ -788,9 +799,9 @@ async def warm_transfer_with_context(call, agent_number, context):
     to: "+15551234567"
     from: "%{call.from}"
     answer_on_bridge: true
-    confirm:  # Runs on the agent leg before bridging - caller doesn't hear it
-      - play:
-          url: "say:Incoming call from %{vars.caller_name}, account %{vars.account_id}, issue type: %{vars.issue_type}"
+    # Dialed leg starts with empty vars. This URL is fetched for that leg;
+    # look the caller up from call.parent or call.peer. See Call Whisper above.
+    confirm: "https://yourserver.com/agent-whisper"
 ```
 
 ### Call Screening with Accept/Reject
@@ -800,9 +811,9 @@ async def warm_transfer_with_context(call, agent_number, context):
     url: "say:Please hold while we locate an agent"
 - connect:
     to: "+15551234567"
-    confirm:  # Screening script runs on the answered leg
+    confirm:  # Screening script runs on the answered leg; it does not need A-leg vars
       - prompt:
-          play: "say:You have an incoming call from %{vars.caller_name}. Press 1 to accept"
+          play: "say:You have an incoming call. Press 1 to accept"
           max_digits: 1
 - cond:
     - when: "connect_result == 'failed'"

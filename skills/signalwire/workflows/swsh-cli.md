@@ -102,6 +102,8 @@ swsh get_call --all-active
 
 For flags on the `create` and `update` commands, fetch `/docs/platform/swsh` — the table above lists commands, not their arguments.
 
+A domain application's `identifier` is at most 50 characters: letters, digits, and hyphens, starting and ending with a letter or digit, with no two hyphens in a row. The domain is the Space name, a hyphen (two hyphens in some Spaces), and the identifier. That label can be at most 63 characters, so a long Space name leaves fewer than 50 characters for the identifier. The response `domain` field is the domain the Space built. A longer domain returns `422` unless a domain application in this Space already uses it. Another Space already using that domain returns `422` with detail `Identifier is not available`. The same `identifier` with the same `user` already used in this Space also returns `422`. On Relay REST domain applications, `code` repeats the HTTP status (`"422"`); read `detail`. The length check runs only when `identifier` changes. Changing it rebuilds the domain with the separator the Space uses now, so a domain that had one hyphen can come back with two.
+
 **On `laml_bin`:** these commands manage cXML applications. This plugin does not teach LaML/cXML for new development, but the commands exist for accounts that still carry them.
 
 ## WireStarter — a local dev container

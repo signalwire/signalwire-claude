@@ -2,16 +2,18 @@
 
 ## Overview
 
-SignalWire Fabric is a unified communication framework. Relay is the SDK for building applications that connect to it.
+SignalWire Fabric is a unified communication framework. Relay is SignalWire's JSON-RPC 2.0 protocol over one persistent WebSocket, and the Relay SDKs wrap it.
 
 **Relay call control does not require a WebSocket.** There are two ways to reach it:
 
 | Path | Use when |
 |------|----------|
 | **HTTP calling commands** — `POST /api/calling/calls` | You want to act on a call from a backend, a cron job, or a webhook handler. No connection to hold open, no SDK required. |
-| **Persistent WebSocket** — the Relay SDK | You want to *receive* real-time events (`call.received`, state changes) and hold session state. |
+| **Persistent WebSocket** — the Relay SDKs | You want to *receive* real-time events (`call.received`, state changes) and hold session state. |
 
 The WebSocket path is for consuming events. If all you need is to tell a live call to do something, use the HTTP endpoint — see [Calling Commands over HTTP](#calling-commands-over-http) below.
+
+**No SDK for your language.** Use an SDK by default. Open one WebSocket to `wss://relay.signalwire.com`. The first message must be `signalwire.connect`. Otherwise, or if it is not sent within about 5 seconds, the socket closes with no response. Backend code uses version 2.0.0, the version the Server SDKs use, with a project ID and an API token. A connection opened with `signalwire.connect` major version 4 receives no calling events, and the service refuses `signalwire.receive`, `signalwire.unreceive`, `signalwire.provision`, `messaging.send`, and every chat and video request on it, with error `-32001` (`Invalid client version for requested API`). Version 4.0.0 is the Client protocol for Call Fabric and the browser, and it authenticates with a short-lived JWT. Never ship the API token to a browser. Docs: https://signalwire.com/docs/apis/relay/server (backend) and https://signalwire.com/docs/apis/relay/client (Call Fabric and WebRTC).
 
 ## Calling Commands over HTTP
 
@@ -525,22 +527,36 @@ class MultiTenant(Consumer):
 
 ### Retrieving Fabric Address
 
+Project administration code lists the addresses on a resource with the project API token:
+
 ```python
 response = requests.get(
-    f"{space_url}/api/fabric/addresses",
+    f"{space_url}/api/fabric/resources/{resource_id}/addresses",
     auth=HTTPBasicAuth(project_id, api_token)
 )
 
-addresses = response.json()
-for addr in addresses:
-    print(f"Address: {addr['address']} - Type: {addr['type']}")
+for addr in response.json()["data"]:
+    print(f"{addr['name']}: {addr['type']}")
 ```
 
-### Address Types
+A Subscriber client lists the addresses it can reach at `GET /api/fabric/subscriber/addresses` and fetches one at `GET /api/fabric/subscriber/addresses/{id}`, with a Subscriber Access Token sent as a Bearer token. These routes reject a project API token. Those operations were previously served at `/api/fabric/addresses` and `/api/fabric/addresses/{id}`. The old paths still answer SAT requests with the same response. Pagination links on the list keep the old path. Both add `Deprecation: true` and a `Link` header naming `/api/fabric/subscriber/addresses` as the successor. No removal date is set.
 
-- **phone**: Phone number (+15551234567)
-- **sip**: SIP URI (sip:user@domain)
-- **subscriber**: Subscriber identifier
+A SIP address's SIP domain is the Space name, a hyphen (two hyphens in some Spaces), and the Domain's name, or `public` or `private` for the built-in Domains. That label can be at most 63 characters. `POST /api/fabric/sip_addresses` and `PATCH /api/fabric/sip_addresses/{id}` return `422` with code `domain_too_long` on `context_id` when the Domain's name makes the label longer, unless this Space already uses that SIP domain. Another Space already using it returns `domain_not_available` on `context_id`.
+
+### RELAY event fields
+
+- `calling.call.state`: `params.subscriber_id` is the Subscriber who placed the call from the Browser SDK or who answered it there. `params.address_id` is the Resource Address the call was placed to, and `params.subscriber_name` is the placing Subscriber's display name, or if that's empty their first name, then their email, then `Subscriber`. `address_id` and `subscriber_name` are present when a Subscriber places the call to an Address.
+- `calling.call.dial`: `call.subscriber_id` is the Subscriber who answered the dialed leg in the Browser SDK, present when a Subscriber answers.
+- `calling.conference`: participant events include `params.subscriber_id` (the Subscriber who placed the participant's call from the Browser SDK or answered it there). `params.address_id` and `params.subscriber_name` are on those participant events when the call was placed to an Address, and `subscriber_name` uses the same display name, first name, email, then `Subscriber` order. `params.deaf` is whether the participant can't hear the conference, present on events about a participant except `participant-call-quality`.
+
+### Address `type` (display type)
+
+These are values of the address `type` field, which the Dashboard calls **Display As**: how the alias appears to client applications.
+
+- **app**: shown to clients as an application
+- **room**: shown to clients as a Conference Room
+- **call**: shown to clients as a call
+- **subscriber**: shown to clients as a Subscriber
 
 ## Testing Relay Applications
 
@@ -683,6 +699,11 @@ def schedule_cleanup(subscriber_id, minutes):
 - External SIP endpoints
 - For connecting to existing PBX systems
 - Custom routing rules
+
+**How SignalWire dials the gateway URI:**
+- Exactly as configured, with one exception. When a call to one of your phone numbers routes to the gateway and the URI has no user part, SignalWire adds the dialed number without the leading `+`. With `sip:pbx.example.com`, a call to `+15551234567` goes to `sip:15551234567@pbx.example.com`.
+- A URI with a user part is never changed, such as `sip:support@pbx.example.com`. Set a user part when the destination routes calls on it, for example by a project ID or an agent name.
+- Calls that reach the gateway through a Resource SIP Address, or a dial to the gateway's Resource Address, always use the URI as configured. If that URI has no user part, the call goes out with no user part.
 
 ## Resource-Based Architecture
 

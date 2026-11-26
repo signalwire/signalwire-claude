@@ -1,6 +1,6 @@
 ---
 name: signalwire
-description: Use when building telephony, messaging, or video applications; implementing voice AI agents; adding real-time AI coaching or call observation (ai_sidecar) to live calls; working with SWML call flows; debugging webhook callbacks or call state issues; setting up real-time WebSocket communication; encountering authentication 401/403 errors; gating a SWAIG function with a semantic gate; or troubleshooting SWAIG function errors - provides REST API patterns, SDK examples, and production-tested workflows for modern SignalWire communication systems
+description: Use when building telephony, messaging (SMS, MMS, or RCS), or video applications; implementing voice AI agents; adding real-time AI coaching or call observation (ai_sidecar) to live calls; working with SWML call flows; debugging webhook callbacks or call state issues; setting up real-time WebSocket communication; encountering authentication 401/403 errors; gating a SWAIG function with a semantic gate; or troubleshooting SWAIG function errors - provides REST API patterns, SDK examples, and production-tested workflows for modern SignalWire communication systems
 ---
 
 # SignalWire
@@ -87,9 +87,9 @@ These insights come from analysis of 89 SignalWire training videos, LiveWire ses
 - **Best Practices:** [Patterns](workflows/ai-agent-patterns.md) | [Error Handling](workflows/ai-agent-error-handling.md) | [Security](workflows/ai-agent-security.md) | [Testing](workflows/ai-agent-testing.md) | [Debug Webhooks](workflows/ai-agent-debug-webhooks.md)
 
 **Other:**
-- [Messaging](workflows/messaging.md) | [Video](workflows/video.md) | [Fabric & Relay](workflows/fabric-relay.md) | [Webhooks & Events](workflows/webhooks-events.md)
+- [Messaging (SMS, MMS, RCS)](workflows/messaging.md) | [Video](workflows/video.md) | [Fabric & Relay](workflows/fabric-relay.md) | [Webhooks & Events](workflows/webhooks-events.md)
 
-**SWML Method Reference:** [All SWML methods](workflows/swml-methods.md) - complete method catalog including queuing, conferencing, AMD, fax, transcription, streaming, taps, payment, control flow, Messaging SWML (`reply` to SMS), and variable syntax
+**SWML Method Reference:** [All SWML methods](workflows/swml-methods.md) - complete method catalog including queuing, conferencing, AMD, fax, transcription, streaming, taps, payment, control flow, Messaging SWML (`reply` to SMS, MMS, and RCS), and variable syntax
 
 ## Quick Start Patterns
 
@@ -101,11 +101,11 @@ These insights come from analysis of 89 SignalWire training videos, LiveWire ses
 
 **Webhooks:** HTTP POST with JSON (`call_id`, `call_state`, `from`, `to`, `direction`)
 
-**Errors:** REST returns HTTP status + JSON with `error`/`message`. SWML logs to Dashboard.
+**Errors:** A failed REST call returns an HTTP status and an `errors` array. Iterate every item. Most `/api/*` routes use `{type, code, message, attribute, url}`, and `code` is the error name. Most `/api/relay/rest` routes use `{detail, status, title, code}`, and `code` repeats the HTTP status as a string, such as `"422"`. Read `detail` for the cause. Campaign Registry uses the first shape. A bad credential or a token missing the required scope gets `401` with a plain-text `Unauthorized` body, not JSON. The Compatibility API (`/api/laml/2010-04-01`) returns one object, `{code, message, more_info, status}`. SWML logs to Dashboard.
 
 ## Key Concepts
 
-**Call States:** queued → created → ringing → answered → ended
+**Call States:** queued → initiated → created → ringing → answered → ending → ended (may skip some, such as answered). `ended` is the final status of every placed call; `end_reason` on that callback says why (`busy`, `noAnswer`). `failed`, `canceled`, and `completed` mean the call was never placed and send no callback.
 
 **SWML Sections:** `main` (required entry point) | `execute` (call + return) | `transfer` (goto)
 

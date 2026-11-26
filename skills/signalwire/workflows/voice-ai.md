@@ -103,12 +103,13 @@ sections:
 - **post_prompt_url**: Where the end-of-call summary report is POSTed (optional). Not the SWAIG function endpoint — functions use `SWAIG` `web_hook_url`
 - **post_prompt_auth_user/password**: HTTP Basic Auth for `post_prompt_url` (optional)
 - **voice**: `<engine>.<voice>[:model]` when neither `languages` nor `multilingual` is set. See [Voice Selection](#voice-selection)
-- **params.double_turns**: `false` by default. A planning model (`utility_model`, else `ai_model`) reviews the turn before each reply. Cover the wait with `languages[].double_turn_fillers`
+- **params.double_turns**: `false` by default. A planning model (`double_turn_model` if set, otherwise `utility_model`, otherwise `ai_model`) reviews the turn before each reply. Cover the wait with `languages[].double_turn_fillers`
+- **params.double_turn_model**: the model for that plan. No effect unless `double_turns` is true. An unrecognized name skips the plan, and the agent replies without one
 - **params.visual_input**: How many of the caller's newest video frames `get_visual_input` sends (`true` = 1, or 1–5). Default `1`
 - **params.video_blank_image**: HTTPS or HTTP URL of a PNG shown on a video call that has no avatar clips
 - **params.barge_functions**: `false` by default. When `false`, functions are not executed while the user is speaking
-- **params.tts_number_format**: `e164` (default), `international`, `national`, or `generic`
-- **params.attention_timeout**: ms before the attention prompt. `0` disables; otherwise `1000`–`600000`. Default `5000`. A value below `end_of_speech_timeout` is raised to that timeout plus 1000 ms
+- **params.tts_number_format**: how the agent speaks phone numbers. `e164` (default, `+12345678901`), `international` (`+1 234-567-8901`), `national` (`(234) 567-8901`), or `generic` (`234 567 8901`). An unrecognized value is ignored and `e164` is used
+- **params.attention_timeout**: ms before the attention prompt. `0` disables; otherwise `1000`–`600000`. Default `5000`. A nonzero value below `end_of_speech_timeout` is raised to that timeout plus 1000 ms
 - **params.digit_timeout**: ms at the end of digit input. `1`–`29999`; any other value keeps the default `3000`
 - **params.hard_stop_time**: Max time the agent stays active, as `HH:MM:SS`, `MM:SS`, or a whole number of seconds. Unit suffixes such as `30m` are not converted (`30m` is 30 seconds)
 
@@ -133,13 +134,15 @@ That history is the argument for being explicit: an application relying on the d
 
 Set a voice via `voice` strings in SWML (`/docs/swml/reference/calling/ai/languages#use-voice-strings`) or `add_language()` in the SDKs (`/docs/server-sdks/guides/voice-language`). Audition voices at `/docs/platform/voice/tts`.
 
+A string that works in `languages` can still be rejected by SWML `play`, Relay, and REST — see [Where a Voice String Works](../reference/sdk/voice-configuration.md#where-a-voice-string-works).
+
 ### utility_model
 
 One parameter that changes the cost and latency profile of several background features at once.
 
 `params.utility_model` names the model used for lightweight background work. **Defaults to whatever `ai_model` is set to** — so an agent on a large frontier model is running its background chores on that model too, while the caller waits.
 
-Documented uses: redaction (`redact_prompt`), transcription cleanup (`auto_correct`), and `double_turns` planning (when `utility_model` is set; otherwise planning uses `ai_model`).
+Documented uses: redaction (`redact_prompt`), transcription cleanup (`auto_correct`), and `double_turns` planning (`double_turn_model` if set, otherwise `utility_model` if set, otherwise `ai_model`).
 
 ```yaml
 - ai:
@@ -180,7 +183,7 @@ If the agent interrupts callers or leaves dead air, that is the knob — see [Tu
 
 **They are mutually exclusive.** Per the docs: *"`multilingual` and `languages` are mutually exclusive. If both are set, SignalWire uses `multilingual` and ignores `languages` entirely."* Setting both does not merge them and does not error — `languages` is simply dropped. This is the first thing people get wrong.
 
-**Recognition hints are not passed in code-switching mode.** One `ai.hints` list covers every language the agent uses; there are no per-language hints. When speech recognition runs in code-switching mode (`multilingual` with its default recognizer, or a `languages` entry whose `code` is `multi`), string hints and `hint` values are not passed to speech recognition, and no error is returned. For a `languages` entry, hints are dropped only while that entry is active, and only when `multi` is the first code. `code: ["en-US", "multi"]` keeps hints. Pattern/replace rules still apply to the transcript in every mode. Outside code-switching mode, `multi` is an ordinary language code.
+**Recognition hints are not passed in code-switching mode.** One `ai.hints` list covers every language the agent uses; there are no per-language hints. When speech recognition runs in code-switching mode (`multilingual` is set, or a `languages` entry whose `code` is `multi` on a recognizer that code-switches on `multi`), string hints and `hint` values are not passed to speech recognition, and no error is returned. For a `languages` entry, hints are dropped only while that entry is active, and only when `multi` is the first code. `code: ["en-US", "multi"]` keeps hints. Pattern/replace rules still apply to the transcript in every mode. Outside code-switching mode, every engine receives hints, and `multi` is an ordinary language code.
 
 Docs: `/docs/swml/reference/calling/ai/multilingual`
 

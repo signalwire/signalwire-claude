@@ -10,8 +10,10 @@ Four layers of control. Only the first one depends on the model cooperating:
 |-------|-----------|
 | Guidance | Prompts and tool descriptions. Probabilistic. |
 | Tool scope | Each step lists its own tools. A tool that is not offered cannot be called. |
-| Transition scope | `set_valid_steps([])` removes `next_step`. Leave `set_valid_contexts` unset so `change_context` is not offered; an empty list still offers it. |
+| Transition scope | `valid_steps` has three states: unset or null still offers `next_step` as `["next"]`; a non-empty list offers only those names; `[]` is deny-all and removes `next_step`. Leave `set_valid_contexts` unset so `change_context` is not offered; an empty list still offers it. These lists only constrain what the model is offered. A `change_step` or `change_context` action from a function can still jump to any existing step or context, and a gather `completion_action` can still move to any step. |
 | Execution authority | The handler checks real state, then commits. The model can ask. Code decides. |
+
+When wording differs by mode, register a copy of the tool for each mode with `define_tool`, reusing the original's description and parameters, and list each copy only in its own step's `set_functions`. Don't have a tool read a mode flag in `global_data` (a mode flag can drift from the real context).
 
 ```python
 def scoped(step, text, tools):
@@ -194,7 +196,7 @@ class SecureAgent(AgentBase):
     )
     def verify_identity(self, args, raw_data):
         pin = args.get("pin")
-        caller = raw_data.get("call", {}).get("from")
+        caller = raw_data.get("caller_id_num")
 
         if self.validate_pin(caller, pin):
             return (FunctionResult(
@@ -217,7 +219,7 @@ class SecureAgent(AgentBase):
         parameters={}
     )
     def get_balance(self, args, raw_data):
-        verified = raw_data.get("vars", {}).get("verified", False)
+        verified = raw_data.get("global_data", {}).get("verified", False)
         if not verified:
             return FunctionResult(
                 "I need to verify your identity first. "
@@ -285,7 +287,7 @@ def explain_bill_increase(self, args, raw_data):
     # self.billing and ask_reasoning_model are your helpers.
     # ask_reasoning_model raises TimeoutError when it exceeds timeout.
     invoices = self.billing.recent_invoices(
-        raw_data.get("call", {}).get("from")
+        raw_data.get("caller_id_num")
     )
 
     question = args.get("question", "why the bill changed")
@@ -356,7 +358,7 @@ Send confirmation via SMS:
 def book_appointment(self, args, raw_data):
     date = args.get("date")
     time = args.get("time")
-    caller = raw_data.get("call", {}).get("from")
+    caller = raw_data.get("caller_id_num")
 
     # Book the appointment
     confirmation = self.calendar.book(date, time)
@@ -373,6 +375,8 @@ def book_appointment(self, args, raw_data):
 ```
 
 ## Multi-Step Flow Pattern
+
+Return one step per call and keep the position in `global_data` (a model given the whole plan rushes it or loses its place). This is the flow's own progress, written by its handlers; it is not a stand-in for the agent's current step.
 
 Guide user through a process:
 
@@ -414,7 +418,7 @@ def collect_email(self, args, raw_data):
 )
 def collect_username(self, args, raw_data):
     username = args.get("username")
-    email = raw_data.get("vars", {}).get("email")
+    email = raw_data.get("global_data", {}).get("email")
 
     # Check availability and create account
     if self.is_username_available(username):
@@ -563,8 +567,8 @@ def check_availability(self, args, raw_data):
 )
 def book_slot(self, args, raw_data):
     time = args.get("time")
-    date = raw_data.get("vars", {}).get("requested_date")
-    caller = raw_data.get("call", {}).get("from")
+    date = raw_data.get("global_data", {}).get("requested_date")
+    caller = raw_data.get("caller_id_num")
 
     confirmation = self.calendar.book(date, time, caller)
 
