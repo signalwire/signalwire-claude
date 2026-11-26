@@ -132,9 +132,9 @@ An inbound message webhook can bridge SMS into AI chat: build a stable conversat
 
 A page can move that chat onto a call with `HandoffRouter` mounted beside `ChatGateway`. The browser dials with the chat handle and a nonce in `userVariables`. That path ends the text leg when the call starts. Returning to text continues under a new ID. The default is `<id>.1`, then `<id>.2`, and so on. Pass `next_conversation_id` (TypeScript `nextConversationId`) to choose the next ID.
 
-## Billing
+## Gotchas
 
-**Per turn, not per minute.** This is the significant difference from voice — an idle chat session costs nothing, where an idle call does not. A long-lived conversation left open between messages is not accruing charges.
+- **Chat bills per turn, not per minute.** An idle conversation costs nothing, unlike an idle call, so a conversation left open between messages accrues no charges.
 
 ## Related
 

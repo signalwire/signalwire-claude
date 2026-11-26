@@ -108,10 +108,6 @@ Two separate changes produced this, and they are easy to conflate:
 
 Sources: `/docs/platform/changelog/2026/8/13`, `/docs/platform/changelog/2026/9/5`.
 
-**Always declare the engine explicitly.** The default has moved twice in two months, and an agent that relies on it will change voice without a deploy.
-
-**This default is for AI agents.** The `play` and `prompt` verbs resolve voices through a separate mapping table and land elsewhere — do not carry this answer over to them.
-
 ### Available Engines
 
 Voice specs take the form **`engine.voice:model`** — engine and voice required, model optional and not supported by every engine. The format is case-insensitive.
@@ -148,7 +144,7 @@ Older code will hit these (source: `/docs/platform/changelog/2026/8/5`):
 
 ### Inline Expression Tags Differ by Engine
 
-**These are not interchangeable.** Using the wrong syntax puts literal bracket text into the audio.
+The syntax differs by engine (see [Gotchas](#gotchas)):
 
 | Engine | Syntax | Notes |
 |--------|--------|-------|
@@ -233,6 +229,12 @@ agent.add_language("English", "en-US", "openai.nova")
 agent.add_language("English", "en-US", "openai.alloy")
 agent.add_language("English", "en-US", "openai.echo")
 ```
+
+## Gotchas
+
+- **Name the engine in every voice string.** The default has moved twice in two months, and an agent that relies on it changes voice without a deploy.
+- **The default voice above is for AI agents only.** `play` and `prompt` resolve voices through a separate mapping and land on a different default.
+- **Expression tags aren't interchangeable between engines.** The wrong syntax is spoken as literal text.
 
 ## Fillers Configuration
 

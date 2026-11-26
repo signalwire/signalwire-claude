@@ -106,4 +106,4 @@ SWML documents define call flows, including AI agents (the `ai` method), and SWA
 
 ## Critical Pattern: Loop Protection
 
-Cap menu retries with `goto` and its `max`. When a label's `max` is reached, the jump is skipped and the document continues with the next method, so put a fallback after the `goto`. Separately, a call is limited to 32 combined `transfer` and `goto` jumps, and 8 in a row without caller input; past that the call is hung up. See [`goto` / `label`](workflows/swml-methods.md#goto--label).
+Cap menu retries with `goto` and its `max`. When a label's `max` is reached, the jump is skipped and the document continues with the next method, so put a fallback after the `goto`. Separately, a call is limited to 32 combined `transfer` and `goto` jumps, and 8 in a row without caller input; past that the call is hung up. See [`goto` / `label`](workflows/swml-methods.md#goto--label) and [SWML Methods: Gotchas](workflows/swml-methods.md#gotchas).

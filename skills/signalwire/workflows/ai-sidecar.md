@@ -20,7 +20,7 @@ Docs: https://signalwire.com/docs/swml/reference/calling/ai-sidecar (subpages: `
 
 **`ai_sidecar` starts its own transcription — there is no `live_transcribe` prerequisite.** You do not need to start a `live_transcribe` before attaching a sidecar, and adding one is unnecessary rather than required. The two *can* coexist on a call if you want a plain transcript alongside the coaching, because the sidecar's transcribe runs under its own separate handle.
 
-The only thing rejected is a **second sidecar** on the same call, which fails with `there is already a sidecar attached to this call`.
+The only thing rejected is a second sidecar on the same call: see [Gotchas](#gotchas).
 
 ## How It Works
 
@@ -65,9 +65,7 @@ So expect an early `turn` and `request` callback — and possibly an `insight` o
 
 Docs: https://signalwire.com/docs/platform/voice/call-legs
 
-**The field is `customer_role`, not `customer_leg`.** There is no `customer_leg` field — it is silently ignored if you set it, and the sidecar falls back to the `remote-caller` default. This is the single most likely configuration mistake.
-
-**Both legs are the constraint people actually hit.** `direction: ["remote-caller"]` is rejected at start with `sidecar requires both legs (remote-caller and local-caller)`. The requirement is documented; the error string is not.
+`customer_role` and `direction` are the two settings most often gotten wrong: see [Gotchas](#gotchas).
 
 To attach a sidecar, `lang` is the only required setting. An `action.summarize` request needs none of the start settings.
 
@@ -279,7 +277,7 @@ Within one evaluation (`request`/`thought`/`tool_call`/`tool_result`/`insight`),
 
 ## Runtime Control
 
-A SWML document attaches the sidecar when that instruction runs; to attach from outside the document's flow, use REST. That request is `POST https://{space}.signalwire.com/api/calling/calls` with `"command": "calling.ai_sidecar"`, the call's `id`, and `params` set to the same settings as the SWML method. A call runs one sidecar at a time. If one is already attached, the HTTP request still returns the call object, but the attach is rejected and no `start` callback follows. Stop the first sidecar before attaching another.
+A SWML document attaches the sidecar when that instruction runs; to attach from outside the document's flow, use REST. That request is `POST https://{space}.signalwire.com/api/calling/calls` with `"command": "calling.ai_sidecar"`, the call's `id`, and `params` set to the same settings as the SWML method. A call runs one sidecar at a time: see [Gotchas](#gotchas).
 
 Ask, poke, status, and stop use that same endpoint — there is no SWML equivalent. Every command names the call in a top-level `id`. Auth is basic auth: Project ID as the username, API token (Voice permission) as the password.
 
@@ -296,7 +294,7 @@ Content-Type: application/json
 { "command": "calling.ai_sidecar.stop", "id": "{call_id}" }
 ```
 
-`status` requests a snapshot of the sidecar's activity counters. The HTTP response is only the call object and does not include that snapshot.
+`status` requests a snapshot of the sidecar's activity counters.
 
 **`ask` and `poke` are not the same thing.** An `ask` question does not become part of the sidecar's conversation, so later tips aren't affected. Answers arrive as `ask_answer` callbacks on the relay topic `calling.ai.sidecar` and, if the sidecar was started with a `url`, at that URL, tagged with the `ask_id`. `poke` drives a normal advice tick early, as though the customer had just finished a turn, and the message stays in the sidecar's conversation, so later tips take it into account. Reach for `poke` when your UI knows something the transcript does not; reach for `ask` when a human wants to query the sidecar. The HTTP response is the call object for both. For `ask`, the `ask_id` first appears in the `ask_request` callback and is repeated on later callbacks for that ask. `poke` has no correlation id.
 
@@ -357,11 +355,15 @@ sections:
 - `sidecar_skip` name reserved
 - Tool loops capped (see `tool_loop` error)
 
-## Best Practices
+## Gotchas
 
-- **Set a prompt** — the default is minimal. Tell the model exactly when to advise and when to `sidecar_skip`.
-- **Use `hints`** for product names, competitors, jargon, and SWAIG enum values — ASR accuracy directly drives advice quality.
-- **Prefer relay for UIs** — the relay topic always fires; add a webhook `url` only if a server needs the events.
-- **Report-only rollout** — start with `params.act_on_channel: false` so transfers/hangups are visible as callbacks without affecting live calls, then enable.
-- **Tune reaction** — lower `idle_timeout_ms` for snappier advice; raise `min_interval_ms` on chatty calls to control model costs.
-- **Mid-call control** — use the `ai_sidecar.ask` REST call command to ask the sidecar questions, or the `inject_message` action to steer it.
+- **The field is `customer_role`, not `customer_leg`.** A `customer_leg` key is silently ignored, and the sidecar falls back to the `remote-caller` default.
+- **Both legs are required.** `direction: ["remote-caller"]` is rejected at start with `sidecar requires both legs (remote-caller and local-caller)`.
+- **One sidecar per call.** A second sidecar fails with `there is already a sidecar attached to this call`. Over REST, the HTTP request still returns the call object, and the only sign of the rejection is that no `start` callback follows. Stop the first sidecar before attaching another.
+- **`calling.ai_sidecar.status` doesn't return the snapshot.** Its HTTP response is only the call object.
+- **Tell the model when to `sidecar_skip`.** The default prompt is minimal.
+- **Put product names, competitors, jargon, and SWAIG enum values in `hints`.** Recognition accuracy drives advice quality.
+- **Prefer relay for UIs.** The relay topic always fires. Add a webhook `url` only if a server needs the events.
+- **Roll out report-only.** Start with `params.act_on_channel: false`, so transfers and hangups show up as callbacks without affecting live calls, then turn it on.
+- **Tune how fast it reacts.** Lower `idle_timeout_ms` for snappier advice. Raise `min_interval_ms` on chatty calls to control model costs.
+- **Steer it mid-call.** Use the `ai_sidecar.ask` REST call command to ask the sidecar questions, or the `inject_message` action to steer it.
