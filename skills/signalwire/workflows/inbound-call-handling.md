@@ -497,13 +497,14 @@ sections:
   main:
     - answer: {}
     - play:
-        url: "say:Please leave a message after the beep"
-    - play:
-        url: "https://example.com/beep.mp3"
+        url: "say:Please leave a message after the beep. Press pound when you are done."
     - record:
-        beep: false
+        beep: true
+        terminators: "#"
+        end_silence_timeout: 5
         max_length: 120
-        end_silence_timeout: 3
+        initial_timeout: 10
+        status_url: "https://example.com/voicemail"
     - play:
         url: "say:Thank you for your message"
     - send_sms:
@@ -965,10 +966,14 @@ sections:
     - transfer: { dest: voicemail }
 
   voicemail:
-    - play: { url: "say:Please leave a message after the beep" }
+    - play: { url: "say:Please leave a message after the beep. Press pound when you are done." }
     - record:
+        beep: true
+        terminators: "#"
+        end_silence_timeout: 5
         max_length: 120
-        end_silence_timeout: 3
+        initial_timeout: 10
+        status_url: "https://example.com/voicemail"
     - play: { url: "say:Thank you. We'll return your call soon." }
     - hangup: {}
 ```
@@ -1001,7 +1006,13 @@ sections:
 
   voicemail:
     - play: { url: "say:All representatives are unavailable. Please leave a message." }
-    - record: { max_length: 120 }
+    - record:
+        beep: true
+        terminators: "#"
+        end_silence_timeout: 5
+        max_length: 120
+        initial_timeout: 10
+        status_url: "https://example.com/voicemail"
     - hangup: {}
 ```
 

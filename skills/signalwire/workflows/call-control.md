@@ -105,19 +105,31 @@ Recording URL sent to webhook when call ends.
 
 ```yaml
 - play:
-    url: "say:Please leave a message after the beep"
-- play:
-    url: "https://example.com/beep.mp3"
+    url: "say:Please leave a message after the beep. Press pound when you are done."
 - record:
+    beep: true
+    terminators: "#"
+    end_silence_timeout: 5
     max_length: 120
-    end_silence_timeout: 3
-    beep: false
+    initial_timeout: 10
+    status_url: "https://example.com/voicemail"
 ```
 
+`record` holds the document until the message ends, then the next instruction runs. The recording ends when the caller presses a `terminators` digit, stays silent for `end_silence_timeout` seconds, reaches `max_length`, or hangs up. SWML and Relay also end it when the caller does not start talking within `initial_timeout` seconds of the beep. Defaults differ by product, so set each value. Samples use a beep, `#`, five seconds of silence, and two minutes. On SWML and Relay they also give the caller ten seconds to start.
+
 **Parameters**:
-- `max_length`: Maximum seconds to record
-- `end_silence_timeout`: Stop after N seconds of silence
-- `beep`: Play beep before recording (default: `true`)
+- `beep`: Play a beep before recording (default: `false`, so set it)
+- `terminators`: Digit that ends the message, such as `#`
+- `end_silence_timeout`: Seconds of silence that end the message
+- `max_length`: Longest message, in seconds
+- `initial_timeout`: Seconds after the beep with no speech. SWML and Relay only
+- `status_url`: URL for `calling.call.record` events
+
+When `params.state` is `finished`, `params` includes `url`, `duration`, `size`, and `recording_id`. `no_input` means the caller left no message. A `calling.error` event has no `state`. Instructions after `record` can read `record_url`, which is set even when the caller left nothing, so check the event state before treating the file as a message. The file is also under **Storage** > **Recordings**, at `https://files.signalwire.com/<SPACE_ID>/<PROJECT_ID>/recordings/<RECORDING_ID>.wav`. That URL is public until Media URL protection is on, which then requires the project's API credentials to fetch it.
+
+On Relay, `record` returns when the command is accepted. Wait on the recording until the message ends. The URL is on that event when `state` is `finished`, and `no_input` means no message.
+
+Docs: https://signalwire.com/docs/platform/voice/voicemail
 
 ### Recording with Relay SDK (Python)
 
@@ -230,38 +242,60 @@ sections:
 ### Python: Mid-Call Actions
 
 ```python
-from signalwire.relay.consumer import Consumer
+from signalwire.relay import RelayClient
 
-class CallController(Consumer):
-    async def on_incoming_call(self, call):
-        await call.answer()
+client = RelayClient(
+    project='your-project-id',
+    token='your-api-token',
+    contexts=['default'],
+)
 
-        # Play greeting
-        await call.play_tts(text="Welcome to our service")
+@client.on_call
+async def handle_call(call):
+    await call.answer()
 
-        # Collect input
-        result = await call.prompt(
-            type='digits',
-            text='Press 1 to continue',
-            max_digits=1,
-            timeout=10
-        )
+    # Play greeting; play returns when accepted
+    welcome = await call.play_tts(text='Welcome to our service')
+    await welcome.wait()
 
-        if result.digits == '1':
-            # Transfer to agent
-            await call.connect([['+15551234567']])
-        else:
-            # Play voicemail message
-            await call.play_audio('https://example.com/voicemail.mp3')
+    # Collect input
+    result = await call.prompt_tts(
+        'Press 1 to continue',
+        {'digits': {'max': 1, 'digit_timeout': 5}, 'initial_timeout': 10},
+    )
+    collected = await result.wait()
+    digits = collected.params.get('result', {}).get('params', {}).get('digits', '')
 
-            # Start recording
-            recording = await call.record_async(max_length=120)
-            await recording.stop()
+    if digits == '1':
+        # Transfer to agent
+        caller = call.device.get('params', {}).get('from_number')
+        await call.connect(devices=[[{
+            'type': 'phone',
+            'params': {
+                'to_number': '+15551234567',
+                'from_number': caller,
+            },
+        }]])
+    else:
+        # Play voicemail message; play also returns when accepted
+        greeting = await call.play_audio('https://example.com/voicemail.mp3')
+        await greeting.wait()
 
-            # Send notification
-            print(f"Voicemail recorded: {recording.url}")
+        # record returns when accepted; wait until the message ends
+        recording = await call.record(audio={
+            "beep": True,
+            "initial_timeout": 10,
+            "end_silence_timeout": 5,
+            "max_length": 120,
+            "terminators": "#",
+        })
+        event = await recording.wait()
+        if event.params.get("state") == "finished":
+            print(f"Voicemail recorded: {event.params['url']}")
 
         await call.hangup()
+
+client.run()
 ```
 
 ### JavaScript: Call State Management
@@ -337,7 +371,12 @@ sections:
 
   voicemail:
     - play: { url: "say:Please leave a message" }
-    - record: { max_length: 120 }
+    - record:
+        beep: true
+        terminators: "#"
+        end_silence_timeout: 5
+        max_length: 120
+        initial_timeout: 10
 ```
 
 ## Call Forwarding
@@ -388,7 +427,12 @@ sections:
 
   voicemail:
     - play: { url: "say:Please leave a message" }
-    - record: {}
+    - record:
+        beep: true
+        terminators: "#"
+        end_silence_timeout: 5
+        max_length: 120
+        initial_timeout: 10
 ```
 
 ## Mute/Unmute
@@ -1007,6 +1051,8 @@ sections:
       - transfer: { dest: voicemail }
 ```
 
+When the forward connects, the call ends when either side hangs up, and no message is recorded. The caller hears the voicemail greeting when nobody answers, the line is busy, or the call is declined. If the dialed phone sends the call to its own voicemail before `timeout`, shorten `timeout` so your greeting plays first.
+
 ## Anti-Patterns to Avoid
 
 ### 1. Losing Context on Transfer
@@ -1260,7 +1306,7 @@ sections:
 
     - play:
         url: "say:Please say your name after the beep"
-    - record:  # Name recording available at %{record_url}
+    - record:  # %{record_url}, set even when the caller left nothing
         beep: true
         max_length: 5
         end_silence_timeout: 2
