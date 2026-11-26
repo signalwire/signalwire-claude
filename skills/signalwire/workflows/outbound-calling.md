@@ -810,7 +810,7 @@ def run_outbound_campaign(campaign_id):
                 database.log_call({
                     'campaign_id': campaign_id,
                     'recipient_id': recipient.id,
-                    'call_id': response.json()['call_id'],
+                    'call_id': response.json()['id'],
                     'status': 'initiated'
                 })
 
@@ -823,7 +823,7 @@ def run_outbound_campaign(campaign_id):
 
 ## Gotchas
 
-- **No Space-level caps on call length or spend.** Every call ends at the platform limit of 14400 seconds (4 hours). `max_duration` is not a `dial` parameter, and `answer.max_duration` does nothing on a call you place, because `answer` skips an outbound leg. Cap an AI call with `params.hard_stop_time` followed by `hangup`, and cap a leg that `connect` dials with `connect.max_duration`.
+- **`answer.max_duration` doesn't cap an outbound call.** `answer` ignores its parameters on an outbound leg, and `max_duration` is not a `dial` parameter, so an outbound call runs until the 4-hour platform limit unless something ends it. On an AI call, set `params.hard_stop_time` on the `ai` method to a whole number of seconds (for example `1200`) and put a `hangup` after `ai`. The Space has no duration or spend cap of its own: see [Voice AI: Cost Guardrails](voice-ai.md#cost-guardrails).
 - **1 CPS covers SIP and every project.** Outbound calls are dialed at 1 call per second across the whole Space, for PSTN and SIP alike. Calls past that are queued, and a call placed while the queue is full gets a failed response, so pace locally and treat that failure as retryable. There is no per-number limit and no inbound rate limit. Contact SignalWire to raise the limit.
 - **Relay device cap.** Relay `dial` and `call.connect` have the same 20-device cap as SWML `connect`: see [SWML Methods: Gotchas](swml-methods.md#gotchas).
 
