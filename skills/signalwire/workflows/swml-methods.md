@@ -19,7 +19,7 @@ SWML (SignalWire Markup Language) is a YAML/JSON document format for scripting c
 | `goto` | Jump to a label in the current section | [below](#goto--label) |
 | `hangup` | End the call | [call-control.md](call-control.md) |
 | `join_conference` | Join an ad-hoc audio conference | [below](#join_conference) |
-| `join_room` | Join a RELAY video room session | [below](#join_room) |
+| `join_room` | Join a RELAY video room by name, not by address | [below](#join_room) |
 | `label` | Mark a jump target for `goto` | [below](#goto--label) |
 | `live_transcribe` | Real-time transcription to a webhook | [below](#live_transcribe) |
 | `live_translate` | Real-time translation with TTS playback | [below](#live_translate) |
@@ -200,13 +200,13 @@ sections:
 
 ### join_room
 
-Join a RELAY video room session; creates the room if it doesn't exist.
+Join a RELAY video room session by its `name` (the name the Video Room was created with), not its address. If no room has that name, `join_room` creates a new empty room and the caller waits alone in it.
 
 Docs: https://signalwire.com/docs/swml/reference/calling/join-room
 
 | Property | Type / Default | Description |
 |----------|----------------|-------------|
-| `name` | string, required | Room name. Allowed characters: `A-Z a-z 0-9 _ -` |
+| `name` | string, required | Video Room `name`, not its address. Allowed characters: `A-Z a-z 0-9 _ -` |
 
 **Variables set:** `join_room_result` (`joined` \| `failed`).
 
