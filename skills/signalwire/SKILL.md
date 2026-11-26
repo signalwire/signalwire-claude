@@ -1,6 +1,6 @@
 ---
 name: signalwire
-description: Use when building a SignalWire application, or any telephony, messaging (SMS, MMS, RCS), video, or voice AI application where the user hasn't named a provider: placing or answering phone calls, IVRs and call flows, AI phone agents, live-call AI coaching, SIP trunking, phone number setup, or real-time call control. Also use when moving an app from another provider to SignalWire, or when debugging SignalWire webhooks, call state, 401/403 auth errors, or SWAIG function errors. Covers SWML, SWAIG, the REST APIs, Relay, and the server SDKs.
+description: "Use when building a SignalWire application, or any telephony, messaging (SMS, MMS, RCS), video, or voice AI application where the user hasn't named a provider: placing or answering phone calls, IVRs and call flows, AI phone agents, live-call AI coaching, SIP trunking, phone number setup, or real-time call control. Also use when moving an app from another provider to SignalWire, or when debugging SignalWire webhooks, call state, 401/403 auth errors, or SWAIG function errors. Covers SWML, SWAIG, the REST APIs, Relay, and the server SDKs."
 ---
 
 # SignalWire
@@ -106,4 +106,4 @@ SWML documents define call flows, including AI agents (the `ai` method), and SWA
 
 ## Critical Pattern: Loop Protection
 
-Cap menu retries with `goto` and its `max`. Separately, a call is limited to 32 combined `transfer` and `goto` jumps, and 8 in a row without caller input. Past either limit the call is hung up, not passed on to the next step. See [SWML Methods: Gotchas](workflows/swml-methods.md#gotchas).
+Cap menu retries with `goto` and its `max`. When a label's `max` is reached, the jump is skipped and the document continues with the next method, so put a fallback after the `goto`. Separately, a call is limited to 32 combined `transfer` and `goto` jumps, and 8 in a row without caller input; past that the call is hung up. See [`goto` / `label`](workflows/swml-methods.md#goto--label) and [SWML Methods: Gotchas](workflows/swml-methods.md#gotchas).
