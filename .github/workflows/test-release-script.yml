@@ -5,11 +5,33 @@ on:
     paths:
       - ".github/scripts/**"
       - ".github/workflows/release.yml"
+      - ".github/workflows/test-release-script.yml"
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - uses: astral-sh/setup-uv@v6
-      - run: uv run --script .github/scripts/test_release.py
+
+      - name: Unit tests
+        run: uv run --script .github/scripts/test_release.py
+
+      - name: Lint
+        run: |
+          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash) 1.7.7
+          ./actionlint -color
+          shellcheck .github/scripts/release.sh
+
+      - name: Dry run against main
+        run: |
+          git switch -q -C main origin/main
+          # Use this PR's scripts against main's history.
+          git checkout "${{ github.event.pull_request.head.sha }}" -- .github/scripts
+          DRY_RUN=1 .github/scripts/release.sh tag-untagged
+          DRY_RUN=1 .github/scripts/release.sh release

@@ -1,0 +1,23 @@
+# The release workflow sets "version" after a merge (see RELEASING.md), so a PR
+# that changes it would release early and out of order.
+name: Check version is unchanged
+
+on:
+  pull_request:
+    paths:
+      - ".claude-plugin/**"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fail if the PR changes a version field
+        run: |
+          if git diff "origin/${{ github.base_ref }}...HEAD" -- .claude-plugin | grep -E '^[-+][[:space:]]*"version"'; then
+            echo "::error::Leave \"version\" in .claude-plugin/ alone. The release workflow sets it after merge; see RELEASING.md."
+            exit 1
+          fi

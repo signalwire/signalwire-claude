@@ -1,37 +1,34 @@
-# Releases the plugin after merges to main.
+# Releases the plugin after merges to main. RELEASING.md explains the process;
+# the steps are in .github/scripts/release.sh.
 #
-# PRs don't touch "version". After a merge, this waits so that merges landing
-# close together share one release: each new push cancels the run still
-# waiting. Then, if anything an install receives has changed since the last
-# release tag, it opens a "Release vX.Y.Z" PR that bumps the version fields and
-# merges it, because main only takes changes through PRs. A merge with the
-# release:minor or release:major label picks a bigger bump than the default
-# patch. Installs see the new version once the release PR lands on main. The
-# same run then tags that commit and publishes a GitHub release. It has to:
-# pushes made with GITHUB_TOKEN, like this merge, don't start workflow runs.
+# The wait job holds a run for RELEASE_DELAY_SECONDS so that merges landing
+# close together share one release: a newer push cancels a run that is still
+# waiting. The release job runs in its own group that doesn't cancel, so a push
+# during a release queues behind it instead of interrupting it.
 #
-# If the release PR can't be merged, the run fails and the PR stays open for a
-# person to merge. The next run then tags that release when it finds it untagged.
+# Pushes made with GITHUB_TOKEN, like the release PR's merge, don't start runs,
+# which is why the release job tags and publishes in the same run.
 name: Release
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Print what would be released without changing anything
+        type: boolean
+        default: false
 
 permissions:
   contents: write
   pull-requests: write
 
-env:
-  GH_TOKEN: ${{ github.token }}
-  RELEASE_BRANCH: release/next
-
 jobs:
-  release:
+  wait:
     runs-on: ubuntu-latest
     concurrency:
-      group: release
+      group: release-wait
       cancel-in-progress: true
     steps:
       - name: Wait for merges that land close together
@@ -40,6 +37,16 @@ jobs:
         env:
           DELAY: ${{ vars.RELEASE_DELAY_SECONDS }}
 
+  release:
+    needs: wait
+    runs-on: ubuntu-latest
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+    steps:
       - uses: actions/checkout@v4
         with:
           ref: main
@@ -47,68 +54,8 @@ jobs:
 
       - uses: astral-sh/setup-uv@v6
 
-      - name: Find the last release
-        id: last
-        run: |
-          current=$(.github/scripts/release.py current)
-          tag="v${current}"
-          if ! git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
-            # Not tagged yet: the last release is the commit that set this version.
-            sha=$(git log -1 --format=%H -G'"version"' -- .claude-plugin/plugin.json)
-            git tag "${tag}" "${sha}"
-            git push origin "${tag}"
-            gh release create "${tag}" --title "${tag}" --notes "Release ${tag}" --verify-tag
-          fi
-          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+      - name: Tag and publish the last release if it has no tag
+        run: .github/scripts/release.sh tag-untagged
 
-      - name: Check for changes that ship
-        id: changes
-        run: |
-          if git diff --name-only "${{ steps.last.outputs.tag }}" HEAD | .github/scripts/release.py releasable; then
-            echo "release=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "Nothing an install receives has changed since ${{ steps.last.outputs.tag }}."
-          fi
-
-      - name: Collect the merged PRs
-        if: steps.changes.outputs.release == 'true'
-        run: |
-          for sha in $(git log --format=%H "${{ steps.last.outputs.tag }}..HEAD"); do
-            gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}/pulls" \
-              --jq '.[] | select(.merged_at != null) | {number, title, labels: [.labels[].name]}'
-          done | jq -s 'unique_by(.number) | sort_by(.number)' > prs.json
-          jq '[.[].labels]' prs.json | .github/scripts/release.py level > level.txt
-          jq -r '.[] | "- \(.title) (#\(.number))"' prs.json > notes.md
-          echo "Bump: $(cat level.txt)"; cat notes.md
-
-      - name: Open or update the release PR, then merge it
-        if: steps.changes.outputs.release == 'true'
-        run: |
-          version=$(.github/scripts/release.py next "$(cat level.txt)")
-          .github/scripts/release.py set "${version}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git switch -C "${RELEASE_BRANCH}"
-          git commit -am "Release v${version}"
-          git push --force origin "${RELEASE_BRANCH}"
-
-          { echo "Releases v${version}, with these merges:"; echo; cat notes.md; } > body.md
-          pr=$(gh pr list --head "${RELEASE_BRANCH}" --state open --json number --jq '.[0].number')
-          if [ -n "${pr}" ]; then
-            gh pr edit "${pr}" --title "Release v${version}" --body-file body.md
-          else
-            gh pr create --base main --head "${RELEASE_BRANCH}" --title "Release v${version}" --body-file body.md
-            pr=$(gh pr list --head "${RELEASE_BRANCH}" --state open --json number --jq '.[0].number')
-          fi
-
-          if ! gh pr merge "${pr}" --squash --delete-branch --subject "Release v${version} (#${pr})"; then
-            echo "::error::Release PR #${pr} couldn't be merged automatically. Merge it by hand."
-            exit 1
-          fi
-
-          # Tag the merge commit and publish the release.
-          merged=$(gh pr view "${pr}" --json mergeCommit --jq .mergeCommit.oid)
-          git fetch -q origin "${merged}"
-          git tag "v${version}" "${merged}"
-          git push origin "v${version}"
-          gh release create "v${version}" --title "v${version}" --notes-file notes.md --verify-tag
+      - name: Release what has changed since then
+        run: .github/scripts/release.sh release
