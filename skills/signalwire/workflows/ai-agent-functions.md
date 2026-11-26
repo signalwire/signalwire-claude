@@ -193,6 +193,8 @@ SWAIG:
 | `mcp_servers[].resources` | boolean, default `false` | Fetch MCP resources in addition to tools |
 | `mcp_servers[].resource_vars` | object | Values for `{name}` placeholders in resource URIs. Used as written; a placeholder with no key is left as-is. Used only when `resources` is enabled |
 
+If MCP tools never appear, check that `SWAIG` is an object: see [Gotchas](#gotchas).
+
 ## SWAIG Includes — Remote Function Discovery
 
 Pull a function list from a remote URL at session start instead of declaring every function inline. Useful for sharing one tool catalog across several agents.
@@ -865,7 +867,7 @@ A PDF is recognized from its content. Word or Excel returns `422` even when serv
 
 `chunking_strategy` defaults to `sentence`, which groups up to `max_sentences_per_chunk` sentences. `sliding` takes a word window with overlap. `paragraph` splits on blank lines. `page` makes one chunk per PDF page; plain text and Markdown have no pages, so they fall back to a blank-line split, like `paragraph`. Markdown is chunked as written, so chunks keep their markup. `split_newlines` applies only to `sentence`: when `true`, a line break also ends a sentence; the default `false` ends sentences on punctuation only.
 
-Status moves from `submitted` to `in_progress`, then to `completed`, or to `failed` when a chunk can't be indexed (for example, because it is too long).
+Status moves from `submitted` to `in_progress`, then to `completed`, or to `failed` when a chunk can't be indexed (for example, because it is too long). A file with no extractable text stays `in_progress`: see [Gotchas](#gotchas).
 
 **Use Cases:**
 - Medical information lookup (HIPAA-compliant)
@@ -951,6 +953,8 @@ gates:
 
 ## Gotchas
 
+- **A DataSphere document with no extractable text stays `in_progress`.** A scanned PDF with no text layer doesn't move to `failed`.
+
 These behaviors are not on the docs site.
 
 - **`mcp_servers` needs `SWAIG` to be an object.** If `SWAIG` is a bare array of functions, `mcp_servers` is silently ignored and its tools never appear. Check this first when MCP tools are missing.
@@ -971,7 +975,6 @@ These behaviors are not on the docs site.
   ```
 
 - **MCP discovery runs once per session, before the greeting.** A server that comes up later in the call isn't picked up. A server that advertises neither `tools` nor `resources` in its capabilities handshake is skipped. The SDK equivalent is at `https://signalwire.com/docs/server-sdks/guides/mcp-gateway`.
-- **A DataSphere document with no extractable text never fails.** A scanned PDF with no text layer stays `in_progress` instead of moving to `failed`.
 
 ## Next Steps
 
