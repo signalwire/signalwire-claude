@@ -585,6 +585,6 @@ def book_slot(self, args, raw_data):
 These behaviors are not on the docs site.
 
 - **`static_greeting` repeats until the caller speaks.** It plays again on every turn, attention timeouts included, until the caller first says something, so a required disclosure can play more than once.
-- **Leave `valid_contexts` unset to keep the model in the current context.** In SWML that means no `valid_contexts` key; in the SDK, don't call `set_valid_contexts`. On some platform versions an empty list still offers `change_context`.
+- **Leave `valid_contexts` unset to keep the model in the current context.** In SWML that means no `valid_contexts` key; in the SDK, don't call `set_valid_contexts`. An empty list still offers `change_context`.
 - **A filler covers only the moment the tool is called.** For the wait, loop `wait_file` with `wait_file_loops=-1`, which plays until the function returns. Without `wait_file_loops` the file plays once. A wait script (a nested list inside the per-language filler array) speaks its phrases one at a time across the wait. It won't talk over an open `wait_file`, and realtime agents don't support wait scripts.
 - **SWAIG webhooks time out at 120 seconds.** A function that runs longer returns an error, and its `set_global_data` is lost.
