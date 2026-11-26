@@ -877,15 +877,15 @@ functions:
     purpose: "Get information from knowledge base"
     data_map:
       webhooks:
-        - url: "https://api.signalwire.com/api/datasphere/search"
+        - url: "https://your-space.signalwire.com/api/datasphere/documents/search"
           method: POST
           headers:
             Authorization: "Basic <base64-encoded-credentials>"
           body:
-            query: "%{args.question}"
+            query_string: "${args.question}"
             document_id: "your-document-id"
           output:
-            response: "%{chunks[0].text}"
+            response: "${chunks[0].text}"
 ```
 
 **Ingest.** [`POST /api/datasphere/documents`](https://signalwire.com/docs/apis/rest/documents/create-document) accepts PDF, plain text, and Markdown from a public `http` or `https` URL, up to 10 MB. DataSphere downloads the file from that URL.
