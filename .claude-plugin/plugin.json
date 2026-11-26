@@ -1,7 +1,7 @@
 {
   "name": "signalwire",
   "displayName": "SignalWire",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Build SignalWire voice, messaging, video, and AI agent applications: SWML call flows, REST APIs, the Server and Browser SDKs, SWAIG functions, and debugging, with production patterns and the traps to avoid.",
   "author": {
     "name": "SignalWire",
