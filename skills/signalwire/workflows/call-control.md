@@ -1271,11 +1271,12 @@ sections:
 
 ## Gotchas
 
+- **`update` depends on the call's status.** `status: canceled` is valid only while the call is `queued` or `ringing`. Canceling a `ringing` call, or completing a call that has been placed, hangs it up and the status becomes `ended`. A `url` or `swml` redirect is valid only while `answered`. A call whose status is `failed`, `canceled`, or `completed` can't be updated.
+
 These behaviors are not on the docs site.
 
-- **`update` depends on the call's status.** `status: canceled` is valid only while the call is `queued` or `ringing`. Canceling a `ringing` call, or completing a call that has been placed, hangs it up and the status becomes `ended`. A `url` or `swml` redirect is valid only while `answered`. A call whose status is `failed`, `canceled`, or `completed` can't be updated.
 - **`connect` inside a SWAIG action needs the `transfer` flag beside the SWML.** An action whose SWML contains `connect` succeeds only when `transfer` sits next to the `SWML` object, which is the shape `connect()` and `execute_swml(doc, transfer=True)` emit. If the flag is missing or nested inside the document, as in hand-built action JSON, the SWML runs inline and `connect` fails within seconds with `connect_result=failed` and no B-leg dialed. The same document works at the top level of a call.
-- **Relay device cap.** Relay `dial` and `call.connect` share the 20-destination cap: see [SWML Methods: Gotchas](swml-methods.md#gotchas).
+- **Relay device cap.** Relay `dial` and `call.connect` have the same 20-device cap as SWML `connect`: see [SWML Methods: Gotchas](swml-methods.md#gotchas).
 
 ## Next Steps
 

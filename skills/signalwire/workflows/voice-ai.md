@@ -583,7 +583,7 @@ Without these, a stuck AI call meters until the 4-hour platform limit ends it.
 ## Gotchas
 
 - **Name the engine in every voice string.** The default voice, and the engine a bare voice name resolves against, have both changed. See [Voice Selection](#voice-selection).
-- **Keep sensitive values in `meta_data`.** Values a function stores with `set_meta_data` go only to functions that share its `meta_data_token`, and the model never sees them. `global_data` is posted with the conversation, so keep secrets out of it and out of the prompt.
+- **Keep sensitive values in `meta_data`.** Values a function stores with `set_meta_data` are sent only to functions that share its `meta_data_token`. `global_data` is sent with every function request and can be expanded into the prompt, so keep secrets out of it and out of the prompt.
 - **Set your own limits on every AI call.** There are no Space-level spend or duration caps. See [Cost Guardrails](#cost-guardrails).
 
 ## Next Steps

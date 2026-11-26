@@ -371,7 +371,7 @@ The model decides it is time to pay. `pay` keeps the digits out of the model's c
 
 Metadata is scoped to a function's `meta_data_token`. The SDK mints a distinct URL token per function, so give the pricing and payment functions the same token; otherwise the payment function sees an empty `meta_data`.
 
-`post_process=True` lets the model speak the handoff before the SWML runs. Run `pay`, then `set` `ai_response`. `set` expands `${...}` when it runs, so `${pay_result}` is already filled when the model reads the stored text. Build the `set` yourself rather than using `.pay(ai_response=)`, and see [Gotchas](#gotchas) for why.
+`post_process=True` lets the model speak the handoff before the SWML runs. Run `pay`, then `set` `ai_response`. `set` expands `${...}` when it runs, so `${pay_result}` is already filled when the model reads the stored text. `.pay(ai_response=)` emits that order (see [Gotchas](#gotchas)).
 
 ```python
 @AgentBase.tool(
@@ -587,8 +587,7 @@ def transfer(self, args, raw_data):
 ## Gotchas
 
 - **`pay` takes `security_code` and `postal_code` as strings.** Pass `"true"`. JSON booleans are rejected.
-- **Run `pay` before `set ai_response`.** `set` expands `${pay_result}` when it runs, so it has to come after `pay`. The SDK's `.pay(ai_response=)` helper writes `set` before `pay`, and the model then sees an empty status, or a stale one from an earlier `pay` on the same call.
+- **Run `pay` before `set ai_response`.** `set` expands `${pay_result}` when it runs, so it has to come after `pay`. The SDK's `.pay(ai_response=)` helper emits that order.
 - **`pay` from a SWAIG function needs `swaig_allow_swml`.** It's on by default. When it's off, the `pay` step is skipped.
 - **`${pay_payment_results}` leaves the expiry and postal code unmasked.** Only the card number and CVV are masked, and the object stays on the call until it ends. Keep it out of `ai_response`, post-call summaries, and later functions; `${pay_result}` is all the model needs.
 - **`set_global_data` replaces a whole top-level key.** Each tool gets its own copy of `global_data` when it's called, so two tools that read and rewrite the same key lose one update. An increment such as `pin_attempts + 1` is that read-modify-write.
-- **The signing key appears only once the project has an API token.** Create a token first if **API Credentials → Signing Key** is empty.

@@ -442,6 +442,8 @@ That form makes the WebSocket a call leg, so audio flows both ways. Shipped Janu
 
 Choosing between them: use `stream` to observe (transcription, compliance capture, analytics) while the call continues its SWML; use `connect: stream:` when the far end is a participant that needs to talk back (a voice bot, a translation bridge).
 
+Concurrent streams, taps, transcriptions, recordings, and detectors share one per-call cap: see [Gotchas](#gotchas).
+
 **Relay form** — the same operation over the [calling commands endpoint](fabric-relay.md#calling-commands-over-http):
 
 ```json
@@ -915,7 +917,7 @@ Docs: https://signalwire.com/docs/swml/reference/variables
 
 ## Gotchas
 
-These behaviors are not on the docs site.
+Some of these behaviors are not on the docs site.
 
 - **Jump limit.** A call is limited to 32 combined `transfer` and `goto` jumps, and 8 in a row without caller input. Past either limit the call is hung up, not passed on to the next method, so a `goto` `max` above 32 can't be honored.
 - **Concurrent operations.** A call runs at most 10 control-based operations at once (a default), shared across streams, taps, transcriptions, recordings, and detectors. Going over fails with `Too many concurrent operations`, so a call already running a recording and two taps has fewer stream slots than you'd expect. Reusing a `control_id` that is still active fails with `Duplicate control_id`.
