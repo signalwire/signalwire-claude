@@ -411,20 +411,23 @@ You MUST verify the PIN before any transfer.
 Step 3: Ask what they need, then transfer them.
 ```
 
-✅ **Right:** steps hold the flow, and a handler holds the rule. Each step offers only its own functions, and the `verify` step can't move on by itself:
+✅ **Right:** steps hold the flow, and a handler holds the rule. Each step offers only its own functions, and the `verify` step is not offered a way to move on:
 
 ```yaml
 - ai:
     prompt:
       text: You are the front desk for Acme Bank.
-      steps:
-        - name: verify
-          text: Ask for the caller's account number and PIN, then check them with verify_pin.
-          functions: [verify_pin]
-          valid_steps: []
-        - name: route
-          text: Ask what the caller needs, then send them to the right team with transfer_call.
-          functions: [transfer_call]
+      contexts:
+        default:
+          steps:
+            - name: verify
+              text: Ask for the caller's account number and PIN, then check them with verify_pin.
+              functions: [verify_pin]
+              valid_steps: []
+            - name: route
+              text: Ask what the caller needs, then send them to the right team with transfer_call.
+              functions: [transfer_call]
+              valid_steps: []
     SWAIG:
       functions:
         - function: verify_pin
